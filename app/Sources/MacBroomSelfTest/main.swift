@@ -47,6 +47,31 @@ check("EngineEvent ignores unknown", EngineEvent(jsonLine: #"{"event":"chatter"}
 check("EngineEvent ignores garbage", EngineEvent(jsonLine: "not json") == nil)
 check("EngineEvent ignores empty", EngineEvent(jsonLine: "") == nil)
 
+// AITool classification
+check("classify gemini path",
+      AITool.classify(path: "/Users/x/.gemini/tmp/bin", label: "Gemini CLI temp files") == .gemini)
+check("classify antigravity -> gemini",
+      AITool.classify(path: "/Users/x/.gemini/antigravity-browser-profile/Default/Cache", label: "Antigravity browser cache") == .gemini)
+check("classify claude old version",
+      AITool.classify(path: "/Users/x/.local/share/claude/versions/2.1", label: "Claude Code old version") == .claude)
+check("classify cursor before others",
+      AITool.classify(path: "/Users/x/.local/share/cursor-agent/versions/1", label: "Cursor Agent old version") == .cursor)
+check("classify openai chatgpt -> codex group",
+      AITool.classify(path: "/Users/x/Library/Caches/com.openai.chat/blob", label: "ChatGPT cache") == .codex)
+check("classify copilot",
+      AITool.classify(path: "/Users/x/.copilot/pkg/universal", label: "GitHub Copilot CLI old version") == .copilot)
+check("classify unknown -> other",
+      AITool.classify(path: "/Users/x/Library/Caches/something", label: "Misc cache") == .other)
+
+// Grouping: largest group first, largest item first within a group
+let groups = AIToolGroup.group([
+    CleanCandidate(category: "ai", label: "Gemini CLI temp files", path: "/g/tmp", sizeBytes: 10),
+    CleanCandidate(category: "ai", label: "Antigravity browser cache", path: "/g/cache", sizeBytes: 100),
+    CleanCandidate(category: "ai", label: "Claude Code old version", path: "/c/v", sizeBytes: 50)
+])
+check("group: gemini first (largest total)", groups.first?.tool == .gemini)
+check("group: gemini sorted desc", groups.first?.candidates.first?.sizeBytes == 100)
+
 // Formatting sanity
 check("Format.bytes non-empty", !Format.bytes(1_500_000).isEmpty)
 

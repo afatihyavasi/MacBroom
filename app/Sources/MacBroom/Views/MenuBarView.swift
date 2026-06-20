@@ -1,74 +1,99 @@
 import SwiftUI
 import MacBroomCore
 
-/// Minimal menu bar panel for the engine bridge skeleton.
-/// The rich, per-tool AI cache UI lands in the AI-cache stage.
+/// Root menu bar panel. Headlines safe AI cache cleanup; system cleanup and the
+/// status panel slot in alongside in later stages.
 struct MenuBarView: View {
     @EnvironmentObject var state: AppState
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
-
-            switch state.phase {
-            case .idle:
-                Text("Temizlenebilir alanı taramak için başlayın.")
-                    .font(.callout).foregroundStyle(.secondary)
-            case .scanning:
-                ProgressView("Taranıyor…").controlSize(.small)
-            case .ready, .cleaning, .finished, .error:
-                summary
-            }
-
+            Divider()
+            content
+            Divider()
             controls
         }
-        .padding(16)
-        .task { await state.refreshDisk() }
+        .padding(14)
+        .task {
+            await state.refreshDisk()
+            if case .idle = state.phase { await state.scan() }
+        }
     }
+
+    // MARK: header
 
     private var header: some View {
-        HStack {
-            Image(systemName: "wand.and.stars.inverse").foregroundStyle(.tint)
-            Text("MacBroom").font(.headline)
-            Spacer()
-            if let d = state.disk {
-                Text("Disk %\(d.usedPercent)")
-                    .font(.caption).foregroundStyle(.secondary)
+        HStack(spacing: 8) {
+            Image(systemName: "wand.and.stars.inverse")
+                .font(.title3).foregroundStyle(.tint)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("MacBroom").font(.headline)
+                if let d = state.disk {
+                    Text("Disk %\(d.usedPercent) dolu · \(Format.bytes(d.free)) boş")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
             }
+            Spacer()
+            Button {
+                Task { await state.scan() }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+            }
+            .buttonStyle(.borderless)
+            .help("Yeniden tara")
+            .disabled(state.phase == .scanning)
         }
     }
 
-    @ViewBuilder private var summary: some View {
+    // MARK: content
+
+    @ViewBuilder private var content: some View {
         switch state.phase {
-        case .ready:
-            Label("\(state.candidates.count) öğe · \(Format.bytes(state.selectedBytes)) seçili",
-                  systemImage: "checkmark.circle")
-                .font(.callout)
+        case .idle, .scanning:
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text("AI cache'leri taranıyor…").font(.callout).foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 12)
         case let .cleaning(done, total):
-            ProgressView(value: Double(done), total: Double(total)) {
+            VStack(alignment: .leading, spacing: 6) {
+                ProgressView(value: Double(done), total: Double(max(total, 1)))
                 Text("Temizleniyor… \(done)/\(total)")
-            }.controlSize(.small)
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 8)
         case let .finished(freed):
-            Label("\(Format.bytes(freed)) boşaltıldı", systemImage: "sparkles")
-                .font(.callout).foregroundStyle(.green)
+            VStack(spacing: 8) {
+                Image(systemName: "sparkles").font(.largeTitle).foregroundStyle(.green)
+                Text("\(Format.bytes(freed)) boşaltıldı")
+                    .font(.title3.weight(.semibold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
         case let .error(msg):
             Label(msg, systemImage: "exclamationmark.triangle")
-                .font(.caption).foregroundStyle(.red)
-        default:
-            EmptyView()
+                .font(.caption).foregroundStyle(.red).padding(.vertical, 8)
+        case .ready:
+            AICacheView()
         }
     }
+
+    // MARK: controls
 
     private var controls: some View {
         HStack {
-            Button("Tara") { Task { await state.scan() } }
-                .disabled(state.phase == .scanning)
+            if case .ready = state.phase {
+                Text("\(Format.bytes(state.selectedBytes)) seçili")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
             if case .ready = state.phase {
                 Button("Temizle") { Task { await state.clean() } }
                     .buttonStyle(.borderedProminent)
                     .disabled(state.selected.isEmpty)
             }
-            Spacer()
             Button("Çıkış") { NSApplication.shared.terminate(nil) }
                 .buttonStyle(.borderless)
         }

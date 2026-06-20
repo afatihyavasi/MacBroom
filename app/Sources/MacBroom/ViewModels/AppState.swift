@@ -31,6 +31,27 @@ final class AppState: ObservableObject {
 
     var totalBytes: Int64 { candidates.reduce(0) { $0 + $1.sizeBytes } }
 
+    /// AI-category candidates grouped into tool sections for display.
+    var aiGroups: [AIToolGroup] {
+        AIToolGroup.group(candidates.filter { $0.category == "ai" })
+    }
+
+    func isSelected(_ path: String) -> Bool { selected.contains(path) }
+
+    func selectionState(for group: AIToolGroup) -> Bool? {
+        let sel = group.candidates.filter { selected.contains($0.path) }.count
+        if sel == 0 { return false }
+        if sel == group.candidates.count { return true }
+        return nil // mixed
+    }
+
+    func toggleGroup(_ group: AIToolGroup) {
+        let allSelected = selectionState(for: group) == true
+        for c in group.candidates {
+            if allSelected { selected.remove(c.path) } else { selected.insert(c.path) }
+        }
+    }
+
     func refreshDisk() async {
         disk = try? await engine.status()
     }
