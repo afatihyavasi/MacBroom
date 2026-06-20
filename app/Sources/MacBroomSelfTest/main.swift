@@ -78,6 +78,16 @@ let groups = AIToolGroup.group([
 check("group: gemini first (largest total)", groups.first?.tool == .gemini)
 check("group: gemini sorted desc", groups.first?.candidates.first?.sizeBytes == 100)
 
+// DiscoverResult: target list with installed flags
+if let d = try? JSONDecoder().decode(DiscoverResult.self, from: data(#"{"targets":[{"id":"ai:gemini","label":"Gemini / Antigravity","category":"ai","installed":true},{"id":"system:dev-misc","label":"Dev","category":"system","installed":false}]}"#)) {
+    check("DiscoverResult count", d.targets.count == 2)
+    check("AnalysisTarget id", d.targets.first?.id == "ai:gemini")
+    check("AnalysisTarget installed true", d.targets.first?.installed == true)
+    check("AnalysisTarget installed false", d.targets.last?.installed == false)
+} else {
+    check("DiscoverResult decodes", false)
+}
+
 // Formatting sanity
 check("Format.bytes non-empty", !Format.bytes(1_500_000).isEmpty)
 

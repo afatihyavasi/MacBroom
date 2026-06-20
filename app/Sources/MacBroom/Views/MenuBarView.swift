@@ -48,7 +48,7 @@ struct MenuBarView: View {
         .padding(14)
         .task {
             await state.refreshStatus()
-            if case .idle = state.phase { await state.scan() }
+            if case .idle = state.phase { await state.discover() }
         }
         .sheet(isPresented: $showingSettings) { SettingsView() }
     }
@@ -61,12 +61,12 @@ struct MenuBarView: View {
                 .font(.title3).foregroundStyle(.tint)
             Text("MacBroom").font(.headline)
             Spacer()
-            Button { Task { await state.scan() } } label: {
+            Button { Task { await state.discover() } } label: {
                 Image(systemName: "arrow.clockwise")
             }
             .buttonStyle(.borderless)
-            .help("Yeniden tara")
-            .disabled(state.phase == .scanning)
+            .help("Hedefleri yeniden bul")
+            .disabled(state.phase == .scanning || state.phase == .discovering)
             Button { showingSettings = true } label: {
                 Image(systemName: "gearshape")
             }
@@ -110,10 +110,18 @@ struct MenuBarView: View {
 
     @ViewBuilder private var cleanContent: some View {
         switch state.phase {
-        case .idle, .scanning:
+        case .idle, .discovering:
             HStack(spacing: 8) {
                 ProgressView().controlSize(.small)
-                Text("Önbellekler taranıyor…").font(.callout).foregroundStyle(.secondary)
+                Text("Hedefler aranıyor…").font(.callout).foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
+        case .selecting:
+            AnalysisSelectionView()
+        case .scanning:
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text("Seçili hedefler taranıyor…").font(.callout).foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
         case let .cleaning(done, total):
@@ -139,6 +147,10 @@ struct MenuBarView: View {
     private var cleanControls: some View {
         HStack {
             if case .ready = state.phase {
+                Button { state.backToSelection() } label: {
+                    Image(systemName: "chevron.left"); Text("Hedefler")
+                }
+                .buttonStyle(.borderless).font(.caption)
                 Text("\(Format.bytes(state.selectedBytes)) seçili")
                     .font(.caption).foregroundStyle(.secondary)
             }

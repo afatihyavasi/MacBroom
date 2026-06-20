@@ -50,6 +50,28 @@ teardown() {
 
 # --- scan: finds safe AI caches, preserves state ---------------------------
 
+@test "discover lists targets with installed flags (fast, no scan)" {
+    mkdir -p "$HOME/.gemini"
+    run bash "$ENGINE" discover
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"targets"'* ]]
+    [[ "$output" == *'"id":"ai:gemini"'* ]]
+    [[ "$output" == *'"installed"'* ]]
+}
+
+@test "scan --targets only runs the selected target" {
+    mkdir -p "$HOME/.gemini/tmp"
+    head -c 2048 /dev/zero > "$HOME/.gemini/tmp/g.bin"
+    # A codex artifact that must NOT be touched/listed when only gemini is asked.
+    mkdir -p "$HOME/.cache/codex-runtimes/r1"
+    head -c 2048 /dev/zero > "$HOME/.cache/codex-runtimes/r1/c.bin"
+
+    run bash "$ENGINE" scan --targets=ai:gemini
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"$HOME/.gemini/tmp/g.bin"* ]]
+    [[ "$output" != *"codex-runtimes"* ]]
+}
+
 @test "ai-scan lists regenerable gemini temp files as candidates" {
     mkdir -p "$HOME/.gemini/tmp"
     head -c 4096 /dev/zero > "$HOME/.gemini/tmp/junk.bin"

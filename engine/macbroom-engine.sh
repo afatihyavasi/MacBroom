@@ -216,44 +216,71 @@ load_mole() {
 }
 
 # --------------------------------------------------------------------------
-# Category -> mole function mapping. Each function is guarded so version drift
-# in the pinned submodule never crashes the engine.
+# Target registry.
+#
+# Each line: id|label|category|detect|fns
+#   detect : ':'-separated existence checks ('~' = $HOME); '*' = always present
+#   fns    : space-separated mole functions to run for this target
+#
+# This is what makes scoped, fast analysis possible: discovery just checks
+# `detect` (no `du`), and a scan runs only the union of `fns` for the targets
+# the user selected — instead of every category function every time.
 # --------------------------------------------------------------------------
-_run_fns() {
-    local fn
-    for fn in "$@"; do
-        declare -F "$fn" >/dev/null 2>&1 && "$fn"
+_mb_targets() {
+    cat <<'EOF'
+ai:gemini|Gemini / Antigravity|ai|~/.gemini|clean_antigravity_caches
+ai:codex|Codex / ChatGPT|ai|~/.codex:~/.cache/codex-runtimes:~/Library/Caches/com.openai.chat|clean_codex_runtimes clean_codex_cli clean_ai_apps
+ai:claude|Claude|ai|~/.local/share/claude:~/Library/Caches/com.anthropic.claudefordesktop:~/Library/Logs/Claude|clean_dev_ai_agents clean_ai_apps
+ai:cursor|Cursor|ai|~/.local/share/cursor-agent|clean_dev_ai_agents
+ai:copilot|GitHub Copilot|ai|~/.copilot|clean_dev_ai_agents
+ai:devtools-mcp|Chrome DevTools MCP|ai|~/.cache/chrome-devtools-mcp:~/Library/Caches/chrome-devtools-mcp|clean_chrome_devtools_mcp_caches
+system:app-caches|Uygulama önbellekleri|system|*|clean_app_caches
+system:editors|Kod editörleri|system|~/Library/Application Support/Code:~/Library/Application Support/Cursor:~/Library/Application Support/JetBrains|clean_code_editors
+system:gui-apps|GUI uygulama önbellekleri|system|*|clean_user_gui_applications
+system:dev-misc|Geliştirici artıkları|system|*|clean_dev_misc
+EOF
+}
+
+_expand_home() { printf '%s' "${1/#\~/$HOME}"; }
+
+# 0 if any detect path exists (or detect is '*').
+_target_installed() {
+    local detect="$1" path
+    [[ "$detect" == "*" ]] && return 0
+    local IFS=:
+    for path in $detect; do
+        [[ -e "$(_expand_home "$path")" ]] && return 0
     done
+    return 1
 }
 
-# Safe, regenerable AI tool artifacts only. State (auth/sessions/memory/history)
-# is preserved by mole's own functions (e.g. clean_codex_cli skips by default).
-run_category_ai() {
-    MB_CATEGORY="ai"
-    _run_fns \
-        clean_dev_ai_agents \
-        clean_codex_runtimes \
-        clean_codex_cli \
-        clean_antigravity_caches \
-        clean_chrome_devtools_mcp_caches \
-        clean_ai_apps
+# Run the union of mole functions for the given target ids (CSV), de-duplicated,
+# each tagged with its target's category. Guarded so submodule drift never
+# crashes the engine.
+_run_targets() {
+    local wanted=",$1,"   # CSV wrapped for substring matching
+    local ran=" "
+    local id label category detect fns fn
+    while IFS='|' read -r id label category detect fns; do
+        [[ -n "$id" ]] || continue
+        [[ "$wanted" == *",$id,"* ]] || continue
+        MB_CATEGORY="$category"
+        for fn in $fns; do
+            [[ "$ran" == *" $fn "* ]] && continue   # already run this scan
+            ran+="$fn "
+            declare -F "$fn" >/dev/null 2>&1 && "$fn"
+        done
+    done < <(_mb_targets)
 }
 
-run_category_system() {
-    MB_CATEGORY="system"
-    _run_fns \
-        clean_app_caches \
-        clean_code_editors \
-        clean_user_gui_applications \
-        clean_dev_misc
-}
-
-run_category() {
-    case "$1" in
-        ai)     run_category_ai ;;
-        system) run_category_system ;;
-        *)      ;; # unknown category ignored
-    esac
+# Expand category names (ai,system) to their target ids.
+_targets_for_categories() {
+    local cats=",$1," id _ category _rest out=""
+    while IFS='|' read -r id _ category _rest; do
+        [[ -n "$id" ]] || continue
+        [[ "$cats" == *",$category,"* ]] && out+="${out:+,}$id"
+    done < <(_mb_targets)
+    printf '%s' "$out"
 }
 
 emit_scan_result() {
@@ -269,51 +296,67 @@ emit_scan_result() {
 # --------------------------------------------------------------------------
 # Subcommands
 # --------------------------------------------------------------------------
-cmd_scan() {
-    local categories="ai,system"
-    local arg
+# Fast: list every analyzable target and whether it is present on this system.
+# No `du`, no mole load — just existence checks, so it returns instantly.
+cmd_discover() {
+    local out="" first=1
+    local id label category detect _fns installed
+    while IFS='|' read -r id label category detect _fns; do
+        [[ -n "$id" ]] || continue
+        if _target_installed "$detect"; then installed="true"; else installed="false"; fi
+        [[ $first -eq 1 ]] || out+=","
+        first=0
+        out+="{\"id\":$(json_string "$id"),\"label\":$(json_string "$label"),\"category\":$(json_string "$category"),\"installed\":$installed}"
+    done < <(_mb_targets)
+    emit "{\"targets\":[$out]}"
+}
+
+# Resolve --targets / --categories args to a concrete CSV of target ids.
+_resolve_targets() {
+    local sel="" cats="" arg
     for arg in "$@"; do
         case "$arg" in
-            --categories=*) categories="${arg#*=}" ;;
+            --targets=*)    sel="${arg#*=}" ;;
+            --categories=*) cats="${arg#*=}" ;;
         esac
     done
+    if [[ -n "$sel" ]]; then
+        printf '%s' "$sel"
+    elif [[ -n "$cats" ]]; then
+        _targets_for_categories "$cats"
+    else
+        _targets_for_categories "ai,system"
+    fi
+}
+
+cmd_scan() {
+    local targets
+    targets="$(_resolve_targets "$@")"
 
     MB_MODE="scan"
     load_mole
 
-    local cat
-    {
-        IFS=',' read -ra _cats <<< "$categories"
-        for cat in "${_cats[@]}"; do
-            run_category "$cat"
-        done
-    } >/dev/null 2>&1
+    { _run_targets "$targets"; } >/dev/null 2>&1
 
     emit_scan_result
 }
 
 cmd_clean() {
-    local paths_file="" categories="ai,system"
+    local paths_file=""
     local arg
     for arg in "$@"; do
-        case "$arg" in
-            --paths-file=*) paths_file="${arg#*=}" ;;
-            --categories=*) categories="${arg#*=}" ;;
-        esac
+        case "$arg" in --paths-file=*) paths_file="${arg#*=}" ;; esac
     done
     [[ -n "$paths_file" && -f "$paths_file" ]] || die "clean requires --paths-file=FILE" 4
+
+    local targets
+    targets="$(_resolve_targets "$@")"
 
     MB_PATHS_FILE="$paths_file"
     MB_MODE="clean"
     load_mole
 
-    local cat
-    {
-        IFS=',' read -ra _cats <<< "$categories"
-        for cat in "${_cats[@]}"; do
-            run_category "$cat"
-        done
-    } >/dev/null 2>&1
+    { _run_targets "$targets"; } >/dev/null 2>&1
 
     emit "{\"event\":\"done\",\"freed_bytes\":$MB_FREED_BYTES,\"count\":$MB_COUNT}"
 }
@@ -459,6 +502,7 @@ main() {
     local sub="${1:-}"
     [[ $# -gt 0 ]] && shift
     case "$sub" in
+        discover)  cmd_discover "$@" ;;
         scan)      cmd_scan "$@" ;;
         clean)     cmd_clean "$@" ;;
         ai-scan)   cmd_scan --categories=ai "$@" ;;
@@ -469,7 +513,7 @@ main() {
         status)    cmd_status "$@" ;;
         version)   cmd_version "$@" ;;
         ""|-h|--help)
-            emit '{"usage":"macbroom-engine.sh {scan|clean|ai-scan|ai-clean|apps|app-scan|app-clean|status|version}"}' ;;
+            emit '{"usage":"macbroom-engine.sh {discover|scan|clean|ai-scan|ai-clean|apps|app-scan|app-clean|status|version}"}' ;;
         *) die "unknown subcommand: $sub" 64 ;;
     esac
 }

@@ -37,8 +37,21 @@ public struct EngineBridge {
         return try decodeLast(SystemStatus.self, from: data)
     }
 
+    /// Fast discovery: which targets exist on this machine (no sizing).
+    public func discover() async throws -> [AnalysisTarget] {
+        let (data, _) = try await runCollecting(["discover"])
+        return try decodeLast(DiscoverResult.self, from: data).targets
+    }
+
     public func scan(categories: [CleanCategory]) async throws -> ScanResult {
         let arg = "--categories=" + categories.map(\.rawValue).joined(separator: ",")
+        let (data, _) = try await runCollecting(["scan", arg])
+        return try decodeLast(ScanResult.self, from: data)
+    }
+
+    /// Scan only the selected target ids (the scoped, fast path).
+    public func scan(targetIds: [String]) async throws -> ScanResult {
+        let arg = "--targets=" + targetIds.joined(separator: ",")
         let (data, _) = try await runCollecting(["scan", arg])
         return try decodeLast(ScanResult.self, from: data)
     }
@@ -59,9 +72,9 @@ public struct EngineBridge {
         streamingClean(subcommand: "app-clean", extraArgs: [], approvedPaths: approvedPaths, deleteMode: deleteMode)
     }
 
-    /// Delete user-approved paths, streaming progress as it goes.
-    public func clean(approvedPaths: [String], categories: [CleanCategory], deleteMode: DeleteMode = .permanent) -> AsyncThrowingStream<EngineEvent, Error> {
-        let arg = "--categories=" + categories.map(\.rawValue).joined(separator: ",")
+    /// Delete user-approved paths within the given targets, streaming progress.
+    public func clean(approvedPaths: [String], targetIds: [String], deleteMode: DeleteMode = .permanent) -> AsyncThrowingStream<EngineEvent, Error> {
+        let arg = "--targets=" + targetIds.joined(separator: ",")
         return streamingClean(subcommand: "clean", extraArgs: [arg], approvedPaths: approvedPaths, deleteMode: deleteMode)
     }
 

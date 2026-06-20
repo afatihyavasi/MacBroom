@@ -29,6 +29,18 @@ public struct ScanResult: Codable {
     public var count: Int
 }
 
+/// An analyzable target from `discover` (fast existence check, no sizing).
+public struct AnalysisTarget: Codable, Identifiable, Hashable {
+    public var id: String
+    public var label: String
+    public var category: String
+    public var installed: Bool
+}
+
+public struct DiscoverResult: Codable {
+    public var targets: [AnalysisTarget]
+}
+
 /// An installed, user-removable application from `apps`.
 public struct AppInfo: Codable, Identifiable, Hashable {
     public var name: String

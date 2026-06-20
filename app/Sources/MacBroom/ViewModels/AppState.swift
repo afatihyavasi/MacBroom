@@ -7,6 +7,8 @@ import MacBroomCore
 final class AppState: ObservableObject {
     enum Phase: Equatable {
         case idle
+        case discovering
+        case selecting          // user chooses which targets to analyze
         case scanning
         case ready
         case cleaning(done: Int, total: Int)
@@ -18,6 +20,11 @@ final class AppState: ObservableObject {
     @Published var candidates: [CleanCandidate] = []
     @Published var selected: Set<String> = []          // selected candidate paths
     @Published var status: SystemStatus?
+
+    // Discovery / target selection
+    @Published var targets: [AnalysisTarget] = []
+    @Published var selectedTargets: Set<String> = []   // target ids chosen to analyze
+    private var scannedTargets: [String] = []          // targets actually scanned (for clean scope)
 
     private let engine: EngineBridge
 
@@ -92,14 +99,39 @@ final class AppState: ObservableObject {
         status = try? await engine.status()
     }
 
-    func scan(categories: [CleanCategory] = CleanCategory.allCases) async {
+    // MARK: discovery -> selection -> scan
+
+    /// Fast: find what's present and present the selection screen. AI targets
+    /// are pre-checked (the safe headline); system targets are opt-in.
+    func discover() async {
+        phase = .discovering
+        do {
+            let found = try await engine.discover()
+            targets = found
+            selectedTargets = Set(found.filter { $0.installed && $0.category == "ai" }.map(\.id))
+            phase = .selecting
+            await refreshStatus()
+        } catch {
+            phase = .error(error.localizedDescription)
+        }
+    }
+
+    func toggleTarget(_ id: String) {
+        if selectedTargets.contains(id) { selectedTargets.remove(id) } else { selectedTargets.insert(id) }
+    }
+
+    var installedTargets: [AnalysisTarget] { targets.filter { $0.installed } }
+
+    /// Scan only the targets the user selected.
+    func scanSelected() async {
+        let ids = Array(selectedTargets)
+        guard !ids.isEmpty else { return }
+        scannedTargets = ids
         phase = .scanning
         do {
-            let result = try await engine.scan(categories: categories)
+            let result = try await engine.scan(targetIds: ids)
             candidates = result.candidates.sorted { $0.sizeBytes > $1.sizeBytes }
-            // Pre-select only AI caches (the safe, headline cleanup). System
-            // caches are opt-in: surfaced but left unchecked so the user
-            // deliberately chooses them.
+            // Pre-select AI caches; system caches stay opt-in.
             selected = Set(candidates.filter { $0.category == "ai" }.map(\.path))
             phase = .ready
             await refreshStatus()
@@ -108,7 +140,14 @@ final class AppState: ObservableObject {
         }
     }
 
-    func clean(categories: [CleanCategory] = CleanCategory.allCases) async {
+    /// Return to the target selection screen.
+    func backToSelection() {
+        candidates = []
+        selected = []
+        phase = .selecting
+    }
+
+    func clean() async {
         let approved = Array(selected)
         guard !approved.isEmpty else { return }
         let total = approved.count
@@ -116,7 +155,7 @@ final class AppState: ObservableObject {
         var freed: Int64 = 0
         var done = 0
         do {
-            for try await event in engine.clean(approvedPaths: approved, categories: categories, deleteMode: deleteMode) {
+            for try await event in engine.clean(approvedPaths: approved, targetIds: scannedTargets, deleteMode: deleteMode) {
                 switch event {
                 case let .progress(_, bytes):
                     freed += bytes
