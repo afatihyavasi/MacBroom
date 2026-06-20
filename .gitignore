@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+*.swp
+
+# Swift / Xcode
+.build/
+.swiftpm/
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+Package.resolved
+
+# Build artifacts
+build/
+dist/
+*.dmg
+*.app
+
+# Secrets / signing
+*.p12
+*.provisionprofile
+.env
+notarization.json
+
+# Engine scratch
+engine/tests/tmp-*

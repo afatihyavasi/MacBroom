@@ -1,0 +1,6 @@
+# MacBroom shellcheck configuration
+# The engine sources mole's lib/ at runtime; those paths aren't resolvable
+# statically, so we don't follow non-constant `source` directives.
+external-sources=false
+# bash 3.2 is the macOS baseline target.
+shell=bash
