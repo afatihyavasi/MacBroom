@@ -1,13 +1,19 @@
 import SwiftUI
 import MacBroomCore
 
-/// System cache cleanup: a reviewable, selectable list of regenerable system /
-/// app caches surfaced by mole (already filtered by its protection layer).
-struct SystemCacheView: View {
+/// Generic cache cleanup for an arbitrary `CleanCategory`: a reviewable,
+/// selectable list of regenerable caches surfaced by the engine (already
+/// filtered by its protection layer). Derives entirely from `category`, so a
+/// new enum case yields a working results view with no per-category code.
+struct CategoryCacheView: View {
     @EnvironmentObject var state: AppState
     @EnvironmentObject var loc: LocalizationManager
 
-    private var items: [CleanCandidate] { state.systemCandidates }
+    let category: CleanCategory
+
+    private var items: [CleanCandidate] {
+        state.candidates(in: category).sorted { $0.sizeBytes > $1.sizeBytes }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.sm) {
@@ -38,10 +44,10 @@ struct SystemCacheView: View {
 
     private var selectAllHeader: some View {
         HStack(spacing: Theme.Space.sm) {
-            SHSelectAllToggle(state: state.selectionState(in: .system),
+            SHSelectAllToggle(state: state.selectionState(in: category),
                               selectTitle: loc.t(.selectAll),
                               deselectTitle: loc.t(.deselectAll)) {
-                state.toggleAll(in: .system)
+                state.toggleAll(in: category)
             }
             Spacer()
             SHBadge(text: loc.t(.itemsBytes, items.count,

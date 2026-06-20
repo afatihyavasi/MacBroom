@@ -7,18 +7,34 @@ struct MenuBarView: View {
     @EnvironmentObject var state: AppState
     @EnvironmentObject var loc: LocalizationManager
 
-    enum Section: String, CaseIterable, Identifiable {
-        case ai, system, apps
-        var id: String { rawValue }
+    /// A tab is either a cleaning category (derived from `CleanCategory`) or the
+    /// Apps uninstaller. The cache tabs come straight from `CleanCategory.allCases`
+    /// and Apps is appended, so a future category case yields a tab for free.
+    enum Section: Hashable, Identifiable {
+        case category(CleanCategory)
+        case apps
+
+        var id: String {
+            switch self {
+            case .category(let c): return c.rawValue
+            case .apps: return "apps"
+            }
+        }
+
+        /// The ordered tab list: every cleaning category, then Apps.
+        static var allCases: [Section] {
+            CleanCategory.allCases.map(Section.category) + [.apps]
+        }
+
         var titleKey: L10n {
             switch self {
-            case .ai: return .tabAI
-            case .system: return .tabSystem
+            case .category(.ai): return .tabAI
+            case .category(.system): return .tabSystem
             case .apps: return .tabApps
             }
         }
     }
-    @State private var section: Section = .ai
+    @State private var section: Section = .category(.ai)
     @Environment(\.openWindow) private var openWindow
     @AppStorage("didOnboard") private var didOnboard = false
 
@@ -36,7 +52,7 @@ struct MenuBarView: View {
 
             content.frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            if section != .apps {
+            if category != nil {
                 SHSeparator()
                 cleanControls
             }
@@ -78,12 +94,14 @@ struct MenuBarView: View {
         }
     }
 
-    /// Invisible buttons that wire ⌘1/⌘2/⌘3 to the tabs.
+    /// Invisible buttons that wire ⌘1…⌘N to the tabs, in their displayed order
+    /// (so a 4th tab automatically gets ⌘4). Only the first 9 are addressable.
     private var tabShortcuts: some View {
         Group {
-            Button("") { section = .ai }.keyboardShortcut("1", modifiers: .command)
-            Button("") { section = .system }.keyboardShortcut("2", modifiers: .command)
-            Button("") { section = .apps }.keyboardShortcut("3", modifiers: .command)
+            ForEach(Array(Section.allCases.prefix(9).enumerated()), id: \.element.id) { index, tab in
+                Button("") { section = tab }
+                    .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
+            }
         }
         .opacity(0).frame(width: 0, height: 0).accessibilityHidden(true)
     }
@@ -118,37 +136,44 @@ struct MenuBarView: View {
     // MARK: content
 
     @ViewBuilder private var content: some View {
-        switch section {
-        case .apps: UninstallView()
-        case .ai, .system: cleanContent
+        if category != nil {
+            cleanContent
+        } else {
+            UninstallView()
         }
     }
 
-    /// The cleaning category for the current tab (Apps handled separately).
-    private var category: CleanCategory { section == .system ? .system : .ai }
+    /// The cleaning category for the current tab, or nil for the Apps tab.
+    private var category: CleanCategory? {
+        if case .category(let c) = section { return c }
+        return nil
+    }
 
     @ViewBuilder private var cleanContent: some View {
-        // A transient state is shown on a tab only if it owns it (`phaseCategory`
-        // == this tab, or nil for a global discovery state). Otherwise the tab
-        // falls through to its own resting view.
-        let owns = state.phaseCategory == nil || state.phaseCategory == category
-        switch state.phase {
-        case .idle, .discovering:
-            loading(loc.t(.searchingTargets))
-        case .scanning where owns:
-            loading(loc.t(.scanningTargets))
-        case let .cleaning(done, total, freed) where owns:
-            cleaningView(done: done, total: total, freed: freed)
-        case let .finished(freed, failed, permissionBlocked) where owns:
-            cacheResult(freed: freed, failed: failed, permissionBlocked: permissionBlocked)
-        case let .error(msg) where owns:
-            resultView(icon: "exclamationmark.triangle.fill", tint: Theme.destructive,
-                       title: msg, action: loc.t(.back)) { state.dismissCacheResult() }
-        default:
-            if state.isScanned(category) {
-                if category == .ai { AICacheView() } else { SystemCacheView() }
-            } else {
-                AnalysisSelectionView(category: category)
+        // Only rendered for a cleaning tab, so `category` is always non-nil here.
+        if let category {
+            // A transient state is shown on a tab only if it owns it
+            // (`phaseCategory` == this tab, or nil for a global discovery state).
+            // Otherwise the tab falls through to its own resting view.
+            let owns = state.phaseCategory == nil || state.phaseCategory == category
+            switch state.phase {
+            case .idle, .discovering:
+                loading(loc.t(.searchingTargets))
+            case .scanning where owns:
+                loading(loc.t(.scanningTargets))
+            case let .cleaning(done, total, freed) where owns:
+                cleaningView(done: done, total: total, freed: freed)
+            case let .finished(freed, failed, permissionBlocked) where owns:
+                cacheResult(freed: freed, failed: failed, permissionBlocked: permissionBlocked)
+            case let .error(msg) where owns:
+                resultView(icon: "exclamationmark.triangle.fill", tint: Theme.destructive,
+                           title: msg, action: loc.t(.back)) { state.dismissCacheResult() }
+            default:
+                if state.isScanned(category) {
+                    if category == .ai { AICacheView() } else { CategoryCacheView(category: category) }
+                } else {
+                    AnalysisSelectionView(category: category)
+                }
             }
         }
     }
@@ -219,7 +244,7 @@ struct MenuBarView: View {
 
     /// True exactly when this tab is showing its results list.
     private var showResults: Bool {
-        guard state.isScanned(category) else { return false }
+        guard let category, state.isScanned(category) else { return false }
         let owns = state.phaseCategory == nil || state.phaseCategory == category
         switch state.phase {
         case .idle, .discovering: return false
@@ -228,25 +253,27 @@ struct MenuBarView: View {
         }
     }
 
-    private var cleanControls: some View {
-        HStack(spacing: Theme.Space.sm) {
-            if showResults {
-                Button { state.backToSelection(category: category) } label: {
-                    HStack(spacing: 3) { Image(systemName: "chevron.left"); Text(loc.t(.backTargets)) }
+    @ViewBuilder private var cleanControls: some View {
+        if let category {
+            HStack(spacing: Theme.Space.sm) {
+                if showResults {
+                    Button { state.backToSelection(category: category) } label: {
+                        HStack(spacing: 3) { Image(systemName: "chevron.left"); Text(loc.t(.backTargets)) }
+                    }
+                    .buttonStyle(.shGhost(.sm))
+                    Text(loc.t(.selectedSuffix, Format.bytes(state.selectedBytes(in: category))))
+                        .font(.shCaption).foregroundStyle(Theme.mutedForeground)
                 }
-                .buttonStyle(.shGhost(.sm))
-                Text(loc.t(.selectedSuffix, Format.bytes(state.selectedBytes(in: category))))
-                    .font(.shCaption).foregroundStyle(Theme.mutedForeground)
+                Spacer()
+                if showResults {
+                    Button(loc.t(.clean)) { Task { await state.clean(category: category) } }
+                        .buttonStyle(.shPrimary(.sm))
+                        .disabled(!state.hasSelection(in: category))
+                }
+                Button(loc.t(.quit)) { NSApplication.shared.terminate(nil) }
+                    .buttonStyle(.shGhost(.sm))
+                    .keyboardShortcut("q", modifiers: .command)
             }
-            Spacer()
-            if showResults {
-                Button(loc.t(.clean)) { Task { await state.clean(category: category) } }
-                    .buttonStyle(.shPrimary(.sm))
-                    .disabled(!state.hasSelection(in: category))
-            }
-            Button(loc.t(.quit)) { NSApplication.shared.terminate(nil) }
-                .buttonStyle(.shGhost(.sm))
-                .keyboardShortcut("q", modifiers: .command)
         }
     }
 }
