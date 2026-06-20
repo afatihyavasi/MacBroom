@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install shell test tools
+        run: brew install bats-core shellcheck
+
+      - name: Shellcheck engine
+        run: shellcheck -x engine/macbroom-engine.sh
+
+      - name: Engine tests (bats)
+        run: bats engine/tests/
+
+      - name: Build app
+        working-directory: app
+        run: swift build
+
+      - name: Swift self-tests
+        working-directory: app
+        run: swift run MacBroomSelfTest
+
+      - name: Assemble .app (smoke)
+        run: bash scripts/make-app.sh "0.0.0-ci"
