@@ -13,6 +13,7 @@ private struct CardModifier: ViewModifier {
             .background(
                 RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
                     .fill(Theme.card)
+                    .shadow(color: .black.opacity(0.05), radius: 1.5, y: 1)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
@@ -37,11 +38,18 @@ enum SHSize { case sm, md
     var font: Font { self == .sm ? .shLabel : .shHeadline }
 }
 
+/// Shared chrome for every button variant. Lives in a ViewModifier (a real view
+/// context) so hover/press/disabled state actually tracks — and so the hover
+/// effect is shadcn's fill-alpha shift, which works on near-black/near-white
+/// fills where `.brightness` would be invisible.
 private struct SHButtonBackground: ViewModifier {
-    let fill: Color
+    let idleFill: Color
+    let hoverFill: Color
     let fg: Color
     let border: Color?
     let size: SHSize
+    let isPressed: Bool
+    @Environment(\.isEnabled) private var isEnabled
     @State private var hovering = false
     func body(content: Content) -> some View {
         content
@@ -52,14 +60,17 @@ private struct SHButtonBackground: ViewModifier {
             .frame(minHeight: size == .sm ? 24 : 30)
             .background(
                 RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
-                    .fill(fill)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
-                            .strokeBorder(border ?? .clear, lineWidth: border == nil ? 0 : 1)
-                    )
+                    .fill(hovering && isEnabled ? hoverFill : idleFill)
             )
-            .brightness(hovering ? 0.04 : 0)
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+                    .strokeBorder(border ?? .clear, lineWidth: border == nil ? 0 : 1)
+            )
+            .opacity(isEnabled ? 1 : 0.45)
+            .scaleEffect(isPressed ? 0.97 : 1)
             .onHover { hovering = $0 }
+            .animation(.easeOut(duration: 0.12), value: hovering)
+            .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isPressed)
             .contentShape(Rectangle())
     }
 }
@@ -67,55 +78,45 @@ private struct SHButtonBackground: ViewModifier {
 struct SHPrimaryButton: ButtonStyle {
     var size: SHSize = .md
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .modifier(SHButtonBackground(fill: Theme.primary, fg: Theme.primaryForeground, border: nil, size: size))
-            .opacity(configuration.isPressed ? 0.85 : 1)
+        configuration.label.modifier(SHButtonBackground(
+            idleFill: Theme.primary, hoverFill: Theme.primary.opacity(0.9),
+            fg: Theme.primaryForeground, border: nil, size: size, isPressed: configuration.isPressed))
     }
 }
 
 struct SHSecondaryButton: ButtonStyle {
     var size: SHSize = .md
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .modifier(SHButtonBackground(fill: Theme.secondary, fg: Theme.secondaryForeground, border: nil, size: size))
-            .opacity(configuration.isPressed ? 0.85 : 1)
+        configuration.label.modifier(SHButtonBackground(
+            idleFill: Theme.secondary, hoverFill: Theme.secondary.opacity(0.8),
+            fg: Theme.secondaryForeground, border: nil, size: size, isPressed: configuration.isPressed))
     }
 }
 
 struct SHOutlineButton: ButtonStyle {
     var size: SHSize = .md
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .modifier(SHButtonBackground(fill: Theme.card, fg: Theme.foreground, border: Theme.border, size: size))
-            .opacity(configuration.isPressed ? 0.85 : 1)
+        configuration.label.modifier(SHButtonBackground(
+            idleFill: Theme.card, hoverFill: Theme.muted,
+            fg: Theme.foreground, border: Theme.border, size: size, isPressed: configuration.isPressed))
     }
 }
 
 struct SHDestructiveButton: ButtonStyle {
     var size: SHSize = .md
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .modifier(SHButtonBackground(fill: Theme.destructive, fg: Theme.destructiveFg, border: nil, size: size))
-            .opacity(configuration.isPressed ? 0.85 : 1)
+        configuration.label.modifier(SHButtonBackground(
+            idleFill: Theme.destructive, hoverFill: Theme.destructive.opacity(0.9),
+            fg: Theme.destructiveFg, border: nil, size: size, isPressed: configuration.isPressed))
     }
 }
 
 struct SHGhostButton: ButtonStyle {
     var size: SHSize = .md
-    @State private var hovering = false
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(size.font)
-            .foregroundStyle(Theme.foreground)
-            .padding(.vertical, size.vPad)
-            .padding(.horizontal, size.hPad)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
-                    .fill(hovering ? Theme.muted : .clear)
-            )
-            .opacity(configuration.isPressed ? 0.7 : 1)
-            .onHover { hovering = $0 }
-            .contentShape(Rectangle())
+        configuration.label.modifier(SHButtonBackground(
+            idleFill: .clear, hoverFill: Theme.muted,
+            fg: Theme.foreground, border: nil, size: size, isPressed: configuration.isPressed))
     }
 }
 
@@ -159,6 +160,7 @@ struct SHIconButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovering)
         .help(help)
     }
 }
@@ -186,6 +188,29 @@ struct SHSeparator: View {
     var body: some View { Rectangle().fill(Theme.border).frame(height: 1) }
 }
 
+// MARK: - Row hover highlight
+
+private struct HoverHighlight: ViewModifier {
+    var radius: CGFloat
+    @State private var hovering = false
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(hovering ? Theme.muted.opacity(0.6) : .clear)
+            )
+            .onHover { hovering = $0 }
+            .animation(.easeOut(duration: 0.12), value: hovering)
+    }
+}
+
+extension View {
+    /// Subtle muted fill on hover — for whole-row clickable list items.
+    func shRowHover(_ radius: CGFloat = Theme.Radius.md) -> some View {
+        modifier(HoverHighlight(radius: radius))
+    }
+}
+
 // MARK: - Section header (icon + title)
 
 struct SHSectionHeader: View {
@@ -210,6 +235,7 @@ struct SHCheckboxStyle: ToggleStyle {
         } label: {
             HStack(spacing: Theme.Space.sm) {
                 box(configuration.isOn ? .on : .off)
+                    .animation(.snappy(duration: 0.12), value: configuration.isOn)
                 configuration.label
             }
             .contentShape(Rectangle())
@@ -248,6 +274,7 @@ struct SHTriCheckbox: View {
     var body: some View {
         Button(action: action) {
             SHCheckboxStyle().box(state == true ? .on : (state == nil ? .mixed : .off))
+                .animation(.snappy(duration: 0.12), value: state)
         }
         .buttonStyle(.plain)
     }

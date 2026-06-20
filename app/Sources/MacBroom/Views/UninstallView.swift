@@ -138,6 +138,7 @@ struct UninstallView: View {
                         }
                         .toggleStyle(SHCheckboxStyle())
                         .padding(.vertical, 5).padding(.horizontal, Theme.Space.sm)
+                        .shRowHover()
                         .help(c.path)
                         if c.id != state.appCandidates.last?.id { SHSeparator().opacity(0.6) }
                     }

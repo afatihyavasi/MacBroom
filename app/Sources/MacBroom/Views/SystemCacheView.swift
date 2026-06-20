@@ -60,6 +60,7 @@ struct SystemCacheView: View {
         .toggleStyle(SHCheckboxStyle())
         .padding(.vertical, 6)
         .padding(.horizontal, Theme.Space.sm)
+        .shRowHover()
         .help(c.path)
     }
 

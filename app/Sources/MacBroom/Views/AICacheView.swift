@@ -100,6 +100,8 @@ private struct AIToolSection: View {
         .toggleStyle(SHCheckboxStyle())
         .padding(.leading, 24)
         .padding(.vertical, 5)
+        .padding(.horizontal, Theme.Space.xs)
+        .shRowHover()
         .help(c.path)
     }
 }
