@@ -1,0 +1,162 @@
+import SwiftUI
+import MacBroomCore
+
+/// Rich per-AI-tool automatic-clean scheduling. Edits a local DRAFT; nothing is
+/// applied until the user presses Save (then AppState.applyRules commits it and
+/// the scheduler picks it up).
+struct AutomationView: View {
+    @EnvironmentObject var state: AppState
+    @EnvironmentObject var loc: LocalizationManager
+    @State private var draft: [String: AutoCleanRule] = [:]
+
+    private var tools: [AnalysisTarget] { state.installedTargets(in: .ai) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.md) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(loc.t(.automationTitle)).font(.shTitle)
+                Text(loc.t(.automationDesc)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
+            }
+
+            if tools.isEmpty {
+                Spacer()
+                Text(loc.t(.autoCleanNoTools)).font(.shBody).foregroundStyle(Theme.mutedForeground)
+                    .frame(maxWidth: .infinity)
+                Spacer()
+            } else {
+                ScrollView {
+                    VStack(spacing: Theme.Space.sm) {
+                        ForEach(tools) { toolCard($0) }
+                    }
+                }
+                .frame(maxHeight: .infinity)
+            }
+
+            SHSeparator()
+            HStack {
+                Button(loc.t(.cancel)) { AutomationWindowController.shared.close() }
+                    .buttonStyle(.shOutline(.sm)).keyboardShortcut(.cancelAction)
+                Spacer()
+                Button(loc.t(.save)) {
+                    state.applyRules(draft)
+                    AutomationWindowController.shared.close()
+                }
+                .buttonStyle(.shPrimary(.sm)).keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(Theme.Space.xl)
+        .frame(width: 460, height: 560)
+        .background(Theme.background)
+        .foregroundStyle(Theme.foreground)
+        .onAppear(perform: seedDraft)
+    }
+
+    private func seedDraft() {
+        var d: [String: AutoCleanRule] = [:]
+        for t in tools { d[t.id] = state.rule(for: t.id) }
+        draft = d
+    }
+
+    private func rule(_ id: String) -> Binding<AutoCleanRule> {
+        Binding(get: { draft[id] ?? .off }, set: { draft[id] = $0 })
+    }
+
+    private func toolCard(_ t: AnalysisTarget) -> some View {
+        let r = rule(t.id)
+        let enabled = r.wrappedValue.isEnabled
+        return VStack(alignment: .leading, spacing: Theme.Space.sm) {
+            HStack(spacing: Theme.Space.sm) {
+                AIToolIconView(tool: AITool(rawValue: String(t.id.dropFirst(3))) ?? .other, size: 18)
+                Text(t.label).font(.shLabel)
+                Spacer()
+                Picker("", selection: r.frequency) {
+                    ForEach(CleanFrequency.allCases) { Text(loc.t($0.titleKey)).tag($0) }
+                }
+                .pickerStyle(.menu).labelsHidden().fixedSize()
+            }
+            conditionalControls(r)
+            if enabled, let last = state.lastRun(for: t.id) {
+                Text(loc.t(.autoCleanLast, Self.relative.localizedString(for: last, relativeTo: Date())))
+                    .font(.shCaption).foregroundStyle(Theme.mutedForeground)
+            }
+        }
+        .padding(Theme.Space.sm)
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.card))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+                .strokeBorder(enabled ? Theme.accent.opacity(0.5) : Theme.border, lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder private func conditionalControls(_ r: Binding<AutoCleanRule>) -> some View {
+        switch r.wrappedValue.frequency {
+        case .off:
+            EmptyView()
+        case .hourly:
+            labeledRow(loc.t(.intervalLabel)) {
+                Stepper(loc.t(.everyNHours, r.wrappedValue.hourInterval), value: r.hourInterval, in: 1...12)
+                    .labelsHidden().fixedSize()
+            }
+        case .daily:
+            timeRow(r)
+        case .weekly:
+            labeledRow(loc.t(.weekdayLabel)) {
+                Picker("", selection: r.weekday) {
+                    ForEach(1...7, id: \.self) { Text(weekdayName($0)).tag($0) }
+                }
+                .pickerStyle(.menu).labelsHidden().fixedSize()
+            }
+            timeRow(r)
+        case .monthly:
+            labeledRow(loc.t(.monthDayLabel)) {
+                Stepper("\(r.wrappedValue.dayOfMonth)", value: r.dayOfMonth, in: 1...28).labelsHidden().fixedSize()
+            }
+            timeRow(r)
+        }
+    }
+
+    private func timeRow(_ r: Binding<AutoCleanRule>) -> some View {
+        labeledRow(loc.t(.timeLabel)) {
+            DatePicker("", selection: timeBinding(r), displayedComponents: .hourAndMinute)
+                .labelsHidden().fixedSize()
+        }
+    }
+
+    private func labeledRow<C: View>(_ label: String, @ViewBuilder _ control: () -> C) -> some View {
+        HStack {
+            Text(label).font(.shCaption).foregroundStyle(Theme.mutedForeground)
+            Spacer()
+            control()
+        }
+    }
+
+    private func timeBinding(_ r: Binding<AutoCleanRule>) -> Binding<Date> {
+        Binding(
+            get: {
+                var c = DateComponents(); c.year = 2000; c.month = 1; c.day = 1
+                c.hour = r.wrappedValue.hour; c.minute = r.wrappedValue.minute
+                return Calendar.current.date(from: c) ?? Date()
+            },
+            set: { newDate in
+                let c = Calendar.current.dateComponents([.hour, .minute], from: newDate)
+                var rule = r.wrappedValue
+                rule.hour = c.hour ?? 0
+                rule.minute = c.minute ?? 0
+                r.wrappedValue = rule
+            }
+        )
+    }
+
+    /// Localized weekday name for Calendar weekday index (1=Sun … 7=Sat).
+    private func weekdayName(_ weekday: Int) -> String {
+        var cal = Calendar(identifier: .gregorian)
+        cal.locale = Locale(identifier: loc.language.resolved.rawValue)
+        let symbols = cal.weekdaySymbols
+        let idx = (weekday - 1) % 7
+        return symbols.indices.contains(idx) ? symbols[idx].capitalized : "\(weekday)"
+    }
+
+    private static let relative: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter(); f.unitsStyle = .abbreviated; return f
+    }()
+}

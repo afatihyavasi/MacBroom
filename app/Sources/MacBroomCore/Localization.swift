@@ -55,6 +55,9 @@ public enum L10n: String, CaseIterable {
     case targetXcode, targetPkgCaches
     case autoCleanTitle, autoCleanDesc, autoCleanNoTools, autoCleanLast
     case freqOff, freqHourly, freqDaily, freqWeekly, freqMonthly
+    case appearance, appearanceSystem, appearanceLight, appearanceDark
+    case aiAutomationInfo, aiAutomationOpen, automationTitle, automationDesc, save
+    case everyNHours, weekdayLabel, timeLabel, monthDayLabel, intervalLabel
     case deletePermanentTitle, deleteTrashTitle, deletePermanentDetail, deleteTrashDetail
     case errEngineNotFound, errNonZero, errDecode
 }
@@ -130,6 +133,12 @@ public enum Localization {
         .autoCleanNoTools: "No AI tools detected yet.", .autoCleanLast: "Last cleaned: %@",
         .freqOff: "Off", .freqHourly: "Hourly", .freqDaily: "Daily",
         .freqWeekly: "Weekly", .freqMonthly: "Monthly",
+        .appearance: "Appearance", .appearanceSystem: "System", .appearanceLight: "Light", .appearanceDark: "Dark",
+        .aiAutomationInfo: "Schedule MacBroom to clean your AI caches automatically.",
+        .aiAutomationOpen: "Set up automation",
+        .automationTitle: "AI Automation", .automationDesc: "Choose when each tool is cleaned. Applied when you press Save.",
+        .save: "Save", .everyNHours: "Every %d h", .weekdayLabel: "Day", .timeLabel: "Time",
+        .monthDayLabel: "Day of month", .intervalLabel: "Interval",
         .deletePermanentTitle: "Delete permanently", .deleteTrashTitle: "Move to Trash",
         .deletePermanentDetail: "Reclaims space immediately (can’t be undone).",
         .deleteTrashDetail: "Reversible; space frees up when the Trash is emptied.",
@@ -184,6 +193,12 @@ public enum Localization {
         .autoCleanNoTools: "Henüz AI aracı bulunamadı.", .autoCleanLast: "Son temizlik: %@",
         .freqOff: "Kapalı", .freqHourly: "Saatlik", .freqDaily: "Günlük",
         .freqWeekly: "Haftalık", .freqMonthly: "Aylık",
+        .appearance: "Görünüm", .appearanceSystem: "Sistem", .appearanceLight: "Açık", .appearanceDark: "Koyu",
+        .aiAutomationInfo: "MacBroom'un AI önbelleklerini otomatik temizlemesini planlayın.",
+        .aiAutomationOpen: "Otomasyonu ayarla",
+        .automationTitle: "AI Otomasyonu", .automationDesc: "Her aracın ne zaman temizleneceğini seçin. Kaydet'e bastığınızda uygulanır.",
+        .save: "Kaydet", .everyNHours: "Her %d saatte", .weekdayLabel: "Gün", .timeLabel: "Saat",
+        .monthDayLabel: "Ayın günü", .intervalLabel: "Aralık",
         .deletePermanentTitle: "Kalıcı olarak sil", .deleteTrashTitle: "Çöp Kutusu’na taşı",
         .deletePermanentDetail: "Alanı hemen geri kazanır (geri alınamaz).",
         .deleteTrashDetail: "Geri alınabilir; alan Çöp boşaltılınca boşalır.",
@@ -238,6 +253,12 @@ public enum Localization {
         .autoCleanNoTools: "Aún no se detectan herramientas de IA.", .autoCleanLast: "Última limpieza: %@",
         .freqOff: "Apagado", .freqHourly: "Cada hora", .freqDaily: "Diario",
         .freqWeekly: "Semanal", .freqMonthly: "Mensual",
+        .appearance: "Apariencia", .appearanceSystem: "Sistema", .appearanceLight: "Claro", .appearanceDark: "Oscuro",
+        .aiAutomationInfo: "Programa MacBroom para limpiar tus cachés de IA automáticamente.",
+        .aiAutomationOpen: "Configurar automatización",
+        .automationTitle: "Automatización de IA", .automationDesc: "Elige cuándo se limpia cada herramienta. Se aplica al pulsar Guardar.",
+        .save: "Guardar", .everyNHours: "Cada %d h", .weekdayLabel: "Día", .timeLabel: "Hora",
+        .monthDayLabel: "Día del mes", .intervalLabel: "Intervalo",
         .deletePermanentTitle: "Eliminar permanentemente", .deleteTrashTitle: "Mover a la Papelera",
         .deletePermanentDetail: "Libera espacio de inmediato (no se puede deshacer).",
         .deleteTrashDetail: "Reversible; el espacio se libera al vaciar la Papelera.",
@@ -292,6 +313,12 @@ public enum Localization {
         .autoCleanNoTools: "Aucun outil d’IA détecté pour l’instant.", .autoCleanLast: "Dernier nettoyage : %@",
         .freqOff: "Désactivé", .freqHourly: "Toutes les heures", .freqDaily: "Quotidien",
         .freqWeekly: "Hebdomadaire", .freqMonthly: "Mensuel",
+        .appearance: "Apparence", .appearanceSystem: "Système", .appearanceLight: "Clair", .appearanceDark: "Sombre",
+        .aiAutomationInfo: "Planifiez le nettoyage automatique de vos caches d'IA par MacBroom.",
+        .aiAutomationOpen: "Configurer l'automatisation",
+        .automationTitle: "Automatisation IA", .automationDesc: "Choisissez quand chaque outil est nettoyé. Appliqué quand vous enregistrez.",
+        .save: "Enregistrer", .everyNHours: "Toutes les %d h", .weekdayLabel: "Jour", .timeLabel: "Heure",
+        .monthDayLabel: "Jour du mois", .intervalLabel: "Intervalle",
         .deletePermanentTitle: "Supprimer définitivement", .deleteTrashTitle: "Mettre à la corbeille",
         .deletePermanentDetail: "Libère l’espace immédiatement (irréversible).",
         .deleteTrashDetail: "Réversible ; l’espace est libéré en vidant la corbeille.",

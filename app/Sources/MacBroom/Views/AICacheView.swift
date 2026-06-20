@@ -10,6 +10,7 @@ struct AICacheView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.sm) {
+            automationBanner
             if state.aiGroups.isEmpty {
                 emptyState
             } else {
@@ -24,6 +25,32 @@ struct AICacheView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    /// Info + entry point to the automatic-cleaning panel. Tinted brighter when
+    /// at least one AI tool already has automation enabled.
+    private var automationBanner: some View {
+        let active = state.installedTargets(in: .ai).contains { state.rule(for: $0.id).isEnabled }
+        return HStack(spacing: Theme.Space.sm) {
+            Image(systemName: "clock.arrow.circlepath").foregroundStyle(Theme.accent)
+            Text(loc.t(.aiAutomationInfo))
+                .font(.shCaption).foregroundStyle(Theme.mutedForeground)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: Theme.Space.xs)
+            Button(loc.t(.aiAutomationOpen)) {
+                AutomationWindowController.shared.show(state: state, loc: loc)
+            }
+            .buttonStyle(.shOutline(.sm)).fixedSize()
+        }
+        .padding(Theme.Space.sm)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+                .fill(Theme.accent.opacity(active ? 0.12 : 0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+                .strokeBorder(Theme.accent.opacity(active ? 0.4 : 0.2), lineWidth: 1)
+        )
     }
 
     private var emptyState: some View {

@@ -6,6 +6,7 @@ import MacBroomCore
 struct MenuBarView: View {
     @EnvironmentObject var state: AppState
     @EnvironmentObject var loc: LocalizationManager
+    @EnvironmentObject var appearance: AppearanceManager
 
     /// A tab is either a cleaning category (derived from `CleanCategory`) or the
     /// Apps uninstaller. The cache tabs come straight from `CleanCategory.allCases`
@@ -83,7 +84,7 @@ struct MenuBarView: View {
                 // Settings opens in its own AppKit window (deterministic for a
                 // menu-bar app; see SettingsWindowController) so its NSMenu
                 // pickers can't dismiss this panel.
-                SettingsWindowController.shared.show(state: state, loc: loc)
+                SettingsWindowController.shared.show(state: state, loc: loc, appearance: appearance)
             }
             .keyboardShortcut(",", modifiers: .command)
         }

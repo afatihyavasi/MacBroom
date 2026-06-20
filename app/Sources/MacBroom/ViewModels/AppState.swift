@@ -370,42 +370,48 @@ final class AppState: ObservableObject {
 
     // MARK: - Scheduled automatic AI cleaning
 
-    /// Per-target frequency (only non-`.off` entries are stored). Published so
-    /// the Settings UI reflects changes live.
-    @Published private(set) var schedules: [String: CleanFrequency] = [:]
+    /// Per-target schedule rules (only enabled entries are stored). Published so
+    /// the automation UI reflects committed changes.
+    @Published private(set) var rules: [String: AutoCleanRule] = [:]
     private var lastRun: [String: Date] = [:]
     private var schedulerStarted = false
-    private let schedulesKey = "autoCleanSchedules"
+    private let rulesKey = "autoCleanRules"
     private let lastRunKey = "autoCleanLastRun"
 
-    func frequency(for targetId: String) -> CleanFrequency { schedules[targetId] ?? .off }
+    func rule(for targetId: String) -> AutoCleanRule { rules[targetId] ?? .off }
     func lastRun(for targetId: String) -> Date? { lastRun[targetId] }
 
-    /// Enable/disable/change a target's automatic-clean schedule. Enabling starts
-    /// the clock now, so the first auto-clean is a full interval away (turning it
-    /// on never wipes immediately).
-    func setSchedule(_ freq: CleanFrequency, for targetId: String) {
-        if freq == .off {
-            schedules[targetId] = nil
-        } else {
-            schedules[targetId] = freq
-            if lastRun[targetId] == nil { lastRun[targetId] = Date() }
+    /// Commit a full set of rules (the automation panel's "Save"). Newly-enabled
+    /// rules start their clock now, so the first auto-clean is a full interval
+    /// away (saving never wipes immediately).
+    func applyRules(_ newRules: [String: AutoCleanRule]) {
+        let now = Date()
+        var next: [String: AutoCleanRule] = [:]
+        for (id, rule) in newRules where rule.isEnabled {
+            next[id] = rule
+            if lastRun[id] == nil { lastRun[id] = now }
         }
-        persistSchedules()
+        // Drop last-run stamps for targets no longer scheduled.
+        for id in lastRun.keys where next[id] == nil { lastRun[id] = nil }
+        rules = next
+        persistRules()
         persistLastRun()
     }
 
     private func loadSchedules() {
-        if let raw = UserDefaults.standard.dictionary(forKey: schedulesKey) as? [String: String] {
-            schedules = raw.compactMapValues { CleanFrequency(rawValue: $0) }.filter { $0.value != .off }
+        if let data = UserDefaults.standard.data(forKey: rulesKey),
+           let decoded = try? JSONDecoder().decode([String: AutoCleanRule].self, from: data) {
+            rules = decoded.filter { $0.value.isEnabled }
         }
         if let raw = UserDefaults.standard.dictionary(forKey: lastRunKey) as? [String: Double] {
             lastRun = raw.mapValues { Date(timeIntervalSince1970: $0) }
         }
     }
 
-    private func persistSchedules() {
-        UserDefaults.standard.set(schedules.mapValues { $0.rawValue }, forKey: schedulesKey)
+    private func persistRules() {
+        if let data = try? JSONEncoder().encode(rules) {
+            UserDefaults.standard.set(data, forKey: rulesKey)
+        }
     }
     private func persistLastRun() {
         UserDefaults.standard.set(lastRun.mapValues { $0.timeIntervalSince1970 }, forKey: lastRunKey)
@@ -429,7 +435,7 @@ final class AppState: ObservableObject {
     private func runDueSchedules() async {
         guard !isBusy else { return }   // never fight a manual operation
         let now = Date()
-        for (id, freq) in schedules where freq.isDue(since: lastRun[id], now: now) {
+        for (id, rule) in rules where rule.isDue(lastRun: lastRun[id], now: now) {
             await autoCleanTarget(id)
             lastRun[id] = Date()
             persistLastRun()

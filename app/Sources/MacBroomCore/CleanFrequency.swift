@@ -1,7 +1,7 @@
 import Foundation
 
 /// How often an AI tool's caches are cleaned automatically.
-public enum CleanFrequency: String, CaseIterable, Identifiable, Sendable {
+public enum CleanFrequency: String, CaseIterable, Identifiable, Sendable, Codable {
     case off, hourly, daily, weekly, monthly
 
     public var id: String { rawValue }

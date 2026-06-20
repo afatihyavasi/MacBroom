@@ -106,6 +106,34 @@ check("freq weekly not due after 1 day",
       CleanFrequency.weekly.isDue(since: Date(timeIntervalSince1970: 0), now: Date(timeIntervalSince1970: 86_400)) == false)
 check("freq never-run is due now", CleanFrequency.daily.isDue(since: nil, now: Date(timeIntervalSince1970: 100)))
 
+// AutoCleanRule calendar-based due logic (UTC gregorian for determinism)
+var utc = Calendar(identifier: .gregorian); utc.timeZone = TimeZone(identifier: "UTC")!
+func dt(_ y: Int, _ mo: Int, _ da: Int, _ h: Int = 0, _ mi: Int = 0) -> Date {
+    utc.date(from: DateComponents(year: y, month: mo, day: da, hour: h, minute: mi))!
+}
+let daily3 = AutoCleanRule(frequency: .daily, hour: 3)
+check("daily: due when lastRun before today's 03:00",
+      daily3.isDue(lastRun: dt(2024,1,1,12), now: dt(2024,1,2,5), calendar: utc))
+check("daily: not due when lastRun after today's 03:00",
+      daily3.isDue(lastRun: dt(2024,1,2,4), now: dt(2024,1,2,5), calendar: utc) == false)
+// 2024-01-01 is a Monday → Calendar weekday 2.
+let weeklyMon = AutoCleanRule(frequency: .weekly, hour: 3, weekday: 2)
+check("weekly Mon: due (lastRun before Monday's fire)",
+      weeklyMon.isDue(lastRun: dt(2023,12,25), now: dt(2024,1,3,12), calendar: utc))
+check("weekly Mon: not due (lastRun after Monday's fire)",
+      weeklyMon.isDue(lastRun: dt(2024,1,2), now: dt(2024,1,3,12), calendar: utc) == false)
+let hourly6 = AutoCleanRule(frequency: .hourly, hourInterval: 6)
+check("hourly/6: fire aligns to 12:00 at 13:00",
+      hourly6.lastFireDate(onOrBefore: dt(2024,1,1,13), calendar: utc) == dt(2024,1,1,12))
+check("hourly/6: due when lastRun before the 12:00 step",
+      hourly6.isDue(lastRun: dt(2024,1,1,11), now: dt(2024,1,1,13), calendar: utc))
+let monthly15 = AutoCleanRule(frequency: .monthly, hour: 3, dayOfMonth: 15)
+check("monthly/15: due after the 15th",
+      monthly15.isDue(lastRun: dt(2024,1,1), now: dt(2024,1,20), calendar: utc))
+check("monthly/15: not due before the 15th when lastRun is this month",
+      monthly15.isDue(lastRun: dt(2024,1,1), now: dt(2024,1,10), calendar: utc) == false)
+check("rule off never due", AutoCleanRule.off.isDue(lastRun: nil, now: dt(2024,1,1), calendar: utc) == false)
+
 // Localization: every key must be translated in all 4 languages (no fallback
 // gaps), and format placeholders must match across languages.
 for lang in [AppLanguage.en, .tr, .es, .fr] {
