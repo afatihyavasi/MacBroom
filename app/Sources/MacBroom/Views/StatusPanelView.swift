@@ -3,22 +3,23 @@ import MacBroomCore
 
 /// Compact live disk + memory usage panel shown under the header.
 struct StatusPanelView: View {
+    @EnvironmentObject var loc: LocalizationManager
     let status: SystemStatus
 
     var body: some View {
         HStack(spacing: 14) {
             UsageBar(
-                title: "Disk",
+                title: loc.t(.disk),
                 systemImage: "internaldrive",
                 percent: status.disk.usedPercent,
-                detail: "\(Format.bytes(status.disk.free)) boş"
+                detail: loc.t(.diskFree, Format.bytes(status.disk.free))
             )
             if let mem = status.memory {
                 UsageBar(
-                    title: "Bellek",
+                    title: loc.t(.memory),
                     systemImage: "memorychip",
                     percent: mem.usedPercent,
-                    detail: "\(Format.bytes(mem.total)) toplam"
+                    detail: loc.t(.memoryTotal, Format.bytes(mem.total))
                 )
             }
         }

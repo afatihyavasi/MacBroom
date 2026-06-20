@@ -99,16 +99,21 @@ public struct SystemStatus: Codable {
 /// Streaming events emitted by `clean` (NDJSON, one per line).
 public enum EngineEvent: Equatable {
     case progress(path: String, freedBytes: Int64)
-    case done(freedBytes: Int64, count: Int)
+    /// A path that could not be removed. `reason == "permission"` means the
+    /// parent directory wasn't writable (Full Disk Access / admin may help).
+    case skipped(path: String, reason: String)
+    case done(freedBytes: Int64, count: Int, failed: Int)
 
     /// Raw decode shape; `event` discriminates the case.
     private struct Wire: Codable {
         var event: String
         var path: String?
+        var reason: String?
         var freedBytes: Int64?
         var count: Int?
+        var failed: Int?
         enum CodingKeys: String, CodingKey {
-            case event, path, count
+            case event, path, reason, count, failed
             case freedBytes = "freed_bytes"
         }
     }
@@ -118,7 +123,8 @@ public enum EngineEvent: Equatable {
               let w = try? JSONDecoder().decode(Wire.self, from: data) else { return nil }
         switch w.event {
         case "progress": self = .progress(path: w.path ?? "", freedBytes: w.freedBytes ?? 0)
-        case "done":     self = .done(freedBytes: w.freedBytes ?? 0, count: w.count ?? 0)
+        case "skipped":  self = .skipped(path: w.path ?? "", reason: w.reason ?? "failed")
+        case "done":     self = .done(freedBytes: w.freedBytes ?? 0, count: w.count ?? 0, failed: w.failed ?? 0)
         default:         return nil
         }
     }
@@ -131,14 +137,14 @@ public enum DeleteMode: String, CaseIterable, Identifiable {
     public var id: String { rawValue }
     public var title: String {
         switch self {
-        case .permanent: return "Kalıcı olarak sil"
-        case .trash: return "Çöp Kutusu'na taşı"
+        case .permanent: return Localization.string(.deletePermanentTitle)
+        case .trash: return Localization.string(.deleteTrashTitle)
         }
     }
     public var detail: String {
         switch self {
-        case .permanent: return "Alanı hemen geri kazanır (geri alınamaz)."
-        case .trash: return "Geri alınabilir; alan Çöp boşaltılınca boşalır."
+        case .permanent: return Localization.string(.deletePermanentDetail)
+        case .trash: return Localization.string(.deleteTrashDetail)
         }
     }
 }
@@ -151,8 +157,8 @@ public enum CleanCategory: String, CaseIterable, Identifiable {
 
     public var title: String {
         switch self {
-        case .ai: return "AI Araçları"
-        case .system: return "Sistem"
+        case .ai: return Localization.string(.categoryAI)
+        case .system: return Localization.string(.categorySystem)
         }
     }
     public var systemImage: String {

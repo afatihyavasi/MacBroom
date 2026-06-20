@@ -3,11 +3,13 @@ import SwiftUI
 @main
 struct MacBroomApp: App {
     @StateObject private var state = AppState()
+    @StateObject private var loc = LocalizationManager()
 
     var body: some Scene {
         MenuBarExtra {
             MenuBarView()
                 .environmentObject(state)
+                .environmentObject(loc)
                 // Fixed panel size: content scrolls internally so switching
                 // tabs/phases never resizes (and thus never "jumps") the window.
                 .frame(width: 380, height: 560)

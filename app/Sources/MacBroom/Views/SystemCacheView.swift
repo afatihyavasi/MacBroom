@@ -5,6 +5,7 @@ import MacBroomCore
 /// app caches surfaced by mole (already filtered by its protection layer).
 struct SystemCacheView: View {
     @EnvironmentObject var state: AppState
+    @EnvironmentObject var loc: LocalizationManager
 
     private var items: [CleanCandidate] { state.systemCandidates }
 
@@ -24,8 +25,7 @@ struct SystemCacheView: View {
                 }
                 .frame(maxHeight: .infinity)
 
-                Label("Önce gözden geçirin — yalnızca yeniden oluşturulabilir önbellekler listelenir.",
-                      systemImage: "lock.shield")
+                Label(loc.t(.systemSafety), systemImage: "lock.shield")
                     .font(.caption2).foregroundStyle(.secondary).padding(.top, 8)
             }
         }
@@ -40,12 +40,12 @@ struct SystemCacheView: View {
                 HStack(spacing: 6) {
                     Image(systemName: symbol)
                         .foregroundStyle(st == false ? Color.secondary : Color.accentColor)
-                    Text("Tümünü seç").font(.caption.weight(.medium))
+                    Text(loc.t(.selectAll)).font(.caption.weight(.medium))
                 }
             }
             .buttonStyle(.borderless)
             Spacer()
-            Text("\(items.count) öğe · \(Format.bytes(items.reduce(0) { $0 + $1.sizeBytes }))")
+            Text(loc.t(.itemsBytes, items.count, Format.bytes(items.reduce(0) { $0 + $1.sizeBytes })))
                 .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
         }
         .padding(.bottom, 6)
@@ -71,7 +71,7 @@ struct SystemCacheView: View {
     private var emptyState: some View {
         VStack(spacing: 8) {
             Image(systemName: "checkmark.seal").font(.largeTitle).foregroundStyle(.green)
-            Text("Temizlenecek sistem önbelleği bulunamadı.")
+            Text(loc.t(.systemEmpty))
                 .font(.callout).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity).padding(.vertical, 24)

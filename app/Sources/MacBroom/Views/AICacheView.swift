@@ -6,6 +6,7 @@ import MacBroomCore
 /// auth / sessions / memory / history are never listed here.
 struct AICacheView: View {
     @EnvironmentObject var state: AppState
+    @EnvironmentObject var loc: LocalizationManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -32,7 +33,7 @@ struct AICacheView: View {
         VStack(spacing: 8) {
             Image(systemName: "checkmark.seal")
                 .font(.largeTitle).foregroundStyle(.green)
-            Text("Temizlenecek AI cache bulunamadı.")
+            Text(loc.t(.aiEmpty))
                 .font(.callout).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -40,8 +41,7 @@ struct AICacheView: View {
     }
 
     private var safetyFootnote: some View {
-        Label("Kimlik, oturum, hafıza ve geçmiş verileri korunur — yalnızca yeniden üretilebilir cache listelenir.",
-              systemImage: "lock.shield")
+        Label(loc.t(.aiSafety), systemImage: "lock.shield")
             .font(.caption2)
             .foregroundStyle(.secondary)
             .padding(.top, 8)
@@ -51,6 +51,7 @@ struct AICacheView: View {
 /// One collapsible tool section (Claude, Codex, Gemini, …).
 private struct AIToolSection: View {
     @EnvironmentObject var state: AppState
+    @EnvironmentObject var loc: LocalizationManager
     let group: AIToolGroup
     @State private var expanded = false
 
@@ -61,7 +62,7 @@ private struct AIToolSection: View {
                 AIToolIconView(tool: group.tool, size: 18)
                 Text(group.tool.displayName).font(.callout.weight(.medium))
                 Spacer()
-                Text("\(group.count) · \(Format.bytes(group.totalBytes))")
+                Text(loc.t(.groupCountBytes, group.count, Format.bytes(group.totalBytes)))
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
                 Button {

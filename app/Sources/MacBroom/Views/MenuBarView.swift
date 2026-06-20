@@ -5,15 +5,16 @@ import MacBroomCore
 /// (AI caches · System caches · Apps uninstaller).
 struct MenuBarView: View {
     @EnvironmentObject var state: AppState
+    @EnvironmentObject var loc: LocalizationManager
 
     enum Section: String, CaseIterable, Identifiable {
         case ai, system, apps
         var id: String { rawValue }
-        var title: String {
+        var titleKey: L10n {
             switch self {
-            case .ai: return "AI"
-            case .system: return "Sistem"
-            case .apps: return "Uygulamalar"
+            case .ai: return .tabAI
+            case .system: return .tabSystem
+            case .apps: return .tabApps
             }
         }
     }
@@ -33,7 +34,7 @@ struct MenuBarView: View {
             Divider()
 
             Picker("", selection: $section) {
-                ForEach(Section.allCases) { Text($0.title).tag($0) }
+                ForEach(Section.allCases) { Text(loc.t($0.titleKey)).tag($0) }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -52,7 +53,9 @@ struct MenuBarView: View {
             await state.refreshStatus()
             if case .idle = state.phase { await state.discover() }
         }
-        .sheet(isPresented: $showingSettings) { SettingsView() }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView().environmentObject(loc)
+        }
     }
 
     // MARK: header
@@ -67,13 +70,13 @@ struct MenuBarView: View {
                 Image(systemName: "arrow.clockwise")
             }
             .buttonStyle(.borderless)
-            .help("Hedefleri yeniden bul")
+            .help(loc.t(.refreshHelp))
             .disabled(state.phase == .scanning || state.phase == .discovering)
             Button { showingSettings = true } label: {
                 Image(systemName: "gearshape")
             }
             .buttonStyle(.borderless)
-            .help("Ayarlar")
+            .help(loc.t(.settingsHelp))
         }
     }
 
@@ -83,12 +86,12 @@ struct MenuBarView: View {
         HStack(spacing: 8) {
             Image(systemName: "lock.shield").foregroundStyle(.orange)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Tam Disk Erişimi").font(.caption.weight(.semibold))
-                Text("Tüm önbellekleri temizlemek için izin verin.")
+                Text(loc.t(.fdaTitle)).font(.caption.weight(.semibold))
+                Text(loc.t(.fdaBannerDesc))
                     .font(.caption2).foregroundStyle(.secondary)
             }
             Spacer()
-            Button("Aç") {
+            Button(loc.t(.open)) {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
             }
             .controlSize(.small)
@@ -116,18 +119,18 @@ struct MenuBarView: View {
     @ViewBuilder private var cleanContent: some View {
         switch state.phase {
         case .idle, .discovering:
-            loading("Hedefler aranıyor…")
+            loading(loc.t(.searchingTargets))
         case .scanning:
-            loading("Seçili hedefler taranıyor…")
+            loading(loc.t(.scanningTargets))
         case let .cleaning(done, total):
             VStack(alignment: .leading, spacing: 6) {
                 ProgressView(value: Double(done), total: Double(max(total, 1)))
-                Text("Temizleniyor… \(done)/\(total)").font(.caption).foregroundStyle(.secondary)
+                Text(loc.t(.cleaningProgress, done, total)).font(.caption).foregroundStyle(.secondary)
             }.padding(.vertical, 8)
         case let .finished(freed):
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.largeTitle).foregroundStyle(.green)
-                Text("\(Format.bytes(freed)) boşaltıldı").font(.title3.weight(.semibold))
+                Text(loc.t(.freed, Format.bytes(freed))).font(.title3.weight(.semibold))
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
         case let .error(msg):
             Label(msg, systemImage: "exclamationmark.triangle")
@@ -162,19 +165,19 @@ struct MenuBarView: View {
         HStack {
             if showResults {
                 Button { state.backToSelection(category: category) } label: {
-                    Image(systemName: "chevron.left"); Text("Hedefler")
+                    Image(systemName: "chevron.left"); Text(loc.t(.backTargets))
                 }
                 .buttonStyle(.borderless).font(.caption)
-                Text("\(Format.bytes(state.selectedBytes)) seçili")
+                Text(loc.t(.selectedSuffix, Format.bytes(state.selectedBytes)))
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
             if showResults {
-                Button("Temizle") { Task { await state.clean() } }
+                Button(loc.t(.clean)) { Task { await state.clean() } }
                     .buttonStyle(.borderedProminent)
                     .disabled(state.selected.isEmpty)
             }
-            Button("Çıkış") { NSApplication.shared.terminate(nil) }
+            Button(loc.t(.quit)) { NSApplication.shared.terminate(nil) }
                 .buttonStyle(.borderless)
         }
     }

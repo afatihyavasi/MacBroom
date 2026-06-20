@@ -79,6 +79,15 @@ path_size_bytes() {
     printf '%s' "$((kb * 1024))"
 }
 
+# Size many paths in ONE du pass: prints the KB (1024-byte blocks) for each
+# argument, one per line, in argument order. One fork instead of N — the win
+# for app-scan, where a big app can have dozens of leftover paths. The caller
+# multiplies to bytes in bash (64-bit safe; awk would overflow into floats).
+_sizes_kb() {
+    [[ $# -gt 0 ]] || return 0
+    du -sk -- "$@" 2>/dev/null | awk -F'\t' '{print $1}'
+}
+
 # --------------------------------------------------------------------------
 # Deletion sink. Isolated so the Trash-vs-permanent policy lives in one place.
 # Honors MACBROOM_DELETE_MODE: "trash" moves to ~/.Trash (reversible),
@@ -414,16 +423,38 @@ cmd_app_scan() {
     name="$(basename "$app" .app)"
     bundle="$(_app_bundle_id "$app")"
 
-    MB_CANDIDATES+=("{\"category\":\"app\",\"label\":$(json_string "$name (uygulama)"),\"path\":$(json_string "$app"),\"size_bytes\":$(path_size_bytes "$app")}")
-    MB_COUNT=$((MB_COUNT + 1))
+    # Collect candidate paths + labels first (cheap existence/protection checks),
+    # then size them all in one du pass — so a large app's review screen no
+    # longer stalls behind dozens of serial `du` forks.
+    local -a paths labels
+    paths+=("$app"); labels+=("$name")
 
     local p
     while IFS= read -r p; do
         [[ -n "$p" && ( -e "$p" || -L "$p" ) ]] || continue
         if should_protect_path "$p"; then continue; fi
-        MB_CANDIDATES+=("{\"category\":\"app\",\"label\":$(json_string "$(basename "$p")"),\"path\":$(json_string "$p"),\"size_bytes\":$(path_size_bytes "$p")}")
-        MB_COUNT=$((MB_COUNT + 1))
+        paths+=("$p"); labels+=("$(basename "$p")")
     done < <(find_app_files "$bundle" "$name" 2>/dev/null || true)
+
+    # One du pass; KB align with `paths` by position. If the count doesn't match
+    # (a path failed to stat), fall back to per-path sizing for correctness.
+    local -a kbs=() sizes=()
+    while IFS= read -r p; do kbs+=("$p"); done < <(_sizes_kb "${paths[@]}")
+    if [[ "${#kbs[@]}" -eq "${#paths[@]}" ]]; then
+        local kb
+        for kb in "${kbs[@]}"; do
+            [[ "$kb" =~ ^[0-9]+$ ]] || kb=0
+            sizes+=("$((kb * 1024))")
+        done
+    else
+        for p in "${paths[@]}"; do sizes+=("$(path_size_bytes "$p")"); done
+    fi
+
+    local i
+    for i in "${!paths[@]}"; do
+        MB_CANDIDATES+=("{\"category\":\"app\",\"label\":$(json_string "${labels[$i]}"),\"path\":$(json_string "${paths[$i]}"),\"size_bytes\":${sizes[$i]:-0}}")
+        MB_COUNT=$((MB_COUNT + 1))
+    done
 
     emit_scan_result
 }
@@ -441,19 +472,25 @@ cmd_app_clean() {
     MB_MODE="clean"
     load_mole
 
-    local p size
+    local p size reason
     while IFS= read -r p || [[ -n "$p" ]]; do
         [[ -n "$p" && ( -e "$p" || -L "$p" ) ]] || continue
         if should_protect_path "$p"; then continue; fi
         size="$(path_size_bytes "$p")"
-        if _mb_remove "$p"; then
+        if _mb_remove "$p" && [[ ! -e "$p" && ! -L "$p" ]]; then
             MB_FREED_BYTES=$((MB_FREED_BYTES + size))
             MB_COUNT=$((MB_COUNT + 1))
             emit "{\"event\":\"progress\",\"path\":$(json_string "$p"),\"freed_bytes\":$size}"
+        else
+            # Removal failed (path still exists). Classify so the UI can tell the
+            # user whether granting Full Disk Access / admin would help.
+            if [[ ! -w "$(dirname "$p")" ]]; then reason="permission"; else reason="failed"; fi
+            MB_FAILED=$((${MB_FAILED:-0} + 1))
+            emit "{\"event\":\"skipped\",\"path\":$(json_string "$p"),\"reason\":\"$reason\"}"
         fi
     done < "$paths_file"
 
-    emit "{\"event\":\"done\",\"freed_bytes\":$MB_FREED_BYTES,\"count\":$MB_COUNT}"
+    emit "{\"event\":\"done\",\"freed_bytes\":$MB_FREED_BYTES,\"count\":$MB_COUNT,\"failed\":${MB_FAILED:-0}}"
 }
 
 cmd_status() {

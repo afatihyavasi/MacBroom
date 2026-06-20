@@ -47,8 +47,14 @@ check("EngineEvent progress",
       EngineEvent(jsonLine: #"{"event":"progress","path":"/x/y","freed_bytes":2048}"#)
         == .progress(path: "/x/y", freedBytes: 2048))
 check("EngineEvent done",
+      EngineEvent(jsonLine: #"{"event":"done","freed_bytes":9000,"count":3,"failed":1}"#)
+        == .done(freedBytes: 9000, count: 3, failed: 1))
+check("EngineEvent done without failed defaults to 0",
       EngineEvent(jsonLine: #"{"event":"done","freed_bytes":9000,"count":3}"#)
-        == .done(freedBytes: 9000, count: 3))
+        == .done(freedBytes: 9000, count: 3, failed: 0))
+check("EngineEvent skipped",
+      EngineEvent(jsonLine: #"{"event":"skipped","path":"/x/y","reason":"permission"}"#)
+        == .skipped(path: "/x/y", reason: "permission"))
 check("EngineEvent ignores unknown", EngineEvent(jsonLine: #"{"event":"chatter"}"#) == nil)
 check("EngineEvent ignores garbage", EngineEvent(jsonLine: "not json") == nil)
 check("EngineEvent ignores empty", EngineEvent(jsonLine: "") == nil)
@@ -90,6 +96,57 @@ if let d = try? JSONDecoder().decode(DiscoverResult.self, from: data(#"{"targets
 
 // Formatting sanity
 check("Format.bytes non-empty", !Format.bytes(1_500_000).isEmpty)
+
+// Localization: every key must be translated in all 4 languages (no fallback
+// gaps), and format placeholders must match across languages.
+for lang in [AppLanguage.en, .tr, .es, .fr] {
+    let missing = L10n.allCases.filter { Localization.string($0, language: lang) == $0.rawValue }
+    check("L10n complete: \(lang.rawValue) (\(missing.count) missing)", missing.isEmpty)
+}
+// Placeholder parity vs English (catches a %d/%@ that drifted between languages).
+func specs(_ s: String) -> [Character] {
+    var out: [Character] = []; var prev: Character? = nil
+    for c in s { if prev == "%", c == "d" || c == "@" { out.append(c) }; prev = c }
+    return out
+}
+for key in L10n.allCases {
+    let ref = specs(Localization.string(key, language: .en))
+    for lang in [AppLanguage.tr, .es, .fr] {
+        check("L10n placeholders match en/\(lang.rawValue): \(key.rawValue)",
+              specs(Localization.string(key, language: lang)) == ref)
+    }
+}
+// System resolution falls back to a supported language (English when none match).
+check("AppLanguage.system resolves to supported",
+      [.en, .tr, .es, .fr].contains(AppLanguage.system.resolved))
+check("AppLanguage.tr resolves to itself", AppLanguage.tr.resolved == .tr)
+
+// Integration: the streaming clean must actually report freed bytes. Regression
+// for the Pipe/termination race where a fast-exiting engine left the final
+// progress/done lines unread → UI showed "0 bytes freed" despite a real delete.
+do {
+    let root = FileManager.default.temporaryDirectory
+        .appendingPathComponent("mbselftest-\(UUID().uuidString)")
+    let victim = root.appendingPathComponent("cache-dir")
+    try? FileManager.default.createDirectory(at: victim, withIntermediateDirectories: true)
+    FileManager.default.createFile(atPath: victim.appendingPathComponent("blob").path,
+                                   contents: Data(count: 128 * 1024))
+    var freed: Int64 = 0
+    var sawDone = false
+    do {
+        for try await ev in EngineBridge().appClean(approvedPaths: [victim.path], deleteMode: .permanent) {
+            switch ev {
+            case let .progress(_, bytes): freed += bytes
+            case let .done(bytes, _, _): sawDone = true; freed = max(freed, bytes)
+            case .skipped: break
+            }
+        }
+    } catch { /* surfaced by the assertions below */ }
+    check("streaming clean reports freed > 0 (not 0 KB)", freed > 0)
+    check("streaming clean emits a done event", sawDone)
+    check("streaming clean removed the path", !FileManager.default.fileExists(atPath: victim.path))
+    try? FileManager.default.removeItem(at: root)
+}
 
 print(failures == 0 ? "\nAll self-tests passed." : "\n\(failures) self-test(s) FAILED.")
 exit(failures == 0 ? 0 : 1)

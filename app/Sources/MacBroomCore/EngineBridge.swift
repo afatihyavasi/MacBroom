@@ -14,9 +14,12 @@ public enum EngineError: LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .engineNotFound: return "Temizleme motoru bulunamadı."
-        case let .nonZeroExit(code, msg): return "Motor hata verdi (\(code)): \(msg)"
-        case let .decodeFailed(s): return "Motor çıktısı çözümlenemedi: \(s)"
+        case .engineNotFound:
+            return Localization.string(.errEngineNotFound)
+        case let .nonZeroExit(code, msg):
+            return String(format: Localization.string(.errNonZero), code, msg)
+        case let .decodeFailed(s):
+            return String(format: Localization.string(.errDecode), s)
         }
     }
 }
@@ -88,12 +91,18 @@ public struct EngineBridge {
                 let pipe = Pipe()
                 proc.standardOutput = pipe
                 proc.standardError = FileHandle.nullDevice
+                let readHandle = pipe.fileHandleForReading
 
+                // All buffer access + event parsing happens under this lock, so
+                // the readability handler (private queue) and the termination
+                // handler (another thread) never race on `buffer`.
+                let lock = NSLock()
+                var didFinish = false
                 var buffer = Data()
-                pipe.fileHandleForReading.readabilityHandler = { handle in
-                    let chunk = handle.availableData
-                    guard !chunk.isEmpty else { return }
-                    buffer.append(chunk)
+
+                // Parse every complete NDJSON line out of `buffer`. Caller holds `lock`.
+                let drain: (Data) -> Void = { newData in
+                    buffer.append(newData)
                     while let nl = buffer.firstIndex(of: 0x0A) {
                         let lineData = buffer.subdata(in: buffer.startIndex..<nl)
                         buffer.removeSubrange(buffer.startIndex...nl)
@@ -103,10 +112,44 @@ public struct EngineBridge {
                         }
                     }
                 }
-                proc.terminationHandler = { _ in
-                    pipe.fileHandleForReading.readabilityHandler = nil
+
+                // One-shot teardown — assumes `lock` is already held. Crucially
+                // it drains whatever is still buffered in the pipe before
+                // finishing: a fast-exiting engine can leave the final
+                // progress/done lines unread when the termination handler wins
+                // the race against the readability handler — losing them would
+                // report "0 bytes freed" even though the delete succeeded.
+                let finishLocked: () -> Void = {
+                    guard !didFinish else { return }
+                    didFinish = true
+                    readHandle.readabilityHandler = nil
+                    if let rest = try? readHandle.readToEnd(), !rest.isEmpty { drain(rest) }
                     try? FileManager.default.removeItem(at: tmp)
                     continuation.finish()
+                }
+
+                // All pipe reads happen under `lock`, so the readability handler
+                // and the teardown's `readToEnd()` can never interleave and drop
+                // a chunk. The handler is only scheduled when data is available,
+                // so reading under the lock won't block.
+                readHandle.readabilityHandler = { handle in
+                    lock.lock(); defer { lock.unlock() }
+                    guard !didFinish else { return }
+                    // Throwing read instead of `availableData`: when the engine
+                    // exits and the pipe closes, this surfaces as a Swift error
+                    // rather than an uncatchable ObjC `Bad file descriptor`
+                    // exception that would crash (SIGABRT) the whole app.
+                    let chunk: Data
+                    do {
+                        chunk = try handle.read(upToCount: 64 * 1024) ?? Data()
+                    } catch {
+                        finishLocked(); return
+                    }
+                    if chunk.isEmpty { finishLocked(); return } // EOF
+                    drain(chunk)
+                }
+                proc.terminationHandler = { _ in
+                    lock.lock(); finishLocked(); lock.unlock()
                 }
                 try proc.run()
             } catch {

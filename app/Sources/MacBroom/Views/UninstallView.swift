@@ -5,6 +5,7 @@ import MacBroomCore
 /// leftovers), then remove with explicit confirmation.
 struct UninstallView: View {
     @EnvironmentObject var state: AppState
+    @EnvironmentObject var loc: LocalizationManager
     @State private var confirming = false
 
     var body: some View {
@@ -13,19 +14,15 @@ struct UninstallView: View {
             case .loading:
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text("Yükleniyor…").font(.callout).foregroundStyle(.secondary)
+                    Text(loc.t(.loading)).font(.callout).foregroundStyle(.secondary)
                 }.frame(maxWidth: .infinity).padding(.vertical, 16)
             case let .uninstalling(done, total):
                 VStack(alignment: .leading, spacing: 6) {
                     ProgressView(value: Double(done), total: Double(max(total, 1)))
-                    Text("Kaldırılıyor… \(done)/\(total)").font(.caption).foregroundStyle(.secondary)
+                    Text(loc.t(.removingProgress, done, total)).font(.caption).foregroundStyle(.secondary)
                 }.padding(.vertical, 8)
-            case let .uninstalled(freed):
-                VStack(spacing: 8) {
-                    Image(systemName: "trash.slash").font(.largeTitle).foregroundStyle(.green)
-                    Text("Kaldırıldı · \(Format.bytes(freed)) boşaltıldı").font(.callout.weight(.medium))
-                    Button("Listeye dön") { state.backToAppList() }.buttonStyle(.link)
-                }.frame(maxWidth: .infinity).padding(.vertical, 14)
+            case let .uninstalled(freed, failed, permissionBlocked):
+                uninstalledResult(freed: freed, failed: failed, permissionBlocked: permissionBlocked)
             case let .error(msg):
                 Label(msg, systemImage: "exclamationmark.triangle")
                     .font(.caption).foregroundStyle(.red).padding(.vertical, 8)
@@ -38,12 +35,49 @@ struct UninstallView: View {
         .task { await state.loadApps() }
     }
 
+    // MARK: result
+
+    /// Outcome screen. When every selected item was removed we celebrate; when
+    /// some couldn't be deleted we tell the user how many and — if the cause was
+    /// a permission wall — offer the Full Disk Access shortcut.
+    @ViewBuilder
+    private func uninstalledResult(freed: Int64, failed: Int, permissionBlocked: Bool) -> some View {
+        VStack(spacing: 8) {
+            if failed == 0 {
+                Image(systemName: "trash.slash").font(.largeTitle).foregroundStyle(.green)
+                Text(loc.t(.removedFreed, Format.bytes(freed))).font(.callout.weight(.medium))
+            } else {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.largeTitle).foregroundStyle(.orange)
+                Text(loc.t(.removedPartial, Format.bytes(freed), failed))
+                    .font(.callout.weight(.medium)).multilineTextAlignment(.center)
+                if permissionBlocked {
+                    Text(loc.t(.someProtected))
+                        .font(.caption).foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center).padding(.horizontal, 8)
+                    Button(loc.t(.openFDA)) { openFullDiskAccess() }
+                        .buttonStyle(.borderedProminent)
+                } else {
+                    Text(loc.t(.itemsInUse))
+                        .font(.caption).foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center).padding(.horizontal, 8)
+                }
+            }
+            Button(loc.t(.backToList)) { state.backToAppList() }.buttonStyle(.link)
+        }.frame(maxWidth: .infinity).padding(.vertical, 14)
+    }
+
+    private func openFullDiskAccess() {
+        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!
+        NSWorkspace.shared.open(url)
+    }
+
     // MARK: app list
 
     private var appList: some View {
         VStack(alignment: .leading, spacing: 0) {
             if state.apps.isEmpty {
-                Text("Kaldırılabilir uygulama bulunamadı.")
+                Text(loc.t(.removableEmpty))
                     .font(.callout).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity).padding(.vertical, 20)
             } else {
@@ -77,10 +111,10 @@ struct UninstallView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Button { state.backToAppList() } label: {
-                    Image(systemName: "chevron.left"); Text("Geri")
+                    Image(systemName: "chevron.left"); Text(loc.t(.back))
                 }.buttonStyle(.borderless)
                 Spacer()
-                Text("\(state.appCandidates.count) öğe · \(Format.bytes(state.appSelectedBytes))")
+                Text(loc.t(.itemsBytes, state.appCandidates.count, Format.bytes(state.appSelectedBytes)))
                     .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
             }
 
@@ -107,19 +141,19 @@ struct UninstallView: View {
             Button(role: .destructive) {
                 confirming = true
             } label: {
-                Label("Kaldır", systemImage: "trash").frame(maxWidth: .infinity)
+                Label(loc.t(.remove), systemImage: "trash").frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .tint(.red)
             .disabled(state.appSelected.isEmpty)
             .confirmationDialog(
-                "\(app.name) ve seçili \(state.appSelected.count) öğe kalıcı olarak silinsin mi?",
+                loc.t(.confirmDeleteTitle, app.name, state.appSelected.count),
                 isPresented: $confirming, titleVisibility: .visible
             ) {
-                Button("Kalıcı olarak sil", role: .destructive) { Task { await state.uninstall() } }
-                Button("Vazgeç", role: .cancel) {}
+                Button(loc.t(.deletePermanentTitle), role: .destructive) { Task { await state.uninstall() } }
+                Button(loc.t(.cancel), role: .cancel) {}
             } message: {
-                Text("Bu işlem geri alınamaz. Sistem-kritik bileşenler korunur.")
+                Text(loc.t(.confirmDeleteMessage))
             }
         }
     }

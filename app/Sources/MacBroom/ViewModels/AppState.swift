@@ -189,7 +189,10 @@ final class AppState: ObservableObject {
                     freed += bytes
                     done += 1
                     phase = .cleaning(done: done, total: total)
-                case let .done(freedBytes, _):
+                case .skipped:
+                    done += 1
+                    phase = .cleaning(done: done, total: total)
+                case let .done(freedBytes, _, _):
                     freed = max(freed, freedBytes)
                 }
             }
@@ -214,7 +217,9 @@ final class AppState: ObservableObject {
         case loading
         case reviewing(AppInfo)
         case uninstalling(done: Int, total: Int)
-        case uninstalled(freedBytes: Int64)
+        /// `failed` > 0 means some paths couldn't be removed; `permissionBlocked`
+        /// flags that Full Disk Access / admin rights would likely unblock them.
+        case uninstalled(freedBytes: Int64, failed: Int, permissionBlocked: Bool)
         case error(String)
     }
 
@@ -260,20 +265,25 @@ final class AppState: ObservableObject {
         guard !approved.isEmpty else { return }
         let total = approved.count
         appFlow = .uninstalling(done: 0, total: total)
-        var freed: Int64 = 0, done = 0
+        var freed: Int64 = 0, done = 0, failed = 0, permissionBlocked = false
         do {
             for try await event in engine.appClean(approvedPaths: approved, deleteMode: deleteMode) {
                 switch event {
                 case let .progress(_, bytes): freed += bytes; done += 1
                     appFlow = .uninstalling(done: done, total: total)
-                case let .done(freedBytes, _): freed = max(freed, freedBytes)
+                case let .skipped(_, reason): failed += 1; done += 1
+                    if reason == "permission" { permissionBlocked = true }
+                    appFlow = .uninstalling(done: done, total: total)
+                case let .done(freedBytes, _, failedCount):
+                    freed = max(freed, freedBytes)
+                    failed = max(failed, failedCount)
                 }
             }
             appCandidates = []
             appSelected = []
             // Drop the uninstalled app from the list (path no longer exists).
             apps.removeAll { !FileManager.default.fileExists(atPath: $0.path) }
-            appFlow = .uninstalled(freedBytes: freed)
+            appFlow = .uninstalled(freedBytes: freed, failed: failed, permissionBlocked: permissionBlocked)
         } catch {
             appFlow = .error(error.localizedDescription)
         }
