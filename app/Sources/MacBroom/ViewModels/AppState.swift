@@ -11,8 +11,16 @@ final class AppState: ObservableObject {
         case selecting          // interactive: per-tab picker or results
         case scanning
         case cleaning(done: Int, total: Int)
-        case finished(freedBytes: Int64)
+        case finished(freedBytes: Int64, failed: Int, permissionBlocked: Bool)
         case error(String)
+    }
+
+    /// A long-running cache operation is in flight (gate refresh/destructive UI).
+    var isBusy: Bool {
+        switch phase {
+        case .discovering, .scanning, .cleaning: return true
+        default: return false
+        }
     }
 
     @Published var phase: Phase = .idle
@@ -204,25 +212,32 @@ final class AppState: ObservableObject {
         phaseCategory = category
         phase = .cleaning(done: 0, total: total)
         var freed: Int64 = 0
-        var done = 0
+        var done = 0, failed = 0
+        var permissionBlocked = false
+        var removed = Set<String>()
         do {
             for try await event in engine.clean(approvedPaths: approved, targetIds: ids, deleteMode: deleteMode) {
                 switch event {
-                case let .progress(_, bytes):
+                case let .progress(path, bytes):
                     freed += bytes
                     done += 1
+                    removed.insert(path)
                     phase = .cleaning(done: done, total: total)
-                case .skipped:
+                case let .skipped(_, reason):
                     done += 1
+                    failed += 1
+                    if reason == "permission" { permissionBlocked = true }
                     phase = .cleaning(done: done, total: total)
-                case let .done(freedBytes, _, _):
+                case let .done(freedBytes, _, failedCount):
                     freed = max(freed, freedBytes)
+                    failed = max(failed, failedCount)
                 }
             }
-            // Drop only the cleaned items; keep the other tab's selection intact.
-            candidates.removeAll { approvedSet.contains($0.path) }
-            selected.subtract(approvedSet)
-            phase = .finished(freedBytes: freed)
+            // Drop only the items actually removed; keep failed ones (and the
+            // other tab's selection) intact so the user can retry.
+            candidates.removeAll { removed.contains($0.path) }
+            selected.subtract(removed)
+            phase = .finished(freedBytes: freed, failed: failed, permissionBlocked: permissionBlocked)
             await refreshStatus()
         } catch {
             phase = .error(error.localizedDescription)

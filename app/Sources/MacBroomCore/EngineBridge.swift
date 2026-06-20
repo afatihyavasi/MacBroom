@@ -84,8 +84,13 @@ public struct EngineBridge {
     /// Shared streaming runner for `clean` / `app-clean`.
     private func streamingClean(subcommand: String, extraArgs: [String], approvedPaths: [String], deleteMode: DeleteMode) -> AsyncThrowingStream<EngineEvent, Error> {
         AsyncThrowingStream { continuation in
+            let tmp: URL
             do {
-                let tmp = try writeApprovedPathsFile(approvedPaths)
+                tmp = try writeApprovedPathsFile(approvedPaths)
+            } catch {
+                continuation.finish(throwing: error); return
+            }
+            do {
                 let proc = try makeProcess([subcommand] + extraArgs + ["--paths-file=\(tmp.path)"],
                                            extraEnv: ["MACBROOM_DELETE_MODE": deleteMode.rawValue])
                 let pipe = Pipe()
@@ -152,7 +157,13 @@ public struct EngineBridge {
                     lock.lock(); finishLocked(); lock.unlock()
                 }
                 try proc.run()
+                // If the consumer cancels (e.g. the view goes away), tear the
+                // child process down instead of leaving it running detached.
+                continuation.onTermination = { @Sendable _ in
+                    if proc.isRunning { proc.terminate() }
+                }
             } catch {
+                try? FileManager.default.removeItem(at: tmp)
                 continuation.finish(throwing: error)
             }
         }
@@ -176,13 +187,21 @@ public struct EngineBridge {
     private func runCollecting(_ args: [String]) async throws -> (Data, Int32) {
         let proc = try makeProcess(args)
         let out = Pipe()
+        let err = Pipe()
         proc.standardOutput = out
-        proc.standardError = FileHandle.nullDevice
+        proc.standardError = err
         try proc.run()
+        // Drain stdout (the large stream) fully, then stderr. Safe here because
+        // the engine's stderr is bounded — mole chatter is suppressed and only
+        // `die` writes a short line — so it can't fill its pipe and deadlock the
+        // child while we read stdout. stderr feeds the nonzero-exit diagnostic.
         let data = out.fileHandleForReading.readDataToEndOfFile()
+        let errData = err.fileHandleForReading.readDataToEndOfFile()
         proc.waitUntilExit()
         if proc.terminationStatus != 0 {
-            let msg = String(data: data, encoding: .utf8) ?? ""
+            let errText = String(data: errData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let outText = String(data: data, encoding: .utf8) ?? ""
+            let msg = errText.isEmpty ? outText : errText
             throw EngineError.nonZeroExit(code: proc.terminationStatus, message: msg)
         }
         return (data, proc.terminationStatus)

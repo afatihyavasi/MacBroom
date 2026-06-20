@@ -44,6 +44,23 @@ die() {
 # Minimal JSON helpers (no jq dependency)
 # --------------------------------------------------------------------------
 # Escape a raw string into a quoted JSON string literal.
+# Escape any remaining C0 control bytes (< 0x20) as \u00xx. Operates byte-wise
+# under LC_ALL=C so multibyte UTF-8 sequences (all bytes >= 0x80) pass through
+# untouched and reassemble correctly on the Swift side.
+_json_escape_controls() {
+    LC_ALL=C awk '
+        BEGIN { for (i = 0; i < 256; i++) ord[sprintf("%c", i)] = i }
+        {
+            out = ""
+            for (j = 1; j <= length($0); j++) {
+                c = substr($0, j, 1)
+                if (ord[c] < 32) out = out sprintf("\\u%04x", ord[c])
+                else out = out c
+            }
+            print out
+        }'
+}
+
 json_string() {
     local s="$1"
     s="${s//\\/\\\\}"   # backslash
@@ -51,6 +68,11 @@ json_string() {
     s="${s//$'\n'/\\n}" # newline
     s="${s//$'\r'/\\r}" # carriage return
     s="${s//$'\t'/\\t}" # tab
+    # Rare: a path/label with other control chars would otherwise emit invalid
+    # JSON and fail the whole result. Only fork awk when one is actually present.
+    case "$s" in
+        *[[:cntrl:]]*) s="$(printf '%s' "$s" | _json_escape_controls)" ;;
+    esac
     printf '"%s"' "$s"
 }
 
@@ -166,6 +188,17 @@ _mb_is_approved() {
     grep -Fxq -- "$1" "$MB_PATHS_FILE"
 }
 
+# Protection gate that fails CLOSED: if mole's `should_protect_path` is missing
+# (submodule drift), treat every path as protected so we never list/delete a
+# path unguarded. Returns 0 (protected) when the function is unavailable.
+_protected() {
+    if declare -F should_protect_path >/dev/null 2>&1; then
+        should_protect_path "$1"
+    else
+        return 0
+    fi
+}
+
 # Handle one protection-cleared path according to the current mode.
 _mb_handle() {
     local path="$1" label="$2"
@@ -180,10 +213,17 @@ _mb_handle() {
     # clean mode: only delete paths the user explicitly approved.
     _mb_is_approved "$path" || return 0
     local size; size="$(path_size_bytes "$path")"
-    if _mb_remove "$path"; then
+    if _mb_remove "$path" && [[ ! -e "$path" && ! -L "$path" ]]; then
         MB_FREED_BYTES=$((MB_FREED_BYTES + size))
         MB_COUNT=$((MB_COUNT + 1))
         emit "{\"event\":\"progress\",\"path\":$(json_string "$path"),\"freed_bytes\":$size}"
+    else
+        # Removal failed (path still present) — report it so the UI can tell the
+        # user, instead of silently counting it as cleaned.
+        local reason
+        if [[ ! -w "$(dirname "$path")" ]]; then reason="permission"; else reason="failed"; fi
+        MB_FAILED=$((${MB_FAILED:-0} + 1))
+        emit "{\"event\":\"skipped\",\"path\":$(json_string "$path"),\"reason\":\"$reason\"}"
     fi
 }
 
@@ -367,7 +407,7 @@ cmd_clean() {
 
     { _run_targets "$targets"; } >/dev/null 2>&1
 
-    emit "{\"event\":\"done\",\"freed_bytes\":$MB_FREED_BYTES,\"count\":$MB_COUNT}"
+    emit "{\"event\":\"done\",\"freed_bytes\":$MB_FREED_BYTES,\"count\":$MB_COUNT,\"failed\":${MB_FAILED:-0}}"
 }
 
 # --------------------------------------------------------------------------
@@ -432,7 +472,7 @@ cmd_app_scan() {
     local p
     while IFS= read -r p; do
         [[ -n "$p" && ( -e "$p" || -L "$p" ) ]] || continue
-        if should_protect_path "$p"; then continue; fi
+        if _protected "$p"; then continue; fi
         paths+=("$p"); labels+=("$(basename "$p")")
     done < <(find_app_files "$bundle" "$name" 2>/dev/null || true)
 
@@ -475,7 +515,7 @@ cmd_app_clean() {
     local p size reason
     while IFS= read -r p || [[ -n "$p" ]]; do
         [[ -n "$p" && ( -e "$p" || -L "$p" ) ]] || continue
-        if should_protect_path "$p"; then continue; fi
+        if _protected "$p"; then continue; fi
         size="$(path_size_bytes "$p")"
         if _mb_remove "$p" && [[ ! -e "$p" && ! -L "$p" ]]; then
             MB_FREED_BYTES=$((MB_FREED_BYTES + size))

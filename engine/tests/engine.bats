@@ -178,3 +178,22 @@ PLIST
     [ ! -e "$HOME/.gemini/tmp/trashme.bin" ]   # gone from origin
     [ -e "$HOME/.Trash/trashme.bin" ]          # recoverable in Trash
 }
+
+# --- failure reporting (no silent swallow) --------------------------------
+
+@test "clean reports a skipped event (no silent swallow) when removal fails" {
+    mkdir -p "$HOME/.gemini/tmp/locked"
+    head -c 4096 /dev/zero > "$HOME/.gemini/tmp/locked/blob"
+    chmod 0500 "$HOME/.gemini/tmp/locked"            # can't remove contents
+    printf '%s\n' "$HOME/.gemini/tmp/locked/blob" > "$HOME/approved.txt"
+
+    run bash "$ENGINE" ai-clean --paths-file="$HOME/approved.txt"
+    chmod -R u+w "$HOME/.gemini/tmp/locked" 2>/dev/null || true
+    [ "$status" -eq 0 ]
+    # The per-item `skipped` event is the source of truth the app counts from
+    # (the aggregate `failed` in `done` is best-effort — mole runs some cleaners
+    # in subshells where the global counter doesn't always propagate).
+    [[ "$output" == *'"event":"skipped"'* ]]
+    [[ "$output" == *'"reason":'* ]]
+    [ -e "$HOME/.gemini/tmp/locked/blob" ]   # genuinely not deleted
+}

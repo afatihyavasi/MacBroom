@@ -63,7 +63,7 @@ struct MenuBarView: View {
             SHIconButton(system: "arrow.clockwise", help: loc.t(.refreshHelp)) {
                 Task { await state.discover() }
             }
-            .disabled(state.phase == .scanning || state.phase == .discovering)
+            .disabled(state.isBusy)
             SHIconButton(system: "gearshape", help: loc.t(.settingsHelp)) {
                 showingSettings = true
             }
@@ -121,10 +121,8 @@ struct MenuBarView: View {
             loading(loc.t(.scanningTargets))
         case let .cleaning(done, total) where owns:
             cleaningView(done: done, total: total)
-        case let .finished(freed) where owns:
-            resultView(icon: "sparkles", tint: Theme.success,
-                       title: loc.t(.freed, Format.bytes(freed)),
-                       action: loc.t(.done)) { state.dismissCacheResult() }
+        case let .finished(freed, failed, permissionBlocked) where owns:
+            cacheResult(freed: freed, failed: failed, permissionBlocked: permissionBlocked)
         case let .error(msg) where owns:
             resultView(icon: "exclamationmark.triangle.fill", tint: Theme.destructive,
                        title: msg, action: loc.t(.back)) { state.dismissCacheResult() }
@@ -153,6 +151,38 @@ struct MenuBarView: View {
             Image(systemName: icon).font(.system(size: 30)).foregroundStyle(tint)
             Text(title).font(.shHeadline).multilineTextAlignment(.center)
             Button(action, action: perform).buttonStyle(.shOutline(.sm))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Cache-clean outcome. Celebrates a full success; on partial failure tells
+    /// the user how many items remained and offers Full Disk Access when the
+    /// cause looks like a permission wall.
+    @ViewBuilder
+    private func cacheResult(freed: Int64, failed: Int, permissionBlocked: Bool) -> some View {
+        VStack(spacing: Theme.Space.md) {
+            if failed == 0 {
+                Image(systemName: "sparkles").font(.system(size: 30)).foregroundStyle(Theme.success)
+                Text(loc.t(.freed, Format.bytes(freed))).font(.shHeadline)
+            } else {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 30)).foregroundStyle(Theme.warning)
+                Text(loc.t(.removedPartial, Format.bytes(freed), failed))
+                    .font(.shHeadline).multilineTextAlignment(.center)
+                if permissionBlocked {
+                    Text(loc.t(.someProtected))
+                        .font(.shCaption).foregroundStyle(Theme.mutedForeground)
+                        .multilineTextAlignment(.center).padding(.horizontal, Theme.Space.sm)
+                    Button(loc.t(.openFDA)) {
+                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
+                    }.buttonStyle(.shPrimary(.sm))
+                } else {
+                    Text(loc.t(.itemsInUse))
+                        .font(.shCaption).foregroundStyle(Theme.mutedForeground)
+                        .multilineTextAlignment(.center).padding(.horizontal, Theme.Space.sm)
+                }
+            }
+            Button(loc.t(.done)) { state.dismissCacheResult() }.buttonStyle(.shOutline(.sm))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
