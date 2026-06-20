@@ -27,13 +27,19 @@ if let r = try? EngineDecode.scanResult(data(#"{"candidates":[{"category":"ai","
     check("ScanResult decodes", false)
 }
 
-// DiskStatus: nested object
-if let d = try? EngineDecode.diskStatus(data(#"{"disk":{"total_bytes":100,"used_bytes":60,"free_bytes":40,"used_percent":60}}"#)) {
-    check("DiskStatus total", d.total == 100)
-    check("DiskStatus used", d.used == 60)
-    check("DiskStatus used_percent", d.usedPercent == 60)
+// SystemStatus: nested disk + optional memory
+if let s = try? EngineDecode.systemStatus(data(#"{"disk":{"total_bytes":100,"used_bytes":60,"free_bytes":40,"used_percent":60},"memory":{"total_bytes":16,"used_bytes":8,"used_percent":50}}"#)) {
+    check("SystemStatus disk total", s.disk.total == 100)
+    check("SystemStatus disk used_percent", s.disk.usedPercent == 60)
+    check("SystemStatus memory present", s.memory?.usedPercent == 50)
 } else {
-    check("DiskStatus decodes", false)
+    check("SystemStatus decodes", false)
+}
+// SystemStatus tolerates missing memory
+if let s = try? EngineDecode.systemStatus(data(#"{"disk":{"total_bytes":1,"used_bytes":1,"free_bytes":0,"used_percent":100}}"#)) {
+    check("SystemStatus memory optional", s.memory == nil)
+} else {
+    check("SystemStatus without memory decodes", false)
 }
 
 // EngineEvent: progress / done / rejects garbage

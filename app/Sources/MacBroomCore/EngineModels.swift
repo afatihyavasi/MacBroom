@@ -29,29 +29,38 @@ public struct ScanResult: Codable {
     public var count: Int
 }
 
-/// Disk snapshot from `status`.
-public struct DiskStatus: Codable {
+/// Disk usage from `status`.
+public struct DiskInfo: Codable {
     public var total: Int64
     public var used: Int64
     public var free: Int64
     public var usedPercent: Int
 
-    enum DiskKeys: String, CodingKey {
-        case totalBytes = "total_bytes"
-        case usedBytes = "used_bytes"
-        case freeBytes = "free_bytes"
+    enum CodingKeys: String, CodingKey {
+        case total = "total_bytes"
+        case used = "used_bytes"
+        case free = "free_bytes"
         case usedPercent = "used_percent"
     }
-    enum RootKeys: String, CodingKey { case disk }
+}
 
-    public init(from decoder: Decoder) throws {
-        let root = try decoder.container(keyedBy: RootKeys.self)
-        let d = try root.nestedContainer(keyedBy: DiskKeys.self, forKey: .disk)
-        total = try d.decode(Int64.self, forKey: .totalBytes)
-        used = try d.decode(Int64.self, forKey: .usedBytes)
-        free = try d.decode(Int64.self, forKey: .freeBytes)
-        usedPercent = try d.decode(Int.self, forKey: .usedPercent)
+/// Memory usage from `status`.
+public struct MemoryInfo: Codable {
+    public var total: Int64
+    public var used: Int64
+    public var usedPercent: Int
+
+    enum CodingKeys: String, CodingKey {
+        case total = "total_bytes"
+        case used = "used_bytes"
+        case usedPercent = "used_percent"
     }
+}
+
+/// Full `status` snapshot: disk plus optional memory.
+public struct SystemStatus: Codable {
+    public var disk: DiskInfo
+    public var memory: MemoryInfo?
 }
 
 /// Streaming events emitted by `clean` (NDJSON, one per line).
@@ -108,7 +117,7 @@ public enum EngineDecode {
     public static func scanResult(_ data: Data) throws -> ScanResult {
         try JSONDecoder().decode(ScanResult.self, from: data)
     }
-    public static func diskStatus(_ data: Data) throws -> DiskStatus {
-        try JSONDecoder().decode(DiskStatus.self, from: data)
+    public static func systemStatus(_ data: Data) throws -> SystemStatus {
+        try JSONDecoder().decode(SystemStatus.self, from: data)
     }
 }

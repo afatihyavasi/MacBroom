@@ -32,9 +32,9 @@ public struct EngineBridge {
 
     // MARK: - Public API
 
-    public func status() async throws -> DiskStatus {
+    public func status() async throws -> SystemStatus {
         let (data, _) = try await runCollecting(["status"])
-        return try decodeLast(DiskStatus.self, from: data)
+        return try decodeLast(SystemStatus.self, from: data)
     }
 
     public func scan(categories: [CleanCategory]) async throws -> ScanResult {

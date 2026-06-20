@@ -10,6 +10,9 @@ struct MenuBarView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
+            if let status = state.status {
+                StatusPanelView(status: status)
+            }
             Divider()
             content
             Divider()
@@ -17,7 +20,7 @@ struct MenuBarView: View {
         }
         .padding(14)
         .task {
-            await state.refreshDisk()
+            await state.refreshStatus()
             if case .idle = state.phase { await state.scan() }
         }
     }
@@ -28,13 +31,7 @@ struct MenuBarView: View {
         HStack(spacing: 8) {
             Image(systemName: "wand.and.stars.inverse")
                 .font(.title3).foregroundStyle(.tint)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("MacBroom").font(.headline)
-                if let d = state.disk {
-                    Text("Disk %\(d.usedPercent) dolu · \(Format.bytes(d.free)) boş")
-                        .font(.caption2).foregroundStyle(.secondary)
-                }
-            }
+            Text("MacBroom").font(.headline)
             Spacer()
             Button {
                 Task { await state.scan() }

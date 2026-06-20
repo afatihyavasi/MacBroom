@@ -300,13 +300,37 @@ cmd_clean() {
 }
 
 cmd_status() {
-    # Disk snapshot for the volume backing $HOME, via df (POSIX, 512-byte blocks).
+    # Disk snapshot for the volume backing $HOME, via df (POSIX, 1K blocks).
     local total used avail pct
     read -r total used avail pct < <(
         df -k "$HOME" 2>/dev/null | awk 'NR==2{gsub(/%/,"",$5); print $2*1024, $3*1024, $4*1024, $5; exit}'
     )
     : "${total:=0}" "${used:=0}" "${avail:=0}" "${pct:=0}"
-    emit "{\"disk\":{\"total_bytes\":$total,\"used_bytes\":$used,\"free_bytes\":$avail,\"used_percent\":$pct}}"
+
+    # Memory snapshot. "available" ~= free + inactive + speculative + purgeable
+    # (reclaimable without pressure); used = total - available.
+    local mem_total mem_used mem_pct
+    mem_total="$(sysctl -n hw.memsize 2>/dev/null || echo 0)"
+    local page avail_pages
+    page="$(sysctl -n hw.pagesize 2>/dev/null || echo 4096)"
+    avail_pages="$(vm_stat 2>/dev/null | awk -F'[:.]' '
+        /Pages free/        {f=$2}
+        /Pages inactive/    {i=$2}
+        /Pages speculative/ {s=$2}
+        /Pages purgeable/   {p=$2}
+        END {print f+i+s+p}
+    ')"
+    : "${avail_pages:=0}"
+    local mem_avail=$((avail_pages * page))
+    mem_used=$((mem_total - mem_avail))
+    [[ "$mem_used" -lt 0 ]] && mem_used=0
+    if [[ "$mem_total" -gt 0 ]]; then
+        mem_pct=$((mem_used * 100 / mem_total))
+    else
+        mem_pct=0
+    fi
+
+    emit "{\"disk\":{\"total_bytes\":$total,\"used_bytes\":$used,\"free_bytes\":$avail,\"used_percent\":$pct},\"memory\":{\"total_bytes\":$mem_total,\"used_bytes\":$mem_used,\"used_percent\":$mem_pct}}"
 }
 
 cmd_version() {

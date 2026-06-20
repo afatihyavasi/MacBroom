@@ -17,7 +17,7 @@ final class AppState: ObservableObject {
     @Published var phase: Phase = .idle
     @Published var candidates: [CleanCandidate] = []
     @Published var selected: Set<String> = []          // selected candidate paths
-    @Published var disk: DiskStatus?
+    @Published var status: SystemStatus?
 
     private let engine: EngineBridge
 
@@ -83,8 +83,8 @@ final class AppState: ObservableObject {
         }
     }
 
-    func refreshDisk() async {
-        disk = try? await engine.status()
+    func refreshStatus() async {
+        status = try? await engine.status()
     }
 
     func scan(categories: [CleanCategory] = CleanCategory.allCases) async {
@@ -97,7 +97,7 @@ final class AppState: ObservableObject {
             // deliberately chooses them.
             selected = Set(candidates.filter { $0.category == "ai" }.map(\.path))
             phase = .ready
-            await refreshDisk()
+            await refreshStatus()
         } catch {
             phase = .error(error.localizedDescription)
         }
@@ -125,7 +125,7 @@ final class AppState: ObservableObject {
             candidates.removeAll { selected.contains($0.path) }
             selected.removeAll()
             phase = .finished(freedBytes: freed)
-            await refreshDisk()
+            await refreshStatus()
         } catch {
             phase = .error(error.localizedDescription)
         }
