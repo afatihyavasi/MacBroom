@@ -36,11 +36,7 @@ struct MenuBarView: View {
         }
     }
     @State private var section: Section = .category(.ai)
-    @Environment(\.openWindow) private var openWindow
     @AppStorage("didOnboard") private var didOnboard = false
-
-    /// Scene id for the standalone Settings window (shared with MacBroomApp).
-    static let settingsWindowID = "macbroom-settings"
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.md) {
@@ -84,12 +80,10 @@ struct MenuBarView: View {
             .disabled(state.isBusy)
             .keyboardShortcut("r", modifiers: .command)
             SHIconButton(system: "gearshape", help: loc.t(.settingsHelp)) {
-                // Settings opens in its OWN window — not a sheet on this panel.
-                // A .menuBarExtraStyle(.window) panel auto-dismisses on key-window
-                // focus loss, and any NSMenu-based control (e.g. .menu pickers)
-                // would otherwise close the whole panel.
-                openWindow(id: Self.settingsWindowID)
-                NSApp.activate(ignoringOtherApps: true)
+                // Settings opens in its own AppKit window (deterministic for a
+                // menu-bar app; see SettingsWindowController) so its NSMenu
+                // pickers can't dismiss this panel.
+                SettingsWindowController.shared.show(state: state, loc: loc)
             }
             .keyboardShortcut(",", modifiers: .command)
         }

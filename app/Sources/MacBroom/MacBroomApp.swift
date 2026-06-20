@@ -19,14 +19,5 @@ struct MacBroomApp: App {
             Image(systemName: "wand.and.stars.inverse")
         }
         .menuBarExtraStyle(.window)
-
-        // Settings lives in its own real window so its controls (pickers, etc.)
-        // never steal focus from — and thus dismiss — the menu-bar panel.
-        Window("MacBroom", id: MenuBarView.settingsWindowID) {
-            SettingsView()
-                .environmentObject(state)
-                .environmentObject(loc)
-        }
-        .windowResizability(.contentSize)
     }
 }

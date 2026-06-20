@@ -2,12 +2,11 @@ import SwiftUI
 import AppKit
 import MacBroomCore
 
-/// Settings sheet (v2): language, deletion policy, Full Disk Access, attribution.
+/// Settings window (v2): language, deletion policy, Full Disk Access, attribution.
 struct SettingsView: View {
     @EnvironmentObject var loc: LocalizationManager
     @EnvironmentObject var state: AppState
     @AppStorage("deletionMode") private var deletionMode: String = DeleteMode.permanent.rawValue
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ScrollView {
@@ -15,7 +14,7 @@ struct SettingsView: View {
             HStack {
                 Text(loc.t(.settingsTitle)).font(.shTitle)
                 Spacer()
-                Button(loc.t(.done)) { dismiss() }
+                Button(loc.t(.done)) { SettingsWindowController.shared.close() }
                     .buttonStyle(.shPrimary(.sm))
                     .keyboardShortcut(.defaultAction)
             }
