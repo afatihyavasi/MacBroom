@@ -36,6 +36,37 @@ final class AppState: ObservableObject {
         AIToolGroup.group(candidates.filter { $0.category == "ai" })
     }
 
+    /// System-category candidates, largest first.
+    var systemCandidates: [CleanCandidate] {
+        candidates.filter { $0.category == "system" }.sorted { $0.sizeBytes > $1.sizeBytes }
+    }
+
+    func candidates(in category: CleanCategory) -> [CleanCandidate] {
+        candidates.filter { $0.category == category.rawValue }
+    }
+
+    func selectedBytes(in category: CleanCategory) -> Int64 {
+        candidates(in: category).filter { selected.contains($0.path) }.reduce(0) { $0 + $1.sizeBytes }
+    }
+
+    /// Tri-state selection for a whole category (true=all, false=none, nil=mixed).
+    func selectionState(in category: CleanCategory) -> Bool? {
+        let items = candidates(in: category)
+        guard !items.isEmpty else { return false }
+        let sel = items.filter { selected.contains($0.path) }.count
+        if sel == 0 { return false }
+        if sel == items.count { return true }
+        return nil
+    }
+
+    func toggleAll(in category: CleanCategory) {
+        let items = candidates(in: category)
+        let allSelected = selectionState(in: category) == true
+        for c in items {
+            if allSelected { selected.remove(c.path) } else { selected.insert(c.path) }
+        }
+    }
+
     func isSelected(_ path: String) -> Bool { selected.contains(path) }
 
     func selectionState(for group: AIToolGroup) -> Bool? {
@@ -61,9 +92,10 @@ final class AppState: ObservableObject {
         do {
             let result = try await engine.scan(categories: categories)
             candidates = result.candidates.sorted { $0.sizeBytes > $1.sizeBytes }
-            // Pre-select everything the scan surfaced — these are already filtered
-            // to safe, regenerable paths by mole's protection layer.
-            selected = Set(candidates.map(\.path))
+            // Pre-select only AI caches (the safe, headline cleanup). System
+            // caches are opt-in: surfaced but left unchecked so the user
+            // deliberately chooses them.
+            selected = Set(candidates.filter { $0.category == "ai" }.map(\.path))
             phase = .ready
             await refreshDisk()
         } catch {

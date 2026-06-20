@@ -5,6 +5,7 @@ import MacBroomCore
 /// status panel slot in alongside in later stages.
 struct MenuBarView: View {
     @EnvironmentObject var state: AppState
+    @State private var tab: CleanCategory = .ai
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -76,8 +77,26 @@ struct MenuBarView: View {
             Label(msg, systemImage: "exclamationmark.triangle")
                 .font(.caption).foregroundStyle(.red).padding(.vertical, 8)
         case .ready:
-            AICacheView()
+            VStack(spacing: 10) {
+                Picker("", selection: $tab) {
+                    ForEach(CleanCategory.allCases) { cat in
+                        Text(tabTitle(cat)).tag(cat)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+
+                switch tab {
+                case .ai:     AICacheView()
+                case .system: SystemCacheView()
+                }
+            }
         }
+    }
+
+    private func tabTitle(_ cat: CleanCategory) -> String {
+        let bytes = state.candidates(in: cat).reduce(0) { $0 + $1.sizeBytes }
+        return bytes > 0 ? "\(cat.title) · \(Format.bytes(bytes))" : cat.title
     }
 
     // MARK: controls
