@@ -97,6 +97,15 @@ if let d = try? JSONDecoder().decode(DiscoverResult.self, from: data(#"{"targets
 // Formatting sanity
 check("Format.bytes non-empty", !Format.bytes(1_500_000).isEmpty)
 
+// CleanFrequency scheduling math
+check("freq off never due", CleanFrequency.off.isDue(since: Date(timeIntervalSince1970: 0), now: Date(timeIntervalSince1970: 9_999_999)) == false)
+check("freq hourly interval", CleanFrequency.hourly.interval == 3600)
+check("freq weekly due after 8 days",
+      CleanFrequency.weekly.isDue(since: Date(timeIntervalSince1970: 0), now: Date(timeIntervalSince1970: 8 * 86_400)))
+check("freq weekly not due after 1 day",
+      CleanFrequency.weekly.isDue(since: Date(timeIntervalSince1970: 0), now: Date(timeIntervalSince1970: 86_400)) == false)
+check("freq never-run is due now", CleanFrequency.daily.isDue(since: nil, now: Date(timeIntervalSince1970: 100)))
+
 // Localization: every key must be translated in all 4 languages (no fallback
 // gaps), and format placeholders must match across languages.
 for lang in [AppLanguage.en, .tr, .es, .fr] {

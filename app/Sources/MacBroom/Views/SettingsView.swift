@@ -5,10 +5,12 @@ import MacBroomCore
 /// Settings sheet (v2): language, deletion policy, Full Disk Access, attribution.
 struct SettingsView: View {
     @EnvironmentObject var loc: LocalizationManager
+    @EnvironmentObject var state: AppState
     @AppStorage("deletionMode") private var deletionMode: String = DeleteMode.permanent.rawValue
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
+        ScrollView {
         VStack(alignment: .leading, spacing: Theme.Space.lg) {
             HStack {
                 Text(loc.t(.settingsTitle)).font(.shTitle)
@@ -17,6 +19,9 @@ struct SettingsView: View {
                     .buttonStyle(.shPrimary(.sm))
                     .keyboardShortcut(.defaultAction)
             }
+
+            // Automatic AI cleaning
+            autoCleanSection
 
             // Language
             VStack(alignment: .leading, spacing: Theme.Space.sm) {
@@ -59,10 +64,62 @@ struct SettingsView: View {
             }
         }
         .padding(Theme.Space.xl)
-        .frame(width: 400)
+        }
+        .frame(width: 400, height: 560)
         .background(Theme.background)
         .foregroundStyle(Theme.foreground)
     }
+
+    // MARK: automatic AI cleaning
+
+    @ViewBuilder private var autoCleanSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.sm) {
+            SHSectionHeader(title: loc.t(.autoCleanTitle), systemImage: "clock.arrow.circlepath")
+            Text(loc.t(.autoCleanDesc)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
+            let tools = state.installedTargets(in: .ai)
+            if tools.isEmpty {
+                Text(loc.t(.autoCleanNoTools)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
+            } else {
+                VStack(spacing: Theme.Space.xs) {
+                    ForEach(tools) { autoCleanRow($0) }
+                }
+            }
+        }
+    }
+
+    private func autoCleanRow(_ t: AnalysisTarget) -> some View {
+        let freq = state.frequency(for: t.id)
+        return HStack(spacing: Theme.Space.sm) {
+            AIToolIconView(tool: AITool(rawValue: String(t.id.dropFirst(3))) ?? .other, size: 16)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(t.label).font(.shLabel)
+                if freq != .off, let last = state.lastRun(for: t.id) {
+                    Text(loc.t(.autoCleanLast, Self.relative.localizedString(for: last, relativeTo: Date())))
+                        .font(.shCaption).foregroundStyle(Theme.mutedForeground)
+                }
+            }
+            Spacer()
+            Picker("", selection: Binding(
+                get: { state.frequency(for: t.id) },
+                set: { state.setSchedule($0, for: t.id) }
+            )) {
+                ForEach(CleanFrequency.allCases) { Text(loc.t($0.titleKey)).tag($0) }
+            }
+            .pickerStyle(.menu).labelsHidden().fixedSize()
+        }
+        .padding(Theme.Space.sm)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.card)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+                .strokeBorder(freq == .off ? Theme.border : Theme.accent.opacity(0.5), lineWidth: 1)
+        )
+    }
+
+    private static let relative: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter(); f.unitsStyle = .abbreviated; return f
+    }()
 
     /// A selectable deletion-mode card (radio behavior).
     private func deletionRow(_ mode: DeleteMode) -> some View {

@@ -48,7 +48,7 @@ struct MenuBarView: View {
             if case .idle = state.phase { await state.discover() }
         }
         .sheet(isPresented: $showingSettings) {
-            SettingsView().environmentObject(loc)
+            SettingsView().environmentObject(loc).environmentObject(state)
         }
     }
 

@@ -41,6 +41,8 @@ final class AppState: ObservableObject {
 
     init(engine: EngineBridge = EngineBridge()) {
         self.engine = engine
+        loadSchedules()
+        startScheduler()
     }
 
     /// User-chosen deletion policy (mirrors @AppStorage("deletionMode")).
@@ -331,5 +333,93 @@ final class AppState: ObservableObject {
         appCandidates = []
         appSelected = []
         appFlow = .browsing
+    }
+
+    // MARK: - Scheduled automatic AI cleaning
+
+    /// Per-target frequency (only non-`.off` entries are stored). Published so
+    /// the Settings UI reflects changes live.
+    @Published private(set) var schedules: [String: CleanFrequency] = [:]
+    private var lastRun: [String: Date] = [:]
+    private var schedulerStarted = false
+    private let schedulesKey = "autoCleanSchedules"
+    private let lastRunKey = "autoCleanLastRun"
+
+    func frequency(for targetId: String) -> CleanFrequency { schedules[targetId] ?? .off }
+    func lastRun(for targetId: String) -> Date? { lastRun[targetId] }
+
+    /// Enable/disable/change a target's automatic-clean schedule. Enabling starts
+    /// the clock now, so the first auto-clean is a full interval away (turning it
+    /// on never wipes immediately).
+    func setSchedule(_ freq: CleanFrequency, for targetId: String) {
+        if freq == .off {
+            schedules[targetId] = nil
+        } else {
+            schedules[targetId] = freq
+            if lastRun[targetId] == nil { lastRun[targetId] = Date() }
+        }
+        persistSchedules()
+        persistLastRun()
+    }
+
+    private func loadSchedules() {
+        if let raw = UserDefaults.standard.dictionary(forKey: schedulesKey) as? [String: String] {
+            schedules = raw.compactMapValues { CleanFrequency(rawValue: $0) }.filter { $0.value != .off }
+        }
+        if let raw = UserDefaults.standard.dictionary(forKey: lastRunKey) as? [String: Double] {
+            lastRun = raw.mapValues { Date(timeIntervalSince1970: $0) }
+        }
+    }
+
+    private func persistSchedules() {
+        UserDefaults.standard.set(schedules.mapValues { $0.rawValue }, forKey: schedulesKey)
+    }
+    private func persistLastRun() {
+        UserDefaults.standard.set(lastRun.mapValues { $0.timeIntervalSince1970 }, forKey: lastRunKey)
+    }
+
+    /// App-lifetime loop: catch up on launch, then re-check every 5 minutes.
+    /// Owned by AppState (not a view), so it survives the panel opening/closing.
+    private func startScheduler() {
+        guard !schedulerStarted else { return }
+        schedulerStarted = true
+        Task { [weak self] in
+            await self?.runDueSchedules()
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 300 * 1_000_000_000)   // 5 min
+                guard let self else { break }
+                await self.runDueSchedules()
+            }
+        }
+    }
+
+    private func runDueSchedules() async {
+        guard !isBusy else { return }   // never fight a manual operation
+        let now = Date()
+        for (id, freq) in schedules where freq.isDue(since: lastRun[id], now: now) {
+            await autoCleanTarget(id)
+            lastRun[id] = Date()
+            persistLastRun()
+        }
+        await refreshStatus()
+    }
+
+    /// Quietly scan one target and clean everything it surfaces. Runs entirely
+    /// off the interactive `phase`, so a background auto-clean never disturbs
+    /// whatever the user is looking at. Candidates are mole-protection-filtered,
+    /// so cleaning all of them is the same safety contract as a manual clean.
+    private func autoCleanTarget(_ targetId: String) async {
+        do {
+            let result = try await engine.scan(targetIds: [targetId])
+            let paths = result.candidates.map(\.path)
+            guard !paths.isEmpty else { return }
+            for try await _ in engine.clean(approvedPaths: paths, targetIds: [targetId], deleteMode: deleteMode) {}
+            // If the cleaned target is currently shown, drop the gone items.
+            let goneSet = Set(paths)
+            candidates.removeAll { goneSet.contains($0.path) }
+            selected.subtract(goneSet)
+        } catch {
+            // Auto-clean is best-effort; surface nothing on failure.
+        }
     }
 }

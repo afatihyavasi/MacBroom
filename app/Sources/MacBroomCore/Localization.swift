@@ -52,6 +52,8 @@ public enum L10n: String, CaseIterable {
     case language, languageSystem, disk, memory, diskFree, memoryTotal
     case categoryAI, categorySystem
     case targetAppCaches, targetEditors, targetGuiApps, targetDevMisc
+    case autoCleanTitle, autoCleanDesc, autoCleanNoTools, autoCleanLast
+    case freqOff, freqHourly, freqDaily, freqWeekly, freqMonthly
     case deletePermanentTitle, deleteTrashTitle, deletePermanentDetail, deleteTrashDetail
     case errEngineNotFound, errNonZero, errDecode
 }
@@ -121,6 +123,11 @@ public enum Localization {
         .categoryAI: "AI Tools", .categorySystem: "System",
         .targetAppCaches: "App caches", .targetEditors: "Code editors",
         .targetGuiApps: "GUI app caches", .targetDevMisc: "Developer leftovers",
+        .autoCleanTitle: "Automatic AI cleaning",
+        .autoCleanDesc: "Clean a tool's caches automatically on a schedule.",
+        .autoCleanNoTools: "No AI tools detected yet.", .autoCleanLast: "Last cleaned: %@",
+        .freqOff: "Off", .freqHourly: "Hourly", .freqDaily: "Daily",
+        .freqWeekly: "Weekly", .freqMonthly: "Monthly",
         .deletePermanentTitle: "Delete permanently", .deleteTrashTitle: "Move to Trash",
         .deletePermanentDetail: "Reclaims space immediately (can’t be undone).",
         .deleteTrashDetail: "Reversible; space frees up when the Trash is emptied.",
@@ -169,6 +176,11 @@ public enum Localization {
         .categoryAI: "AI Araçları", .categorySystem: "Sistem",
         .targetAppCaches: "Uygulama önbellekleri", .targetEditors: "Kod editörleri",
         .targetGuiApps: "GUI uygulama önbellekleri", .targetDevMisc: "Geliştirici artıkları",
+        .autoCleanTitle: "Otomatik AI temizliği",
+        .autoCleanDesc: "Bir aracın önbelleklerini belirlenen sıklıkta otomatik temizler.",
+        .autoCleanNoTools: "Henüz AI aracı bulunamadı.", .autoCleanLast: "Son temizlik: %@",
+        .freqOff: "Kapalı", .freqHourly: "Saatlik", .freqDaily: "Günlük",
+        .freqWeekly: "Haftalık", .freqMonthly: "Aylık",
         .deletePermanentTitle: "Kalıcı olarak sil", .deleteTrashTitle: "Çöp Kutusu’na taşı",
         .deletePermanentDetail: "Alanı hemen geri kazanır (geri alınamaz).",
         .deleteTrashDetail: "Geri alınabilir; alan Çöp boşaltılınca boşalır.",
@@ -217,6 +229,11 @@ public enum Localization {
         .categoryAI: "Herramientas de IA", .categorySystem: "Sistema",
         .targetAppCaches: "Cachés de apps", .targetEditors: "Editores de código",
         .targetGuiApps: "Cachés de apps con interfaz", .targetDevMisc: "Restos de desarrollo",
+        .autoCleanTitle: "Limpieza automática de IA",
+        .autoCleanDesc: "Limpia las cachés de una herramienta según una frecuencia.",
+        .autoCleanNoTools: "Aún no se detectan herramientas de IA.", .autoCleanLast: "Última limpieza: %@",
+        .freqOff: "Apagado", .freqHourly: "Cada hora", .freqDaily: "Diario",
+        .freqWeekly: "Semanal", .freqMonthly: "Mensual",
         .deletePermanentTitle: "Eliminar permanentemente", .deleteTrashTitle: "Mover a la Papelera",
         .deletePermanentDetail: "Libera espacio de inmediato (no se puede deshacer).",
         .deleteTrashDetail: "Reversible; el espacio se libera al vaciar la Papelera.",
@@ -265,6 +282,11 @@ public enum Localization {
         .categoryAI: "Outils d’IA", .categorySystem: "Système",
         .targetAppCaches: "Caches d’apps", .targetEditors: "Éditeurs de code",
         .targetGuiApps: "Caches d’apps graphiques", .targetDevMisc: "Restes de développement",
+        .autoCleanTitle: "Nettoyage IA automatique",
+        .autoCleanDesc: "Nettoie les caches d’un outil selon une fréquence définie.",
+        .autoCleanNoTools: "Aucun outil d’IA détecté pour l’instant.", .autoCleanLast: "Dernier nettoyage : %@",
+        .freqOff: "Désactivé", .freqHourly: "Toutes les heures", .freqDaily: "Quotidien",
+        .freqWeekly: "Hebdomadaire", .freqMonthly: "Mensuel",
         .deletePermanentTitle: "Supprimer définitivement", .deleteTrashTitle: "Mettre à la corbeille",
         .deletePermanentDetail: "Libère l’espace immédiatement (irréversible).",
         .deleteTrashDetail: "Réversible ; l’espace est libéré en vidant la corbeille.",
