@@ -39,7 +39,7 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
 /// Every user-facing string key. Values with `%@` / `%d` are `String(format:)`
 /// templates; see `Localization.tables`.
 public enum L10n: String, CaseIterable {
-    case tabAI, tabSystem, tabApps
+    case tabAI, tabSystem, tabDeveloper, tabApps
     case refreshHelp, settingsHelp, open, quit, clean, loading, back, backToList
     case fdaTitle, fdaBannerDesc, fdaSettingsDesc, openFDA, openInSettings
     case searchingTargets, scanningTargets, cleaningProgress, freed, backTargets, selectedSuffix
@@ -50,8 +50,9 @@ public enum L10n: String, CaseIterable {
     case analyzeQuestion, analyzeSubtitle, noTargetsInCategory, clearSelection, analyzeButton
     case settingsTitle, done, deletionMethod, about, aboutVersion, engineAttribution
     case language, languageSystem, disk, memory, diskFree, memoryTotal
-    case categoryAI, categorySystem
+    case categoryAI, categorySystem, categoryDeveloper
     case targetAppCaches, targetEditors, targetGuiApps, targetDevMisc
+    case targetXcode, targetPkgCaches
     case autoCleanTitle, autoCleanDesc, autoCleanNoTools, autoCleanLast
     case freqOff, freqHourly, freqDaily, freqWeekly, freqMonthly
     case deletePermanentTitle, deleteTrashTitle, deletePermanentDetail, deleteTrashDetail
@@ -84,7 +85,7 @@ public enum Localization {
 
     // MARK: - English (also the fallback)
     private static let en: [L10n: String] = [
-        .tabAI: "AI", .tabSystem: "System", .tabApps: "Apps",
+        .tabAI: "AI", .tabSystem: "System", .tabDeveloper: "Developer", .tabApps: "Apps",
         .refreshHelp: "Rediscover targets", .settingsHelp: "Settings",
         .open: "Open", .quit: "Quit", .clean: "Clean", .loading: "Loading…",
         .back: "Back", .backToList: "Back to list",
@@ -120,9 +121,10 @@ public enum Localization {
         .engineAttribution: "Cleaning engine provided by tw93/mole (GPL-3.0).",
         .language: "Language", .languageSystem: "System (automatic)",
         .disk: "Disk", .memory: "Memory", .diskFree: "%@ free", .memoryTotal: "%@ total",
-        .categoryAI: "AI Tools", .categorySystem: "System",
+        .categoryAI: "AI Tools", .categorySystem: "System", .categoryDeveloper: "Developer",
         .targetAppCaches: "App caches", .targetEditors: "Code editors",
         .targetGuiApps: "GUI app caches", .targetDevMisc: "Developer leftovers",
+        .targetXcode: "Xcode DerivedData", .targetPkgCaches: "Package manager caches",
         .autoCleanTitle: "Automatic AI cleaning",
         .autoCleanDesc: "Clean a tool's caches automatically on a schedule.",
         .autoCleanNoTools: "No AI tools detected yet.", .autoCleanLast: "Last cleaned: %@",
@@ -137,7 +139,7 @@ public enum Localization {
 
     // MARK: - Turkish
     private static let tr: [L10n: String] = [
-        .tabAI: "AI", .tabSystem: "Sistem", .tabApps: "Uygulamalar",
+        .tabAI: "AI", .tabSystem: "Sistem", .tabDeveloper: "Geliştirici", .tabApps: "Uygulamalar",
         .refreshHelp: "Hedefleri yeniden bul", .settingsHelp: "Ayarlar",
         .open: "Aç", .quit: "Çıkış", .clean: "Temizle", .loading: "Yükleniyor…",
         .back: "Geri", .backToList: "Listeye dön",
@@ -173,9 +175,10 @@ public enum Localization {
         .engineAttribution: "Temizleme motoru tw93/mole (GPL-3.0) tarafından sağlanır.",
         .language: "Dil", .languageSystem: "Sistem (otomatik)",
         .disk: "Disk", .memory: "Bellek", .diskFree: "%@ boş", .memoryTotal: "%@ toplam",
-        .categoryAI: "AI Araçları", .categorySystem: "Sistem",
+        .categoryAI: "AI Araçları", .categorySystem: "Sistem", .categoryDeveloper: "Geliştirici",
         .targetAppCaches: "Uygulama önbellekleri", .targetEditors: "Kod editörleri",
         .targetGuiApps: "GUI uygulama önbellekleri", .targetDevMisc: "Geliştirici artıkları",
+        .targetXcode: "Xcode DerivedData", .targetPkgCaches: "Paket yöneticisi önbellekleri",
         .autoCleanTitle: "Otomatik AI temizliği",
         .autoCleanDesc: "Bir aracın önbelleklerini belirlenen sıklıkta otomatik temizler.",
         .autoCleanNoTools: "Henüz AI aracı bulunamadı.", .autoCleanLast: "Son temizlik: %@",
@@ -190,7 +193,7 @@ public enum Localization {
 
     // MARK: - Spanish
     private static let es: [L10n: String] = [
-        .tabAI: "IA", .tabSystem: "Sistema", .tabApps: "Apps",
+        .tabAI: "IA", .tabSystem: "Sistema", .tabDeveloper: "Desarrollo", .tabApps: "Apps",
         .refreshHelp: "Volver a buscar objetivos", .settingsHelp: "Ajustes",
         .open: "Abrir", .quit: "Salir", .clean: "Limpiar", .loading: "Cargando…",
         .back: "Atrás", .backToList: "Volver a la lista",
@@ -226,9 +229,10 @@ public enum Localization {
         .engineAttribution: "Motor de limpieza proporcionado por tw93/mole (GPL-3.0).",
         .language: "Idioma", .languageSystem: "Sistema (automático)",
         .disk: "Disco", .memory: "Memoria", .diskFree: "%@ libres", .memoryTotal: "%@ en total",
-        .categoryAI: "Herramientas de IA", .categorySystem: "Sistema",
+        .categoryAI: "Herramientas de IA", .categorySystem: "Sistema", .categoryDeveloper: "Desarrollo",
         .targetAppCaches: "Cachés de apps", .targetEditors: "Editores de código",
         .targetGuiApps: "Cachés de apps con interfaz", .targetDevMisc: "Restos de desarrollo",
+        .targetXcode: "Xcode DerivedData", .targetPkgCaches: "Cachés de gestores de paquetes",
         .autoCleanTitle: "Limpieza automática de IA",
         .autoCleanDesc: "Limpia las cachés de una herramienta según una frecuencia.",
         .autoCleanNoTools: "Aún no se detectan herramientas de IA.", .autoCleanLast: "Última limpieza: %@",
@@ -243,7 +247,7 @@ public enum Localization {
 
     // MARK: - French
     private static let fr: [L10n: String] = [
-        .tabAI: "IA", .tabSystem: "Système", .tabApps: "Apps",
+        .tabAI: "IA", .tabSystem: "Système", .tabDeveloper: "Développeur", .tabApps: "Apps",
         .refreshHelp: "Rechercher à nouveau les cibles", .settingsHelp: "Réglages",
         .open: "Ouvrir", .quit: "Quitter", .clean: "Nettoyer", .loading: "Chargement…",
         .back: "Retour", .backToList: "Retour à la liste",
@@ -279,9 +283,10 @@ public enum Localization {
         .engineAttribution: "Moteur de nettoyage fourni par tw93/mole (GPL-3.0).",
         .language: "Langue", .languageSystem: "Système (automatique)",
         .disk: "Disque", .memory: "Mémoire", .diskFree: "%@ libres", .memoryTotal: "%@ au total",
-        .categoryAI: "Outils d’IA", .categorySystem: "Système",
+        .categoryAI: "Outils d’IA", .categorySystem: "Système", .categoryDeveloper: "Développeur",
         .targetAppCaches: "Caches d’apps", .targetEditors: "Éditeurs de code",
         .targetGuiApps: "Caches d’apps graphiques", .targetDevMisc: "Restes de développement",
+        .targetXcode: "Xcode DerivedData", .targetPkgCaches: "Caches des gestionnaires de paquets",
         .autoCleanTitle: "Nettoyage IA automatique",
         .autoCleanDesc: "Nettoie les caches d’un outil selon une fréquence définie.",
         .autoCleanNoTools: "Aucun outil d’IA détecté pour l’instant.", .autoCleanLast: "Dernier nettoyage : %@",

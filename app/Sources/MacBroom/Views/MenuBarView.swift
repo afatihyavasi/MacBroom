@@ -30,6 +30,7 @@ struct MenuBarView: View {
             switch self {
             case .category(.ai): return .tabAI
             case .category(.system): return .tabSystem
+            case .category(.developer): return .tabDeveloper
             case .apps: return .tabApps
             }
         }

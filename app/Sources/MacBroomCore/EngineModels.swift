@@ -153,18 +153,21 @@ public enum DeleteMode: String, CaseIterable, Identifiable {
 public enum CleanCategory: String, CaseIterable, Identifiable {
     case ai
     case system
+    case developer
     public var id: String { rawValue }
 
     public var title: String {
         switch self {
         case .ai: return Localization.string(.categoryAI)
         case .system: return Localization.string(.categorySystem)
+        case .developer: return Localization.string(.categoryDeveloper)
         }
     }
     public var systemImage: String {
         switch self {
         case .ai: return "sparkles"
         case .system: return "internaldrive"
+        case .developer: return "hammer"
         }
     }
 }

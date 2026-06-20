@@ -197,3 +197,32 @@ PLIST
     [[ "$output" == *'"reason":'* ]]
     [ -e "$HOME/.gemini/tmp/locked/blob" ]   # genuinely not deleted
 }
+
+# --- developer category (clean_xcode_derived_data deletes via safe_remove) --
+
+@test "discover lists developer targets" {
+    run bash "$ENGINE" discover
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"id":"developer:xcode"'* ]]
+    [[ "$output" == *'"id":"developer:pkg-caches"'* ]]
+}
+
+@test "developer:xcode scan surfaces DerivedData (safe_remove override routes to our sink)" {
+    mkdir -p "$HOME/Library/Developer/Xcode/DerivedData/Foo-abc"
+    head -c 65536 /dev/zero > "$HOME/Library/Developer/Xcode/DerivedData/Foo-abc/blob"
+
+    run bash "$ENGINE" scan --targets=developer:xcode
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"$HOME/Library/Developer/Xcode/DerivedData"* ]]
+    [[ "$output" == *'"size_bytes":'* ]]
+}
+
+@test "developer:xcode clean removes only the approved DerivedData path" {
+    mkdir -p "$HOME/Library/Developer/Xcode/DerivedData/Foo-abc"
+    head -c 65536 /dev/zero > "$HOME/Library/Developer/Xcode/DerivedData/Foo-abc/blob"
+    printf '%s\n' "$HOME/Library/Developer/Xcode/DerivedData/Foo-abc" > "$HOME/approved.txt"
+
+    run bash "$ENGINE" clean --targets=developer:xcode --paths-file="$HOME/approved.txt"
+    [ "$status" -eq 0 ]
+    [ ! -e "$HOME/Library/Developer/Xcode/DerivedData/Foo-abc" ]   # approved removed
+}

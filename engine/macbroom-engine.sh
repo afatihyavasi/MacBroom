@@ -182,6 +182,37 @@ safe_clean() {
     done
 }
 
+# --------------------------------------------------------------------------
+# Our override of mole's safe_remove.
+# mole calls it as:  safe_remove <path> [silent] [precomputed_size_kb]
+# Some clean functions (e.g. clean_xcode_derived_data) delete via safe_remove
+# instead of safe_clean. Route those through the same protection-gated sink so
+# they surface in scan mode and obey the approved-path allowlist in clean mode,
+# exactly like safe_clean. The extra args (silent/size) are mole-internal and
+# irrelevant to us. Returns 0 so callers that count successes keep working.
+#
+# NOTE: unlike safe_clean (which mole never defines), mole DOES define its own
+# safe_remove in lib/core/file_ops.sh, sourced by load_mole. So our override is
+# clobbered when mole loads and MUST be re-applied afterwards. The body lives in
+# _mb_install_safe_remove_override so load_mole can re-install it at the end.
+# --------------------------------------------------------------------------
+_mb_install_safe_remove_override() {
+    safe_remove() {
+        local path="$1"
+        [[ -n "$path" ]] || return 0
+        [[ -e "$path" || -L "$path" ]] || return 0
+        if declare -F should_protect_path >/dev/null 2>&1 && should_protect_path "$path"; then
+            return 0
+        fi
+        if declare -F is_path_whitelisted >/dev/null 2>&1 && is_path_whitelisted "$path"; then
+            return 0
+        fi
+        _mb_handle "$path" "$(basename "$path")"
+        return 0
+    }
+}
+_mb_install_safe_remove_override
+
 # Membership test for the approved-path allowlist (bash 3.2 friendly).
 _mb_is_approved() {
     [[ -n "$MB_PATHS_FILE" ]] || return 1
@@ -262,6 +293,12 @@ load_mole() {
     # deletion safety we rely on (should_protect_path / is_path_whitelisted) does
     # not depend on these shell options.
     set +eu
+
+    # mole's file_ops.sh defined its own safe_remove just now, clobbering our
+    # protection-gated override. Re-install ours so safe_remove-based cleaners
+    # (e.g. clean_xcode_derived_data) route through the engine sink. safe_clean
+    # needs no such treatment — mole never defines it.
+    _mb_install_safe_remove_override
 }
 
 # --------------------------------------------------------------------------
@@ -287,6 +324,8 @@ system:app-caches|Uygulama önbellekleri|system|*|clean_app_caches
 system:editors|Kod editörleri|system|~/Library/Application Support/Code:~/Library/Application Support/Cursor:~/Library/Application Support/JetBrains|clean_code_editors
 system:gui-apps|GUI uygulama önbellekleri|system|*|clean_user_gui_applications
 system:dev-misc|Geliştirici artıkları|system|*|clean_dev_misc
+developer:xcode|Xcode DerivedData|developer|~/Library/Developer/Xcode/DerivedData|clean_xcode_derived_data
+developer:pkg-caches|Paket yöneticisi önbellekleri|developer|~/.npm:~/.yarn/cache:~/Library/Caches/pip:~/.cache/poetry|clean_dev_npm clean_dev_python
 EOF
 }
 
