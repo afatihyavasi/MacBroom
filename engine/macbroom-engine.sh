@@ -299,6 +299,100 @@ cmd_clean() {
     emit "{\"event\":\"done\",\"freed_bytes\":$MB_FREED_BYTES,\"count\":$MB_COUNT}"
 }
 
+# --------------------------------------------------------------------------
+# App uninstaller
+# --------------------------------------------------------------------------
+_app_bundle_id() {
+    plutil -extract CFBundleIdentifier raw "$1/Contents/Info.plist" 2>/dev/null \
+        || defaults read "$1/Contents/Info" CFBundleIdentifier 2>/dev/null \
+        || echo ""
+}
+
+# List user-removable applications as JSON.
+cmd_apps() {
+    load_mole
+    local -a roots=("/Applications" "$HOME/Applications")
+    local out="" first=1
+    local root app name bundle size
+    for root in "${roots[@]}"; do
+        [[ -d "$root" ]] || continue
+        for app in "$root"/*.app; do
+            [[ -d "$app" ]] || continue
+            name="$(basename "$app" .app)"
+            bundle="$(_app_bundle_id "$app")"
+            # Skip system-critical / protected apps.
+            if declare -F should_protect_from_uninstall >/dev/null 2>&1 \
+                && should_protect_from_uninstall "$bundle" 2>/dev/null; then
+                continue
+            fi
+            size="$(path_size_bytes "$app")"
+            [[ $first -eq 1 ]] || out+=","
+            first=0
+            out+="{\"name\":$(json_string "$name"),\"path\":$(json_string "$app"),\"bundle_id\":$(json_string "$bundle"),\"size_bytes\":$size}"
+        done
+    done
+    emit "{\"apps\":[$out]}"
+}
+
+# Scan one app: the bundle itself + its leftover files, as removal candidates.
+cmd_app_scan() {
+    local app=""
+    local arg
+    for arg in "$@"; do
+        case "$arg" in --app=*) app="${arg#*=}";; esac
+    done
+    [[ -n "$app" && -d "$app" ]] || die "app-scan requires --app=/path/App.app" 4
+
+    export MOLE_UNINSTALL_MODE=1
+    MB_MODE="scan"; MB_CATEGORY="app"
+    load_mole
+
+    local name bundle
+    name="$(basename "$app" .app)"
+    bundle="$(_app_bundle_id "$app")"
+
+    MB_CANDIDATES+=("{\"category\":\"app\",\"label\":$(json_string "$name (uygulama)"),\"path\":$(json_string "$app"),\"size_bytes\":$(path_size_bytes "$app")}")
+    MB_COUNT=$((MB_COUNT + 1))
+
+    local p
+    while IFS= read -r p; do
+        [[ -n "$p" && ( -e "$p" || -L "$p" ) ]] || continue
+        if should_protect_path "$p"; then continue; fi
+        MB_CANDIDATES+=("{\"category\":\"app\",\"label\":$(json_string "$(basename "$p")"),\"path\":$(json_string "$p"),\"size_bytes\":$(path_size_bytes "$p")}")
+        MB_COUNT=$((MB_COUNT + 1))
+    done < <(find_app_files "$bundle" "$name" 2>/dev/null || true)
+
+    emit_scan_result
+}
+
+# Remove the approved app + leftover paths.
+cmd_app_clean() {
+    local paths_file=""
+    local arg
+    for arg in "$@"; do
+        case "$arg" in --paths-file=*) paths_file="${arg#*=}";; esac
+    done
+    [[ -n "$paths_file" && -f "$paths_file" ]] || die "app-clean requires --paths-file=FILE" 4
+
+    export MOLE_UNINSTALL_MODE=1
+    MB_MODE="clean"
+    load_mole
+
+    local p size
+    while IFS= read -r p || [[ -n "$p" ]]; do
+        [[ -n "$p" && ( -e "$p" || -L "$p" ) ]] || continue
+        if should_protect_path "$p"; then continue; fi
+        size="$(path_size_bytes "$p")"
+        if _mb_remove "$p"; then
+            MB_FREED_BYTES=$((MB_FREED_BYTES + size))
+            MB_COUNT=$((MB_COUNT + 1))
+            emit "{\"event\":\"progress\",\"path\":$(json_string "$p"),\"freed_bytes\":$size}"
+        fi
+    done < "$paths_file"
+
+    emit "{\"event\":\"done\",\"freed_bytes\":$MB_FREED_BYTES,\"count\":$MB_COUNT}"
+}
+
 cmd_status() {
     # Disk snapshot for the volume backing $HOME, via df (POSIX, 1K blocks).
     local total used avail pct
@@ -346,14 +440,17 @@ main() {
     local sub="${1:-}"
     [[ $# -gt 0 ]] && shift
     case "$sub" in
-        scan)     cmd_scan "$@" ;;
-        clean)    cmd_clean "$@" ;;
-        ai-scan)  cmd_scan --categories=ai "$@" ;;
-        ai-clean) cmd_clean --categories=ai "$@" ;;
-        status)   cmd_status "$@" ;;
-        version)  cmd_version "$@" ;;
+        scan)      cmd_scan "$@" ;;
+        clean)     cmd_clean "$@" ;;
+        ai-scan)   cmd_scan --categories=ai "$@" ;;
+        ai-clean)  cmd_clean --categories=ai "$@" ;;
+        apps)      cmd_apps "$@" ;;
+        app-scan)  cmd_app_scan "$@" ;;
+        app-clean) cmd_app_clean "$@" ;;
+        status)    cmd_status "$@" ;;
+        version)   cmd_version "$@" ;;
         ""|-h|--help)
-            emit '{"usage":"macbroom-engine.sh {scan|clean|ai-scan|ai-clean|status|version}"}' ;;
+            emit '{"usage":"macbroom-engine.sh {scan|clean|ai-scan|ai-clean|apps|app-scan|app-clean|status|version}"}' ;;
         *) die "unknown subcommand: $sub" 64 ;;
     esac
 }

@@ -134,4 +134,81 @@ final class AppState: ObservableObject {
     func toggle(_ path: String) {
         if selected.contains(path) { selected.remove(path) } else { selected.insert(path) }
     }
+
+    // MARK: - App uninstaller flow
+
+    enum UninstallFlow: Equatable {
+        case browsing
+        case loading
+        case reviewing(AppInfo)
+        case uninstalling(done: Int, total: Int)
+        case uninstalled(freedBytes: Int64)
+        case error(String)
+    }
+
+    @Published var apps: [AppInfo] = []
+    @Published var appFlow: UninstallFlow = .browsing
+    @Published var appCandidates: [CleanCandidate] = []
+    @Published var appSelected: Set<String> = []
+
+    var appSelectedBytes: Int64 {
+        appCandidates.filter { appSelected.contains($0.path) }.reduce(0) { $0 + $1.sizeBytes }
+    }
+
+    func loadApps() async {
+        guard apps.isEmpty else { return }
+        appFlow = .loading
+        do {
+            apps = try await engine.apps().sorted { $0.sizeBytes > $1.sizeBytes }
+            appFlow = .browsing
+        } catch {
+            appFlow = .error(error.localizedDescription)
+        }
+    }
+
+    func reviewApp(_ app: AppInfo) async {
+        appFlow = .loading
+        do {
+            let result = try await engine.appScan(appPath: app.path)
+            appCandidates = result.candidates
+            appSelected = Set(appCandidates.map(\.path)) // pre-select all for full removal
+            appFlow = .reviewing(app)
+        } catch {
+            appFlow = .error(error.localizedDescription)
+        }
+    }
+
+    func toggleAppItem(_ path: String) {
+        if appSelected.contains(path) { appSelected.remove(path) } else { appSelected.insert(path) }
+    }
+
+    func uninstall() async {
+        let approved = Array(appSelected)
+        guard !approved.isEmpty else { return }
+        let total = approved.count
+        appFlow = .uninstalling(done: 0, total: total)
+        var freed: Int64 = 0, done = 0
+        do {
+            for try await event in engine.appClean(approvedPaths: approved) {
+                switch event {
+                case let .progress(_, bytes): freed += bytes; done += 1
+                    appFlow = .uninstalling(done: done, total: total)
+                case let .done(freedBytes, _): freed = max(freed, freedBytes)
+                }
+            }
+            appCandidates = []
+            appSelected = []
+            // Drop the uninstalled app from the list (path no longer exists).
+            apps.removeAll { !FileManager.default.fileExists(atPath: $0.path) }
+            appFlow = .uninstalled(freedBytes: freed)
+        } catch {
+            appFlow = .error(error.localizedDescription)
+        }
+    }
+
+    func backToAppList() {
+        appCandidates = []
+        appSelected = []
+        appFlow = .browsing
+    }
 }

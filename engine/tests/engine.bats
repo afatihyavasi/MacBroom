@@ -103,3 +103,43 @@ teardown() {
     [ "$status" -ne 0 ]
     [[ "$output" == *'"error"'* ]]
 }
+
+# --- app uninstaller ------------------------------------------------------
+
+@test "app-scan finds an app's leftovers" {
+    mkdir -p "$HOME/Applications/Foo.app/Contents"
+    cat > "$HOME/Applications/Foo.app/Contents/Info.plist" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>com.test.foo</string>
+</dict></plist>
+PLIST
+    mkdir -p "$HOME/Library/Caches/Foo"
+    head -c 2048 /dev/zero > "$HOME/Library/Caches/Foo/blob"
+
+    run bash "$ENGINE" app-scan --app="$HOME/Applications/Foo.app"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"$HOME/Applications/Foo.app"* ]]   # the bundle itself
+    [[ "$output" == *"$HOME/Library/Caches/Foo"* ]]     # a leftover
+}
+
+@test "app-clean removes only approved app paths" {
+    mkdir -p "$HOME/Library/Caches/Foo"
+    head -c 2048 /dev/zero > "$HOME/Library/Caches/Foo/blob"
+    mkdir -p "$HOME/Library/Caches/Bar"
+    head -c 2048 /dev/zero > "$HOME/Library/Caches/Bar/blob"
+
+    printf '%s\n' "$HOME/Library/Caches/Foo" > "$HOME/approved.txt"
+
+    run bash "$ENGINE" app-clean --paths-file="$HOME/approved.txt"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"event":"done"'* ]]
+    [ ! -e "$HOME/Library/Caches/Foo" ]   # approved removed
+    [ -e "$HOME/Library/Caches/Bar" ]     # untouched
+}
+
+@test "app-scan requires --app" {
+    run bash "$ENGINE" app-scan
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'"error"'* ]]
+}

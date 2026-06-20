@@ -43,13 +43,34 @@ public struct EngineBridge {
         return try decodeLast(ScanResult.self, from: data)
     }
 
+    // MARK: App uninstaller
+
+    public func apps() async throws -> [AppInfo] {
+        let (data, _) = try await runCollecting(["apps"])
+        return try decodeLast(AppsResult.self, from: data).apps
+    }
+
+    public func appScan(appPath: String) async throws -> ScanResult {
+        let (data, _) = try await runCollecting(["app-scan", "--app=\(appPath)"])
+        return try decodeLast(ScanResult.self, from: data)
+    }
+
+    public func appClean(approvedPaths: [String]) -> AsyncThrowingStream<EngineEvent, Error> {
+        streamingClean(subcommand: "app-clean", extraArgs: [], approvedPaths: approvedPaths)
+    }
+
     /// Delete user-approved paths, streaming progress as it goes.
     public func clean(approvedPaths: [String], categories: [CleanCategory]) -> AsyncThrowingStream<EngineEvent, Error> {
+        let arg = "--categories=" + categories.map(\.rawValue).joined(separator: ",")
+        return streamingClean(subcommand: "clean", extraArgs: [arg], approvedPaths: approvedPaths)
+    }
+
+    /// Shared streaming runner for `clean` / `app-clean`.
+    private func streamingClean(subcommand: String, extraArgs: [String], approvedPaths: [String]) -> AsyncThrowingStream<EngineEvent, Error> {
         AsyncThrowingStream { continuation in
             do {
                 let tmp = try writeApprovedPathsFile(approvedPaths)
-                let arg = "--categories=" + categories.map(\.rawValue).joined(separator: ",")
-                let proc = try makeProcess(["clean", arg, "--paths-file=\(tmp.path)"])
+                let proc = try makeProcess([subcommand] + extraArgs + ["--paths-file=\(tmp.path)"])
                 let pipe = Pipe()
                 proc.standardOutput = pipe
                 proc.standardError = FileHandle.nullDevice

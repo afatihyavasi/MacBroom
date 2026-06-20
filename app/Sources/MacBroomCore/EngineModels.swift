@@ -29,6 +29,26 @@ public struct ScanResult: Codable {
     public var count: Int
 }
 
+/// An installed, user-removable application from `apps`.
+public struct AppInfo: Codable, Identifiable, Hashable {
+    public var name: String
+    public var path: String
+    public var bundleId: String
+    public var sizeBytes: Int64
+
+    public var id: String { path }
+
+    enum CodingKeys: String, CodingKey {
+        case name, path
+        case bundleId = "bundle_id"
+        case sizeBytes = "size_bytes"
+    }
+}
+
+public struct AppsResult: Codable {
+    public var apps: [AppInfo]
+}
+
 /// Disk usage from `status`.
 public struct DiskInfo: Codable {
     public var total: Int64

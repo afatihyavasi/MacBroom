@@ -1,11 +1,23 @@
 import SwiftUI
 import MacBroomCore
 
-/// Root menu bar panel. Headlines safe AI cache cleanup; system cleanup and the
-/// status panel slot in alongside in later stages.
+/// Root menu bar panel: header + live status, then a three-way section switch
+/// (AI caches · System caches · Apps uninstaller).
 struct MenuBarView: View {
     @EnvironmentObject var state: AppState
-    @State private var tab: CleanCategory = .ai
+
+    enum Section: String, CaseIterable, Identifiable {
+        case ai, system, apps
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .ai: return "AI"
+            case .system: return "Sistem"
+            case .apps: return "Uygulamalar"
+            }
+        }
+    }
+    @State private var section: Section = .ai
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -14,9 +26,19 @@ struct MenuBarView: View {
                 StatusPanelView(status: status)
             }
             Divider()
+
+            Picker("", selection: $section) {
+                ForEach(Section.allCases) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
             content
-            Divider()
-            controls
+
+            if section != .apps {
+                Divider()
+                cleanControls
+            }
         }
         .padding(14)
         .task {
@@ -33,9 +55,7 @@ struct MenuBarView: View {
                 .font(.title3).foregroundStyle(.tint)
             Text("MacBroom").font(.headline)
             Spacer()
-            Button {
-                Task { await state.scan() }
-            } label: {
+            Button { Task { await state.scan() } } label: {
                 Image(systemName: "arrow.clockwise")
             }
             .buttonStyle(.borderless)
@@ -47,58 +67,43 @@ struct MenuBarView: View {
     // MARK: content
 
     @ViewBuilder private var content: some View {
+        switch section {
+        case .apps:
+            UninstallView()
+        case .ai, .system:
+            cleanContent
+        }
+    }
+
+    @ViewBuilder private var cleanContent: some View {
         switch state.phase {
         case .idle, .scanning:
             HStack(spacing: 8) {
                 ProgressView().controlSize(.small)
-                Text("AI cache'leri taranıyor…").font(.callout).foregroundStyle(.secondary)
+                Text("Önbellekler taranıyor…").font(.callout).foregroundStyle(.secondary)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
         case let .cleaning(done, total):
             VStack(alignment: .leading, spacing: 6) {
                 ProgressView(value: Double(done), total: Double(max(total, 1)))
-                Text("Temizleniyor… \(done)/\(total)")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            .padding(.vertical, 8)
+                Text("Temizleniyor… \(done)/\(total)").font(.caption).foregroundStyle(.secondary)
+            }.padding(.vertical, 8)
         case let .finished(freed):
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.largeTitle).foregroundStyle(.green)
-                Text("\(Format.bytes(freed)) boşaltıldı")
-                    .font(.title3.weight(.semibold))
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+                Text("\(Format.bytes(freed)) boşaltıldı").font(.title3.weight(.semibold))
+            }.frame(maxWidth: .infinity).padding(.vertical, 16)
         case let .error(msg):
             Label(msg, systemImage: "exclamationmark.triangle")
                 .font(.caption).foregroundStyle(.red).padding(.vertical, 8)
         case .ready:
-            VStack(spacing: 10) {
-                Picker("", selection: $tab) {
-                    ForEach(CleanCategory.allCases) { cat in
-                        Text(tabTitle(cat)).tag(cat)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-
-                switch tab {
-                case .ai:     AICacheView()
-                case .system: SystemCacheView()
-                }
-            }
+            if section == .ai { AICacheView() } else { SystemCacheView() }
         }
     }
 
-    private func tabTitle(_ cat: CleanCategory) -> String {
-        let bytes = state.candidates(in: cat).reduce(0) { $0 + $1.sizeBytes }
-        return bytes > 0 ? "\(cat.title) · \(Format.bytes(bytes))" : cat.title
-    }
+    // MARK: clean controls
 
-    // MARK: controls
-
-    private var controls: some View {
+    private var cleanControls: some View {
         HStack {
             if case .ready = state.phase {
                 Text("\(Format.bytes(state.selectedBytes)) seçili")
