@@ -44,7 +44,9 @@ struct MenuBarView: View {
                 Divider()
                 cleanControls
             }
+            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(14)
         .task {
             await state.refreshStatus()

@@ -203,7 +203,8 @@ final class AppState: ObservableObject {
         guard apps.isEmpty else { return }
         appFlow = .loading
         do {
-            apps = try await engine.apps().sorted { $0.sizeBytes > $1.sizeBytes }
+            apps = try await engine.apps()
+                .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             appFlow = .browsing
         } catch {
             appFlow = .error(error.localizedDescription)

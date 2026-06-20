@@ -55,8 +55,6 @@ struct UninstallView: View {
                                     Image(systemName: "app.dashed").foregroundStyle(.tint)
                                     Text(app.name).font(.callout).lineLimit(1)
                                     Spacer()
-                                    Text(Format.bytes(app.sizeBytes))
-                                        .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                                     Image(systemName: "chevron.right")
                                         .font(.caption2).foregroundStyle(.tertiary)
                                 }

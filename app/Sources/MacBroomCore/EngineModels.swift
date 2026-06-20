@@ -46,7 +46,8 @@ public struct AppInfo: Codable, Identifiable, Hashable {
     public var name: String
     public var path: String
     public var bundleId: String
-    public var sizeBytes: Int64
+    /// Absent in the fast `apps` listing; computed lazily during app-scan.
+    public var sizeBytes: Int64?
 
     public var id: String { path }
 

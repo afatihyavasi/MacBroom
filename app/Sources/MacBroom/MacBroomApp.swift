@@ -8,7 +8,9 @@ struct MacBroomApp: App {
         MenuBarExtra {
             MenuBarView()
                 .environmentObject(state)
-                .frame(width: 360)
+                // Fixed panel size: content scrolls internally so switching
+                // tabs/phases never resizes (and thus never "jumps") the window.
+                .frame(width: 380, height: 560)
         } label: {
             // Menu bar icon. A filled broom-ish glyph; swapped for a custom
             // template asset during the polish stage.

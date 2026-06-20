@@ -370,12 +370,14 @@ _app_bundle_id() {
         || echo ""
 }
 
-# List user-removable applications as JSON.
+# List user-removable applications as JSON. Intentionally does NOT size each
+# app (no `du`) so the list returns instantly; the size is computed lazily by
+# app-scan when the user selects a specific app.
 cmd_apps() {
     load_mole
     local -a roots=("/Applications" "$HOME/Applications")
     local out="" first=1
-    local root app name bundle size
+    local root app name bundle
     for root in "${roots[@]}"; do
         [[ -d "$root" ]] || continue
         for app in "$root"/*.app; do
@@ -387,10 +389,9 @@ cmd_apps() {
                 && should_protect_from_uninstall "$bundle" 2>/dev/null; then
                 continue
             fi
-            size="$(path_size_bytes "$app")"
             [[ $first -eq 1 ]] || out+=","
             first=0
-            out+="{\"name\":$(json_string "$name"),\"path\":$(json_string "$app"),\"bundle_id\":$(json_string "$bundle"),\"size_bytes\":$size}"
+            out+="{\"name\":$(json_string "$name"),\"path\":$(json_string "$app"),\"bundle_id\":$(json_string "$bundle")}"
         done
     done
     emit "{\"apps\":[$out]}"
