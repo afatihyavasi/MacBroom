@@ -1,8 +1,8 @@
 import SwiftUI
 import MacBroomCore
 
-/// Root menu bar panel: header + live status, then a three-way section switch
-/// (AI caches · System caches · Apps uninstaller).
+/// Root menu bar panel (v2 shadcn design): header + live status, then a
+/// three-way section switch (AI caches · System caches · Apps uninstaller).
 struct MenuBarView: View {
     @EnvironmentObject var state: AppState
     @EnvironmentObject var loc: LocalizationManager
@@ -23,32 +23,25 @@ struct MenuBarView: View {
     @AppStorage("didOnboard") private var didOnboard = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Theme.Space.md) {
             header
-            if !didOnboard {
-                onboardingBanner
-            }
-            if let status = state.status {
-                StatusPanelView(status: status)
-            }
-            Divider()
+            if !didOnboard { onboardingBanner }
+            if let status = state.status { StatusPanelView(status: status) }
 
-            Picker("", selection: $section) {
-                ForEach(Section.allCases) { Text(loc.t($0.titleKey)).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            SHTabs(selection: $section,
+                   items: Section.allCases.map { ($0, loc.t($0.titleKey)) })
 
-            content
-                .frame(maxHeight: .infinity)
+            content.frame(maxWidth: .infinity, maxHeight: .infinity)
 
             if section != .apps {
-                Divider()
+                SHSeparator()
                 cleanControls
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(14)
+        .padding(Theme.Space.lg)
+        .background(Theme.background)
+        .foregroundStyle(Theme.foreground)
         .task {
             await state.refreshStatus()
             if case .idle = state.phase { await state.discover() }
@@ -61,55 +54,55 @@ struct MenuBarView: View {
     // MARK: header
 
     private var header: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Theme.Space.sm) {
             Image(systemName: "wand.and.stars.inverse")
-                .font(.title3).foregroundStyle(.tint)
-            Text("MacBroom").font(.headline)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Theme.accent)
+            Text("MacBroom").font(.shTitle)
             Spacer()
-            Button { Task { await state.discover() } } label: {
-                Image(systemName: "arrow.clockwise")
+            SHIconButton(system: "arrow.clockwise", help: loc.t(.refreshHelp)) {
+                Task { await state.discover() }
             }
-            .buttonStyle(.borderless)
-            .help(loc.t(.refreshHelp))
             .disabled(state.phase == .scanning || state.phase == .discovering)
-            Button { showingSettings = true } label: {
-                Image(systemName: "gearshape")
+            SHIconButton(system: "gearshape", help: loc.t(.settingsHelp)) {
+                showingSettings = true
             }
-            .buttonStyle(.borderless)
-            .help(loc.t(.settingsHelp))
         }
     }
 
     // MARK: onboarding
 
     private var onboardingBanner: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "lock.shield").foregroundStyle(.orange)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(loc.t(.fdaTitle)).font(.caption.weight(.semibold))
-                Text(loc.t(.fdaBannerDesc))
-                    .font(.caption2).foregroundStyle(.secondary)
+        HStack(spacing: Theme.Space.sm) {
+            Image(systemName: "lock.shield").foregroundStyle(Theme.warning)
+            VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+                Text(loc.t(.fdaTitle)).font(.shLabel)
+                Text(loc.t(.fdaBannerDesc)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
             }
             Spacer()
             Button(loc.t(.open)) {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
             }
-            .controlSize(.small)
-            Button { didOnboard = true } label: { Image(systemName: "xmark") }
-                .buttonStyle(.borderless).controlSize(.small)
+            .buttonStyle(.shOutline(.sm))
+            SHIconButton(system: "xmark") { didOnboard = true }
         }
-        .padding(8)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.orange.opacity(0.12)))
+        .padding(Theme.Space.sm)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+                .fill(Theme.warning.opacity(0.12))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+                .strokeBorder(Theme.warning.opacity(0.25), lineWidth: 1)
+        )
     }
 
     // MARK: content
 
     @ViewBuilder private var content: some View {
         switch section {
-        case .apps:
-            UninstallView()
-        case .ai, .system:
-            cleanContent
+        case .apps: UninstallView()
+        case .ai, .system: cleanContent
         }
     }
 
@@ -119,8 +112,7 @@ struct MenuBarView: View {
     @ViewBuilder private var cleanContent: some View {
         // A transient state is shown on a tab only if it owns it (`phaseCategory`
         // == this tab, or nil for a global discovery state). Otherwise the tab
-        // falls through to its own resting view — so scanning/cleaning/finishing
-        // one tab never hijacks the other.
+        // falls through to its own resting view.
         let owns = state.phaseCategory == nil || state.phaseCategory == category
         switch state.phase {
         case .idle, .discovering:
@@ -128,25 +120,15 @@ struct MenuBarView: View {
         case .scanning where owns:
             loading(loc.t(.scanningTargets))
         case let .cleaning(done, total) where owns:
-            VStack(alignment: .leading, spacing: 6) {
-                ProgressView(value: Double(done), total: Double(max(total, 1)))
-                Text(loc.t(.cleaningProgress, done, total)).font(.caption).foregroundStyle(.secondary)
-            }.padding(.vertical, 8)
+            cleaningView(done: done, total: total)
         case let .finished(freed) where owns:
-            VStack(spacing: 10) {
-                Image(systemName: "sparkles").font(.largeTitle).foregroundStyle(.green)
-                Text(loc.t(.freed, Format.bytes(freed))).font(.title3.weight(.semibold))
-                Button(loc.t(.done)) { state.dismissCacheResult() }.buttonStyle(.link)
-            }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            resultView(icon: "sparkles", tint: Theme.success,
+                       title: loc.t(.freed, Format.bytes(freed)),
+                       action: loc.t(.done)) { state.dismissCacheResult() }
         case let .error(msg) where owns:
-            VStack(spacing: 10) {
-                Label(msg, systemImage: "exclamationmark.triangle")
-                    .font(.caption).foregroundStyle(.red)
-                Button(loc.t(.back)) { state.dismissCacheResult() }.buttonStyle(.link)
-            }.frame(maxWidth: .infinity, maxHeight: .infinity).padding(.vertical, 8)
+            resultView(icon: "exclamationmark.triangle.fill", tint: Theme.destructive,
+                       title: msg, action: loc.t(.back)) { state.dismissCacheResult() }
         default:
-            // Resting (or a transient state owned by the OTHER tab): show this
-            // category's results if already analyzed, else its target picker.
             if state.isScanned(category) {
                 if category == .ai { AICacheView() } else { SystemCacheView() }
             } else {
@@ -155,18 +137,37 @@ struct MenuBarView: View {
         }
     }
 
+    private func cleaningView(done: Int, total: Int) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Space.sm) {
+            SHProgressBar(value: Double(done) / Double(max(total, 1)))
+            Text(loc.t(.cleaningProgress, done, total))
+                .font(.shCaption).foregroundStyle(Theme.mutedForeground)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .padding(.vertical, Theme.Space.sm)
+    }
+
+    private func resultView(icon: String, tint: Color, title: String,
+                            action: String, perform: @escaping () -> Void) -> some View {
+        VStack(spacing: Theme.Space.md) {
+            Image(systemName: icon).font(.system(size: 30)).foregroundStyle(tint)
+            Text(title).font(.shHeadline).multilineTextAlignment(.center)
+            Button(action, action: perform).buttonStyle(.shOutline(.sm))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
     private func loading(_ text: String) -> some View {
-        HStack(spacing: 8) {
+        VStack(spacing: Theme.Space.md) {
             ProgressView().controlSize(.small)
-            Text(text).font(.callout).foregroundStyle(.secondary)
+            Text(text).font(.shBody).foregroundStyle(Theme.mutedForeground)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: clean controls
 
-    /// True exactly when this tab is showing its results list (so the Clean
-    /// controls belong on screen). Mirrors the `default` branch of `cleanContent`.
+    /// True exactly when this tab is showing its results list.
     private var showResults: Bool {
         guard state.isScanned(category) else { return false }
         let owns = state.phaseCategory == nil || state.phaseCategory == category
@@ -178,23 +179,23 @@ struct MenuBarView: View {
     }
 
     private var cleanControls: some View {
-        HStack {
+        HStack(spacing: Theme.Space.sm) {
             if showResults {
                 Button { state.backToSelection(category: category) } label: {
-                    Image(systemName: "chevron.left"); Text(loc.t(.backTargets))
+                    HStack(spacing: 3) { Image(systemName: "chevron.left"); Text(loc.t(.backTargets)) }
                 }
-                .buttonStyle(.borderless).font(.caption)
+                .buttonStyle(.shGhost(.sm))
                 Text(loc.t(.selectedSuffix, Format.bytes(state.selectedBytes(in: category))))
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.shCaption).foregroundStyle(Theme.mutedForeground)
             }
             Spacer()
             if showResults {
                 Button(loc.t(.clean)) { Task { await state.clean(category: category) } }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.shPrimary(.sm))
                     .disabled(!state.hasSelection(in: category))
             }
             Button(loc.t(.quit)) { NSApplication.shared.terminate(nil) }
-                .buttonStyle(.borderless)
+                .buttonStyle(.shGhost(.sm))
         }
     }
 }

@@ -9,17 +9,14 @@ struct AICacheView: View {
     @EnvironmentObject var loc: LocalizationManager
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: Theme.Space.sm) {
             if state.aiGroups.isEmpty {
                 emptyState
             } else {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 6) {
-                        ForEach(state.aiGroups) { group in
-                            AIToolSection(group: group)
-                        }
+                    VStack(spacing: Theme.Space.sm) {
+                        ForEach(state.aiGroups) { AIToolSection(group: $0) }
                     }
-                    .padding(.vertical, 4)
                 }
                 .frame(maxHeight: .infinity)
 
@@ -30,21 +27,20 @@ struct AICacheView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "checkmark.seal")
-                .font(.largeTitle).foregroundStyle(.green)
-            Text(loc.t(.aiEmpty))
-                .font(.callout).foregroundStyle(.secondary)
+        VStack(spacing: Theme.Space.md) {
+            Image(systemName: "checkmark.seal").font(.system(size: 30)).foregroundStyle(Theme.success)
+            Text(loc.t(.aiEmpty)).font(.shBody).foregroundStyle(Theme.mutedForeground)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var safetyFootnote: some View {
-        Label(loc.t(.aiSafety), systemImage: "lock.shield")
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-            .padding(.top, 8)
+        HStack(alignment: .top, spacing: Theme.Space.xs) {
+            Image(systemName: "lock.shield").font(.system(size: 10))
+            Text(loc.t(.aiSafety))
+        }
+        .font(.shCaption)
+        .foregroundStyle(Theme.mutedForeground)
     }
 }
 
@@ -56,64 +52,54 @@ private struct AIToolSection: View {
     @State private var expanded = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 8) {
-                tristateBox
-                AIToolIconView(tool: group.tool, size: 18)
-                Text(group.tool.displayName).font(.callout.weight(.medium))
-                Spacer()
-                Text(loc.t(.groupCountBytes, group.count, Format.bytes(group.totalBytes)))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                Button {
-                    withAnimation(.snappy(duration: 0.18)) { expanded.toggle() }
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .rotationEffect(.degrees(expanded ? 90 : 0))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.borderless)
-            }
-            .padding(.vertical, 4)
-
+        VStack(alignment: .leading, spacing: 0) {
+            header
             if expanded {
-                ForEach(group.candidates) { c in
-                    HStack(spacing: 8) {
-                        Toggle("", isOn: Binding(
-                            get: { state.isSelected(c.path) },
-                            set: { _ in state.toggle(c.path) }
-                        ))
-                        .labelsHidden()
-                        .toggleStyle(.checkbox)
-                        Text(c.label).font(.caption).lineLimit(1)
-                        Spacer()
-                        Text(Format.bytes(c.sizeBytes))
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(.secondary)
+                VStack(spacing: 0) {
+                    ForEach(group.candidates) { c in
+                        SHSeparator().opacity(0.6)
+                        candidateRow(c)
                     }
-                    .padding(.leading, 26)
-                    .help(c.path)
                 }
+                .padding(.top, 4)
             }
         }
-        .padding(.horizontal, 4)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.primary.opacity(0.04))
-        )
+        .shCard(padding: Theme.Space.sm)
     }
 
-    private var tristateBox: some View {
-        let stateValue = state.selectionState(for: group)
-        let symbol = stateValue == true ? "checkmark.square.fill"
-            : (stateValue == nil ? "minus.square.fill" : "square")
-        return Button {
-            state.toggleGroup(group)
-        } label: {
-            Image(systemName: symbol)
-                .foregroundStyle(stateValue == false ? Color.secondary : Color.accentColor)
+    private var header: some View {
+        HStack(spacing: Theme.Space.sm) {
+            SHTriCheckbox(state: state.selectionState(for: group)) { state.toggleGroup(group) }
+            AIToolIconView(tool: group.tool, size: 18)
+            Text(group.tool.displayName).font(.shLabel)
+            Spacer()
+            SHBadge(text: loc.t(.groupCountBytes, group.count, Format.bytes(group.totalBytes)))
+            Button {
+                withAnimation(.snappy(duration: 0.18)) { expanded.toggle() }
+            } label: {
+                Image(systemName: "chevron.right")
+                    .rotationEffect(.degrees(expanded ? 90 : 0))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Theme.mutedForeground)
+            }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.borderless)
+    }
+
+    private func candidateRow(_ c: CleanCandidate) -> some View {
+        Toggle(isOn: Binding(
+            get: { state.isSelected(c.path) },
+            set: { _ in state.toggle(c.path) }
+        )) {
+            HStack(spacing: Theme.Space.sm) {
+                Text(c.label).font(.shCaption).lineLimit(1)
+                Spacer()
+                Text(Format.bytes(c.sizeBytes)).font(.shMono).foregroundStyle(Theme.mutedForeground)
+            }
+        }
+        .toggleStyle(SHCheckboxStyle())
+        .padding(.leading, 24)
+        .padding(.vertical, 5)
+        .help(c.path)
     }
 }

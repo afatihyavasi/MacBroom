@@ -11,42 +11,40 @@ struct AnalysisSelectionView: View {
     private var items: [AnalysisTarget] { state.installedTargets(in: category) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(loc.t(.analyzeQuestion))
-                .font(.callout.weight(.medium))
-            Text(loc.t(.analyzeSubtitle))
-                .font(.caption2).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: Theme.Space.md) {
+            VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+                Text(loc.t(.analyzeQuestion)).font(.shHeadline)
+                Text(loc.t(.analyzeSubtitle)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
+            }
 
             if items.isEmpty {
                 Spacer()
                 Text(loc.t(.noTargetsInCategory))
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.shBody).foregroundStyle(Theme.mutedForeground)
                     .frame(maxWidth: .infinity)
                 Spacer()
             } else {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 2) {
-                        ForEach(items) { t in
-                            row(t)
-                        }
+                    VStack(spacing: Theme.Space.xs) {
+                        ForEach(items) { row($0) }
                     }
                 }
                 .frame(maxHeight: .infinity)
 
-                HStack {
+                HStack(spacing: Theme.Space.sm) {
                     Button(loc.t(.selectAll)) {
                         for t in items { state.selectedTargets.insert(t.id) }
-                    }.buttonStyle(.link).font(.caption)
+                    }.buttonStyle(.shGhost(.sm))
                     Button(loc.t(.clearSelection)) {
                         for t in items { state.selectedTargets.remove(t.id) }
-                    }.buttonStyle(.link).font(.caption)
+                    }.buttonStyle(.shGhost(.sm))
                     Spacer()
                     Button {
                         Task { await state.scanSelected(category: category) }
                     } label: {
                         Text(loc.t(.analyzeButton, state.selectedTargetCount(in: category)))
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.shPrimary(.sm))
                     .disabled(state.selectedTargetCount(in: category) == 0)
                 }
             }
@@ -59,13 +57,22 @@ struct AnalysisSelectionView: View {
             get: { state.selectedTargets.contains(t.id) },
             set: { _ in state.toggleTarget(t.id) }
         )) {
-            HStack(spacing: 8) {
+            HStack(spacing: Theme.Space.sm) {
                 icon(for: t)
-                Text(label(for: t)).font(.callout)
+                Text(label(for: t)).font(.shBody)
+                Spacer()
             }
         }
-        .toggleStyle(.checkbox)
-        .padding(.vertical, 2)
+        .toggleStyle(SHCheckboxStyle())
+        .padding(.vertical, 6)
+        .padding(.horizontal, Theme.Space.sm)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.card)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+                .strokeBorder(Theme.border, lineWidth: 1)
+        )
     }
 
     /// System target labels arrive from the engine in Turkish; localize the
@@ -85,7 +92,7 @@ struct AnalysisSelectionView: View {
         if category == .ai {
             AIToolIconView(tool: AITool(rawValue: String(t.id.dropFirst(3))) ?? .other, size: 18)
         } else {
-            Image(systemName: "internaldrive").frame(width: 18).foregroundStyle(.tint)
+            Image(systemName: "internaldrive").frame(width: 18).foregroundStyle(Theme.accent)
         }
     }
 }

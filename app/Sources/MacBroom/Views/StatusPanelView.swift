@@ -1,21 +1,21 @@
 import SwiftUI
 import MacBroomCore
 
-/// Compact live disk + memory usage panel shown under the header.
+/// Compact live disk + memory usage cards shown under the header.
 struct StatusPanelView: View {
     @EnvironmentObject var loc: LocalizationManager
     let status: SystemStatus
 
     var body: some View {
-        HStack(spacing: 14) {
-            UsageBar(
+        HStack(spacing: Theme.Space.sm) {
+            UsageCard(
                 title: loc.t(.disk),
                 systemImage: "internaldrive",
                 percent: status.disk.usedPercent,
                 detail: loc.t(.diskFree, Format.bytes(status.disk.free))
             )
             if let mem = status.memory {
-                UsageBar(
+                UsageCard(
                     title: loc.t(.memory),
                     systemImage: "memorychip",
                     percent: mem.usedPercent,
@@ -26,8 +26,8 @@ struct StatusPanelView: View {
     }
 }
 
-/// A labeled mini usage bar that tints by pressure.
-private struct UsageBar: View {
+/// A labeled mini usage card that tints its bar by pressure.
+private struct UsageCard: View {
     let title: String
     let systemImage: String
     let percent: Int
@@ -35,30 +35,25 @@ private struct UsageBar: View {
 
     private var tint: Color {
         switch percent {
-        case ..<70: return .green
-        case 70..<88: return .yellow
-        default: return .red
+        case ..<70: return Theme.success
+        case 70..<88: return Theme.warning
+        default: return Theme.destructive
         }
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 4) {
-                Image(systemName: systemImage).font(.caption2)
-                Text(title).font(.caption2.weight(.medium))
+        VStack(alignment: .leading, spacing: Theme.Space.sm) {
+            HStack(spacing: Theme.Space.xs) {
+                Image(systemName: systemImage).font(.system(size: 11))
+                    .foregroundStyle(Theme.mutedForeground)
+                Text(title).font(.shLabel)
                 Spacer()
-                Text("%\(percent)").font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+                Text("\(percent)%").font(.shMono).foregroundStyle(Theme.mutedForeground)
             }
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.primary.opacity(0.12))
-                    Capsule().fill(tint)
-                        .frame(width: max(2, geo.size.width * CGFloat(min(max(percent, 0), 100)) / 100))
-                }
-            }
-            .frame(height: 5)
-            Text(detail).font(.caption2).foregroundStyle(.secondary)
+            SHProgressBar(value: Double(percent) / 100, tint: tint)
+            Text(detail).font(.shCaption).foregroundStyle(Theme.mutedForeground)
         }
+        .shCard()
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

@@ -2,69 +2,94 @@ import SwiftUI
 import AppKit
 import MacBroomCore
 
-/// Settings sheet: deletion policy, Full Disk Access, and attribution.
+/// Settings sheet (v2): language, deletion policy, Full Disk Access, attribution.
 struct SettingsView: View {
     @EnvironmentObject var loc: LocalizationManager
     @AppStorage("deletionMode") private var deletionMode: String = DeleteMode.permanent.rawValue
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Theme.Space.lg) {
             HStack {
-                Text(loc.t(.settingsTitle)).font(.title2.weight(.semibold))
+                Text(loc.t(.settingsTitle)).font(.shTitle)
                 Spacer()
-                Button(loc.t(.done)) { dismiss() }.keyboardShortcut(.defaultAction)
+                Button(loc.t(.done)) { dismiss() }
+                    .buttonStyle(.shPrimary(.sm))
+                    .keyboardShortcut(.defaultAction)
             }
 
             // Language
-            VStack(alignment: .leading, spacing: 6) {
-                Label(loc.t(.language), systemImage: "globe").font(.headline)
+            VStack(alignment: .leading, spacing: Theme.Space.sm) {
+                SHSectionHeader(title: loc.t(.language), systemImage: "globe")
                 Picker("", selection: $loc.language) {
                     ForEach(AppLanguage.allCases) { Text($0.displayName).tag($0) }
                 }
-                .pickerStyle(.menu)
-                .labelsHidden()
+                .pickerStyle(.menu).labelsHidden()
             }
-
-            Divider()
 
             // Deletion policy
-            VStack(alignment: .leading, spacing: 6) {
-                Label(loc.t(.deletionMethod), systemImage: "trash").font(.headline)
-                Picker("", selection: $deletionMode) {
-                    ForEach(DeleteMode.allCases) { Text($0.title).tag($0.rawValue) }
+            VStack(alignment: .leading, spacing: Theme.Space.sm) {
+                SHSectionHeader(title: loc.t(.deletionMethod), systemImage: "trash")
+                VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                    ForEach(DeleteMode.allCases) { mode in
+                        deletionRow(mode)
+                    }
                 }
-                .pickerStyle(.radioGroup)
-                .labelsHidden()
-                Text(DeleteMode(rawValue: deletionMode)?.detail ?? "")
-                    .font(.caption).foregroundStyle(.secondary)
             }
-
-            Divider()
 
             // Full Disk Access
-            VStack(alignment: .leading, spacing: 6) {
-                Label(loc.t(.fdaTitle), systemImage: "lock.shield").font(.headline)
+            VStack(alignment: .leading, spacing: Theme.Space.sm) {
+                SHSectionHeader(title: loc.t(.fdaTitle), systemImage: "lock.shield")
                 Text(loc.t(.fdaSettingsDesc))
-                    .font(.caption).foregroundStyle(.secondary)
-                Button(loc.t(.openInSettings)) { openFullDiskAccess() }
+                    .font(.shCaption).foregroundStyle(Theme.mutedForeground)
+                Button(loc.t(.openInSettings)) { openFullDiskAccess() }.buttonStyle(.shOutline(.sm))
             }
 
-            Divider()
+            SHSeparator()
 
             // About / attribution
-            VStack(alignment: .leading, spacing: 4) {
-                Label(loc.t(.about), systemImage: "info.circle").font(.headline)
+            VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                SHSectionHeader(title: loc.t(.about), systemImage: "info.circle")
                 Text(loc.t(.aboutVersion, appVersion))
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.shCaption).foregroundStyle(Theme.mutedForeground)
                 Text(loc.t(.engineAttribution))
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.shCaption).foregroundStyle(Theme.mutedForeground)
                 Link("github.com/tw93/mole", destination: URL(string: "https://github.com/tw93/mole")!)
-                    .font(.caption)
+                    .font(.shCaption).tint(Theme.accent)
             }
         }
-        .padding(20)
-        .frame(width: 380)
+        .padding(Theme.Space.xl)
+        .frame(width: 400)
+        .background(Theme.background)
+        .foregroundStyle(Theme.foreground)
+    }
+
+    /// A selectable deletion-mode card (radio behavior).
+    private func deletionRow(_ mode: DeleteMode) -> some View {
+        let selected = deletionMode == mode.rawValue
+        return Button { deletionMode = mode.rawValue } label: {
+            HStack(alignment: .top, spacing: Theme.Space.sm) {
+                Image(systemName: selected ? "largecircle.fill.circle" : "circle")
+                    .foregroundStyle(selected ? Theme.accent : Theme.mutedForeground)
+                    .font(.system(size: 13))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(mode.title).font(.shLabel)
+                    Text(mode.detail).font(.shCaption).foregroundStyle(Theme.mutedForeground)
+                }
+                Spacer()
+            }
+            .padding(Theme.Space.sm)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+                    .fill(selected ? Theme.muted : Theme.card)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+                    .strokeBorder(selected ? Theme.accent.opacity(0.5) : Theme.border, lineWidth: 1)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private var appVersion: String {
