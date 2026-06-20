@@ -42,6 +42,7 @@ struct MenuBarView: View {
         .padding(Theme.Space.lg)
         .background(Theme.background)
         .foregroundStyle(Theme.foreground)
+        .background(tabShortcuts)
         .task {
             await state.refreshStatus()
             if case .idle = state.phase { await state.discover() }
@@ -64,10 +65,22 @@ struct MenuBarView: View {
                 Task { await state.discover() }
             }
             .disabled(state.isBusy)
+            .keyboardShortcut("r", modifiers: .command)
             SHIconButton(system: "gearshape", help: loc.t(.settingsHelp)) {
                 showingSettings = true
             }
+            .keyboardShortcut(",", modifiers: .command)
         }
+    }
+
+    /// Invisible buttons that wire ⌘1/⌘2/⌘3 to the tabs.
+    private var tabShortcuts: some View {
+        Group {
+            Button("") { section = .ai }.keyboardShortcut("1", modifiers: .command)
+            Button("") { section = .system }.keyboardShortcut("2", modifiers: .command)
+            Button("") { section = .apps }.keyboardShortcut("3", modifiers: .command)
+        }
+        .opacity(0).frame(width: 0, height: 0).accessibilityHidden(true)
     }
 
     // MARK: onboarding
@@ -119,8 +132,8 @@ struct MenuBarView: View {
             loading(loc.t(.searchingTargets))
         case .scanning where owns:
             loading(loc.t(.scanningTargets))
-        case let .cleaning(done, total) where owns:
-            cleaningView(done: done, total: total)
+        case let .cleaning(done, total, freed) where owns:
+            cleaningView(done: done, total: total, freed: freed)
         case let .finished(freed, failed, permissionBlocked) where owns:
             cacheResult(freed: freed, failed: failed, permissionBlocked: permissionBlocked)
         case let .error(msg) where owns:
@@ -135,10 +148,12 @@ struct MenuBarView: View {
         }
     }
 
-    private func cleaningView(done: Int, total: Int) -> some View {
+    private func cleaningView(done: Int, total: Int, freed: Int64) -> some View {
         VStack(alignment: .leading, spacing: Theme.Space.sm) {
             SHProgressBar(value: Double(done) / Double(max(total, 1)))
-            Text(loc.t(.cleaningProgress, done, total))
+            Text(freed > 0
+                 ? loc.t(.cleaningProgressBytes, done, total, Format.bytes(freed))
+                 : loc.t(.cleaningProgress, done, total))
                 .font(.shCaption).foregroundStyle(Theme.mutedForeground)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
@@ -226,6 +241,7 @@ struct MenuBarView: View {
             }
             Button(loc.t(.quit)) { NSApplication.shared.terminate(nil) }
                 .buttonStyle(.shGhost(.sm))
+                .keyboardShortcut("q", modifiers: .command)
         }
     }
 }

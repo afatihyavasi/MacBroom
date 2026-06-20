@@ -10,7 +10,7 @@ final class AppState: ObservableObject {
         case discovering
         case selecting          // interactive: per-tab picker or results
         case scanning
-        case cleaning(done: Int, total: Int)
+        case cleaning(done: Int, total: Int, freedBytes: Int64)
         case finished(freedBytes: Int64, failed: Int, permissionBlocked: Bool)
         case error(String)
     }
@@ -210,7 +210,7 @@ final class AppState: ObservableObject {
         let ids = scannedTargets.filter { $0.hasPrefix(category.rawValue + ":") }
         let total = approved.count
         phaseCategory = category
-        phase = .cleaning(done: 0, total: total)
+        phase = .cleaning(done: 0, total: total, freedBytes: 0)
         var freed: Int64 = 0
         var done = 0, failed = 0
         var permissionBlocked = false
@@ -222,12 +222,12 @@ final class AppState: ObservableObject {
                     freed += bytes
                     done += 1
                     removed.insert(path)
-                    phase = .cleaning(done: done, total: total)
+                    phase = .cleaning(done: done, total: total, freedBytes: freed)
                 case let .skipped(_, reason):
                     done += 1
                     failed += 1
                     if reason == "permission" { permissionBlocked = true }
-                    phase = .cleaning(done: done, total: total)
+                    phase = .cleaning(done: done, total: total, freedBytes: freed)
                 case let .done(freedBytes, _, failedCount):
                     freed = max(freed, freedBytes)
                     failed = max(failed, failedCount)
@@ -254,7 +254,7 @@ final class AppState: ObservableObject {
         case browsing
         case loading
         case reviewing(AppInfo)
-        case uninstalling(done: Int, total: Int)
+        case uninstalling(done: Int, total: Int, freedBytes: Int64)
         /// `failed` > 0 means some paths couldn't be removed; `permissionBlocked`
         /// flags that Full Disk Access / admin rights would likely unblock them.
         case uninstalled(freedBytes: Int64, failed: Int, permissionBlocked: Bool)
@@ -302,16 +302,16 @@ final class AppState: ObservableObject {
         let approved = Array(appSelected)
         guard !approved.isEmpty else { return }
         let total = approved.count
-        appFlow = .uninstalling(done: 0, total: total)
+        appFlow = .uninstalling(done: 0, total: total, freedBytes: 0)
         var freed: Int64 = 0, done = 0, failed = 0, permissionBlocked = false
         do {
             for try await event in engine.appClean(approvedPaths: approved, deleteMode: deleteMode) {
                 switch event {
                 case let .progress(_, bytes): freed += bytes; done += 1
-                    appFlow = .uninstalling(done: done, total: total)
+                    appFlow = .uninstalling(done: done, total: total, freedBytes: freed)
                 case let .skipped(_, reason): failed += 1; done += 1
                     if reason == "permission" { permissionBlocked = true }
-                    appFlow = .uninstalling(done: done, total: total)
+                    appFlow = .uninstalling(done: done, total: total, freedBytes: freed)
                 case let .done(freedBytes, _, failedCount):
                     freed = max(freed, freedBytes)
                     failed = max(failed, failedCount)

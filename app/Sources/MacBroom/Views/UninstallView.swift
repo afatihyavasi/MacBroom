@@ -14,10 +14,12 @@ struct UninstallView: View {
             case .loading:
                 centered { ProgressView().controlSize(.small)
                     Text(loc.t(.loading)).font(.shBody).foregroundStyle(Theme.mutedForeground) }
-            case let .uninstalling(done, total):
+            case let .uninstalling(done, total, freed):
                 VStack(alignment: .leading, spacing: Theme.Space.sm) {
                     SHProgressBar(value: Double(done) / Double(max(total, 1)))
-                    Text(loc.t(.removingProgress, done, total))
+                    Text(freed > 0
+                         ? loc.t(.removingProgressBytes, done, total, Format.bytes(freed))
+                         : loc.t(.removingProgress, done, total))
                         .font(.shCaption).foregroundStyle(Theme.mutedForeground)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)

@@ -43,6 +43,7 @@ public enum L10n: String, CaseIterable {
     case refreshHelp, settingsHelp, open, quit, clean, loading, back, backToList
     case fdaTitle, fdaBannerDesc, fdaSettingsDesc, openFDA, openInSettings
     case searchingTargets, scanningTargets, cleaningProgress, freed, backTargets, selectedSuffix
+    case cleaningProgressBytes, removingProgressBytes
     case removingProgress, removedFreed, removedPartial, someProtected, itemsInUse
     case removableEmpty, itemsBytes, remove, confirmDeleteTitle, cancel, confirmDeleteMessage
     case aiEmpty, aiSafety, groupCountBytes, systemSafety, selectAll, systemEmpty
@@ -91,6 +92,8 @@ public enum Localization {
         .openFDA: "Open Full Disk Access", .openInSettings: "Open in System Settings",
         .searchingTargets: "Searching targets…", .scanningTargets: "Scanning selected targets…",
         .cleaningProgress: "Cleaning… %d/%d", .freed: "%@ freed",
+        .cleaningProgressBytes: "Cleaning… %d/%d · %@ freed",
+        .removingProgressBytes: "Removing… %d/%d · %@ freed",
         .backTargets: "Targets", .selectedSuffix: "%@ selected",
         .removingProgress: "Removing… %d/%d", .removedFreed: "Removed · %@ freed",
         .removedPartial: "%@ freed · %d item(s) couldn’t be removed",
@@ -137,6 +140,8 @@ public enum Localization {
         .openFDA: "Tam Disk Erişimi’ni Aç", .openInSettings: "Sistem Ayarları’nda Aç",
         .searchingTargets: "Hedefler aranıyor…", .scanningTargets: "Seçili hedefler taranıyor…",
         .cleaningProgress: "Temizleniyor… %d/%d", .freed: "%@ boşaltıldı",
+        .cleaningProgressBytes: "Temizleniyor… %d/%d · %@ boşaltıldı",
+        .removingProgressBytes: "Kaldırılıyor… %d/%d · %@ boşaltıldı",
         .backTargets: "Hedefler", .selectedSuffix: "%@ seçili",
         .removingProgress: "Kaldırılıyor… %d/%d", .removedFreed: "Kaldırıldı · %@ boşaltıldı",
         .removedPartial: "%@ boşaltıldı · %d öğe silinemedi",
@@ -183,6 +188,8 @@ public enum Localization {
         .openFDA: "Abrir Acceso a Todo el Disco", .openInSettings: "Abrir en Ajustes del Sistema",
         .searchingTargets: "Buscando objetivos…", .scanningTargets: "Analizando los objetivos seleccionados…",
         .cleaningProgress: "Limpiando… %d/%d", .freed: "%@ liberados",
+        .cleaningProgressBytes: "Limpiando… %d/%d · %@ liberados",
+        .removingProgressBytes: "Eliminando… %d/%d · %@ liberados",
         .backTargets: "Objetivos", .selectedSuffix: "%@ seleccionados",
         .removingProgress: "Eliminando… %d/%d", .removedFreed: "Eliminado · %@ liberados",
         .removedPartial: "%@ liberados · no se pudieron eliminar %d elemento(s)",
@@ -229,6 +236,8 @@ public enum Localization {
         .openFDA: "Ouvrir l’Accès complet au disque", .openInSettings: "Ouvrir dans Réglages Système",
         .searchingTargets: "Recherche des cibles…", .scanningTargets: "Analyse des cibles sélectionnées…",
         .cleaningProgress: "Nettoyage… %d/%d", .freed: "%@ libérés",
+        .cleaningProgressBytes: "Nettoyage… %d/%d · %@ libérés",
+        .removingProgressBytes: "Suppression… %d/%d · %@ libérés",
         .backTargets: "Cibles", .selectedSuffix: "%@ sélectionnés",
         .removingProgress: "Suppression… %d/%d", .removedFreed: "Supprimé · %@ libérés",
         .removedPartial: "%@ libérés · %d élément(s) n’ont pas pu être supprimés",
