@@ -6,7 +6,14 @@ import MacBroomCore
 struct UninstallView: View {
     @EnvironmentObject var state: AppState
     @EnvironmentObject var loc: LocalizationManager
+    @AppStorage("deletionMode") private var deletionMode: String = DeleteMode.permanent.rawValue
     @State private var confirming = false
+
+    /// Confirm-button title reflects the user's deletion policy.
+    private var deleteActionTitle: String {
+        let mode = DeleteMode(rawValue: deletionMode) ?? .permanent
+        return loc.t(mode == .trash ? .deleteTrashTitle : .deletePermanentTitle)
+    }
 
     var body: some View {
         Group {
@@ -112,7 +119,7 @@ struct UninstallView: View {
     private func reviewList(_ app: AppInfo) -> some View {
         VStack(alignment: .leading, spacing: Theme.Space.sm) {
             HStack {
-                Button { state.backToAppList() } label: {
+                Button { confirming = false; state.backToAppList() } label: {
                     HStack(spacing: 3) { Image(systemName: "chevron.left"); Text(loc.t(.back)) }
                 }.buttonStyle(.shGhost(.sm))
                 Spacer()
@@ -149,22 +156,51 @@ struct UninstallView: View {
             }
             .frame(maxHeight: .infinity)
 
-            Button(role: .destructive) { confirming = true } label: {
-                HStack(spacing: Theme.Space.xs) { Image(systemName: "trash"); Text(loc.t(.remove)) }
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.shDestructive(.md))
-            .disabled(state.appSelected.isEmpty)
-            .confirmationDialog(
-                loc.t(.confirmDeleteTitle, app.name, state.appSelected.count),
-                isPresented: $confirming, titleVisibility: .visible
-            ) {
-                Button(loc.t(.deletePermanentTitle), role: .destructive) { Task { await state.uninstall() } }
-                Button(loc.t(.cancel), role: .cancel) {}
-            } message: {
-                Text(loc.t(.confirmDeleteMessage))
+            // Inline confirmation — a system confirmationDialog/sheet would steal
+            // key-window focus and dismiss the whole MenuBarExtra panel (which
+            // reads as "the app closed"). Keeping it in-panel avoids that.
+            if confirming {
+                inlineConfirm(app)
+            } else {
+                Button(role: .destructive) { confirming = true } label: {
+                    HStack(spacing: Theme.Space.xs) { Image(systemName: "trash"); Text(loc.t(.remove)) }
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.shDestructive(.md))
+                .disabled(state.appSelected.isEmpty)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    /// In-panel destructive confirmation (replaces the focus-stealing dialog).
+    private func inlineConfirm(_ app: AppInfo) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Space.sm) {
+            Text(loc.t(.confirmDeleteTitle, app.name, state.appSelected.count))
+                .font(.shLabel)
+            Text(loc.t(.confirmDeleteMessage))
+                .font(.shCaption).foregroundStyle(Theme.mutedForeground)
+            HStack(spacing: Theme.Space.sm) {
+                Button(loc.t(.cancel)) { confirming = false }
+                    .buttonStyle(.shOutline(.sm))
+                    .keyboardShortcut(.cancelAction)
+                Spacer()
+                Button(deleteActionTitle) {
+                    confirming = false
+                    Task { await state.uninstall() }
+                }
+                .buttonStyle(.shDestructive(.sm))
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(Theme.Space.sm)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+                .fill(Theme.destructive.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+                .strokeBorder(Theme.destructive.opacity(0.30), lineWidth: 1)
+        )
     }
 }
