@@ -46,7 +46,7 @@ public enum L10n: String, CaseIterable {
     case cleaningProgressBytes, removingProgressBytes
     case removingProgress, removedFreed, removedPartial, someProtected, itemsInUse
     case removableEmpty, itemsBytes, remove, confirmDeleteTitle, cancel, confirmDeleteMessage
-    case aiEmpty, aiSafety, groupCountBytes, systemSafety, selectAll, systemEmpty
+    case aiEmpty, aiSafety, groupCountBytes, systemSafety, selectAll, deselectAll, systemEmpty
     case analyzeQuestion, analyzeSubtitle, noTargetsInCategory, clearSelection, analyzeButton
     case settingsTitle, done, deletionMethod, about, aboutVersion, engineAttribution
     case language, languageSystem, disk, memory, diskFree, memoryTotal
@@ -110,7 +110,7 @@ public enum Localization {
         .aiSafety: "Identity, sessions, memory and history are preserved — only regenerable caches are listed.",
         .groupCountBytes: "%d · %@",
         .systemSafety: "Review first — only regenerable caches are listed.",
-        .selectAll: "Select all", .systemEmpty: "No system cache to clean.",
+        .selectAll: "Select all", .deselectAll: "Deselect all", .systemEmpty: "No system cache to clean.",
         .analyzeQuestion: "What should we analyze?",
         .analyzeSubtitle: "Only your selection is scanned — it’s faster.",
         .noTargetsInCategory: "No targets found in this category.",
@@ -163,7 +163,7 @@ public enum Localization {
         .aiSafety: "Kimlik, oturum, hafıza ve geçmiş verileri korunur — yalnızca yeniden üretilebilir cache listelenir.",
         .groupCountBytes: "%d · %@",
         .systemSafety: "Önce gözden geçirin — yalnızca yeniden oluşturulabilir önbellekler listelenir.",
-        .selectAll: "Tümünü seç", .systemEmpty: "Temizlenecek sistem önbelleği bulunamadı.",
+        .selectAll: "Tümünü seç", .deselectAll: "Seçimi kaldır", .systemEmpty: "Temizlenecek sistem önbelleği bulunamadı.",
         .analyzeQuestion: "Neyi analiz edelim?",
         .analyzeSubtitle: "Yalnızca seçtikleriniz taranır — daha hızlıdır.",
         .noTargetsInCategory: "Bu kategoride hedef bulunamadı.",
@@ -216,7 +216,7 @@ public enum Localization {
         .aiSafety: "Se conservan identidad, sesiones, memoria e historial — solo se listan cachés regenerables.",
         .groupCountBytes: "%d · %@",
         .systemSafety: "Revisa primero — solo se listan cachés regenerables.",
-        .selectAll: "Seleccionar todo", .systemEmpty: "No hay caché del sistema para limpiar.",
+        .selectAll: "Seleccionar todo", .deselectAll: "Deseleccionar todo", .systemEmpty: "No hay caché del sistema para limpiar.",
         .analyzeQuestion: "¿Qué analizamos?",
         .analyzeSubtitle: "Solo se analiza tu selección — es más rápido.",
         .noTargetsInCategory: "No se encontraron objetivos en esta categoría.",
@@ -269,7 +269,7 @@ public enum Localization {
         .aiSafety: "Identité, sessions, mémoire et historique sont préservés — seuls les caches régénérables sont listés.",
         .groupCountBytes: "%d · %@",
         .systemSafety: "Vérifiez d’abord — seuls les caches régénérables sont listés.",
-        .selectAll: "Tout sélectionner", .systemEmpty: "Aucun cache système à nettoyer.",
+        .selectAll: "Tout sélectionner", .deselectAll: "Tout désélectionner", .systemEmpty: "Aucun cache système à nettoyer.",
         .analyzeQuestion: "Que faut-il analyser ?",
         .analyzeSubtitle: "Seule votre sélection est analysée — c’est plus rapide.",
         .noTargetsInCategory: "Aucune cible trouvée dans cette catégorie.",

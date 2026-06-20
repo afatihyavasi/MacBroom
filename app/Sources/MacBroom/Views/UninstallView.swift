@@ -130,6 +130,12 @@ struct UninstallView: View {
             HStack(spacing: Theme.Space.sm) {
                 AppIconView(path: app.path)
                 Text(app.name).font(.shTitle)
+                Spacer()
+                SHSelectAllToggle(state: state.appSelectionState,
+                                  selectTitle: loc.t(.selectAll),
+                                  deselectTitle: loc.t(.deselectAll)) {
+                    state.toggleAllAppItems()
+                }
             }
 
             ScrollView {

@@ -38,8 +38,11 @@ struct SystemCacheView: View {
 
     private var selectAllHeader: some View {
         HStack(spacing: Theme.Space.sm) {
-            SHTriCheckbox(state: state.selectionState(in: .system)) { state.toggleAll(in: .system) }
-            Text(loc.t(.selectAll)).font(.shLabel)
+            SHSelectAllToggle(state: state.selectionState(in: .system),
+                              selectTitle: loc.t(.selectAll),
+                              deselectTitle: loc.t(.deselectAll)) {
+                state.toggleAll(in: .system)
+            }
             Spacer()
             SHBadge(text: loc.t(.itemsBytes, items.count,
                                Format.bytes(items.reduce(0) { $0 + $1.sizeBytes })))

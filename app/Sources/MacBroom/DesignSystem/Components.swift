@@ -267,6 +267,27 @@ struct SHCheckboxStyle: ToggleStyle {
     }
 }
 
+/// A "select all / deselect all" header control: a tri-state checkbox plus a
+/// label that flips to the deselect title once everything is selected. One click
+/// toggles the whole set.
+struct SHSelectAllToggle: View {
+    let state: Bool?           // true=all, nil=mixed, false=none
+    let selectTitle: String
+    let deselectTitle: String
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: Theme.Space.sm) {
+                SHCheckboxStyle().box(state == true ? .on : (state == nil ? .mixed : .off))
+                    .animation(.snappy(duration: 0.12), value: state)
+                Text(state == true ? deselectTitle : selectTitle).font(.shLabel)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 /// A standalone tri-state checkbox (for "select all" headers).
 struct SHTriCheckbox: View {
     let state: Bool?   // true=all, false=none, nil=mixed

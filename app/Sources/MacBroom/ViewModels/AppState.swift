@@ -138,6 +138,25 @@ final class AppState: ObservableObject {
         if selectedTargets.contains(id) { selectedTargets.remove(id) } else { selectedTargets.insert(id) }
     }
 
+    /// Tri-state selection across a category's installed targets (drives the
+    /// analyze screen's select-all/deselect-all toggle).
+    func targetsSelectionState(in category: CleanCategory) -> Bool? {
+        let items = installedTargets(in: category)
+        guard !items.isEmpty else { return false }
+        let sel = items.filter { selectedTargets.contains($0.id) }.count
+        if sel == 0 { return false }
+        if sel == items.count { return true }
+        return nil
+    }
+
+    func toggleAllTargets(in category: CleanCategory) {
+        let items = installedTargets(in: category)
+        let allSelected = targetsSelectionState(in: category) == true
+        for t in items {
+            if allSelected { selectedTargets.remove(t.id) } else { selectedTargets.insert(t.id) }
+        }
+    }
+
     var installedTargets: [AnalysisTarget] { targets.filter { $0.installed } }
 
     /// Installed targets for one category (drives the per-tab selection screen).
@@ -298,6 +317,20 @@ final class AppState: ObservableObject {
 
     func toggleAppItem(_ path: String) {
         if appSelected.contains(path) { appSelected.remove(path) } else { appSelected.insert(path) }
+    }
+
+    /// Tri-state selection across the reviewed app's items (select-all toggle).
+    var appSelectionState: Bool? {
+        guard !appCandidates.isEmpty else { return false }
+        let sel = appCandidates.filter { appSelected.contains($0.path) }.count
+        if sel == 0 { return false }
+        if sel == appCandidates.count { return true }
+        return nil
+    }
+
+    func toggleAllAppItems() {
+        if appSelectionState == true { appSelected.removeAll() }
+        else { appSelected = Set(appCandidates.map(\.path)) }
     }
 
     func uninstall() async {

@@ -32,12 +32,11 @@ struct AnalysisSelectionView: View {
                 .frame(maxHeight: .infinity)
 
                 HStack(spacing: Theme.Space.sm) {
-                    Button(loc.t(.selectAll)) {
-                        for t in items { state.selectedTargets.insert(t.id) }
-                    }.buttonStyle(.shGhost(.sm))
-                    Button(loc.t(.clearSelection)) {
-                        for t in items { state.selectedTargets.remove(t.id) }
-                    }.buttonStyle(.shGhost(.sm))
+                    SHSelectAllToggle(state: state.targetsSelectionState(in: category),
+                                      selectTitle: loc.t(.selectAll),
+                                      deselectTitle: loc.t(.deselectAll)) {
+                        state.toggleAllTargets(in: category)
+                    }
                     Spacer()
                     Button {
                         Task { await state.scanSelected(category: category) }
