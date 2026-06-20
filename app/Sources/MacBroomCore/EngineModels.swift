@@ -111,6 +111,25 @@ public enum EngineEvent: Equatable {
     }
 }
 
+/// How approved paths are removed.
+public enum DeleteMode: String, CaseIterable, Identifiable {
+    case permanent
+    case trash
+    public var id: String { rawValue }
+    public var title: String {
+        switch self {
+        case .permanent: return "Kalıcı olarak sil"
+        case .trash: return "Çöp Kutusu'na taşı"
+        }
+    }
+    public var detail: String {
+        switch self {
+        case .permanent: return "Alanı hemen geri kazanır (geri alınamaz)."
+        case .trash: return "Geri alınabilir; alan Çöp boşaltılınca boşalır."
+        }
+    }
+}
+
 /// Categories surfaced in the UI.
 public enum CleanCategory: String, CaseIterable, Identifiable {
     case ai

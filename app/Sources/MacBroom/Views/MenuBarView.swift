@@ -18,10 +18,15 @@ struct MenuBarView: View {
         }
     }
     @State private var section: Section = .ai
+    @State private var showingSettings = false
+    @AppStorage("didOnboard") private var didOnboard = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
+            if !didOnboard {
+                onboardingBanner
+            }
             if let status = state.status {
                 StatusPanelView(status: status)
             }
@@ -45,6 +50,7 @@ struct MenuBarView: View {
             await state.refreshStatus()
             if case .idle = state.phase { await state.scan() }
         }
+        .sheet(isPresented: $showingSettings) { SettingsView() }
     }
 
     // MARK: header
@@ -61,7 +67,34 @@ struct MenuBarView: View {
             .buttonStyle(.borderless)
             .help("Yeniden tara")
             .disabled(state.phase == .scanning)
+            Button { showingSettings = true } label: {
+                Image(systemName: "gearshape")
+            }
+            .buttonStyle(.borderless)
+            .help("Ayarlar")
         }
+    }
+
+    // MARK: onboarding
+
+    private var onboardingBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "lock.shield").foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Tam Disk Erişimi").font(.caption.weight(.semibold))
+                Text("Tüm önbellekleri temizlemek için izin verin.")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button("Aç") {
+                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
+            }
+            .controlSize(.small)
+            Button { didOnboard = true } label: { Image(systemName: "xmark") }
+                .buttonStyle(.borderless).controlSize(.small)
+        }
+        .padding(8)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.orange.opacity(0.12)))
     }
 
     // MARK: content

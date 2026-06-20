@@ -25,6 +25,11 @@ final class AppState: ObservableObject {
         self.engine = engine
     }
 
+    /// User-chosen deletion policy (mirrors @AppStorage("deletionMode")).
+    private var deleteMode: DeleteMode {
+        DeleteMode(rawValue: UserDefaults.standard.string(forKey: "deletionMode") ?? "") ?? .permanent
+    }
+
     var selectedBytes: Int64 {
         candidates.filter { selected.contains($0.path) }.reduce(0) { $0 + $1.sizeBytes }
     }
@@ -111,7 +116,7 @@ final class AppState: ObservableObject {
         var freed: Int64 = 0
         var done = 0
         do {
-            for try await event in engine.clean(approvedPaths: approved, categories: categories) {
+            for try await event in engine.clean(approvedPaths: approved, categories: categories, deleteMode: deleteMode) {
                 switch event {
                 case let .progress(_, bytes):
                     freed += bytes
@@ -189,7 +194,7 @@ final class AppState: ObservableObject {
         appFlow = .uninstalling(done: 0, total: total)
         var freed: Int64 = 0, done = 0
         do {
-            for try await event in engine.appClean(approvedPaths: approved) {
+            for try await event in engine.appClean(approvedPaths: approved, deleteMode: deleteMode) {
                 switch event {
                 case let .progress(_, bytes): freed += bytes; done += 1
                     appFlow = .uninstalling(done: done, total: total)

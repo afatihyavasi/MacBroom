@@ -55,22 +55,23 @@ public struct EngineBridge {
         return try decodeLast(ScanResult.self, from: data)
     }
 
-    public func appClean(approvedPaths: [String]) -> AsyncThrowingStream<EngineEvent, Error> {
-        streamingClean(subcommand: "app-clean", extraArgs: [], approvedPaths: approvedPaths)
+    public func appClean(approvedPaths: [String], deleteMode: DeleteMode = .permanent) -> AsyncThrowingStream<EngineEvent, Error> {
+        streamingClean(subcommand: "app-clean", extraArgs: [], approvedPaths: approvedPaths, deleteMode: deleteMode)
     }
 
     /// Delete user-approved paths, streaming progress as it goes.
-    public func clean(approvedPaths: [String], categories: [CleanCategory]) -> AsyncThrowingStream<EngineEvent, Error> {
+    public func clean(approvedPaths: [String], categories: [CleanCategory], deleteMode: DeleteMode = .permanent) -> AsyncThrowingStream<EngineEvent, Error> {
         let arg = "--categories=" + categories.map(\.rawValue).joined(separator: ",")
-        return streamingClean(subcommand: "clean", extraArgs: [arg], approvedPaths: approvedPaths)
+        return streamingClean(subcommand: "clean", extraArgs: [arg], approvedPaths: approvedPaths, deleteMode: deleteMode)
     }
 
     /// Shared streaming runner for `clean` / `app-clean`.
-    private func streamingClean(subcommand: String, extraArgs: [String], approvedPaths: [String]) -> AsyncThrowingStream<EngineEvent, Error> {
+    private func streamingClean(subcommand: String, extraArgs: [String], approvedPaths: [String], deleteMode: DeleteMode) -> AsyncThrowingStream<EngineEvent, Error> {
         AsyncThrowingStream { continuation in
             do {
                 let tmp = try writeApprovedPathsFile(approvedPaths)
-                let proc = try makeProcess([subcommand] + extraArgs + ["--paths-file=\(tmp.path)"])
+                let proc = try makeProcess([subcommand] + extraArgs + ["--paths-file=\(tmp.path)"],
+                                           extraEnv: ["MACBROOM_DELETE_MODE": deleteMode.rawValue])
                 let pipe = Pipe()
                 proc.standardOutput = pipe
                 proc.standardError = FileHandle.nullDevice
@@ -103,13 +104,14 @@ public struct EngineBridge {
 
     // MARK: - Process plumbing
 
-    private func makeProcess(_ args: [String]) throws -> Process {
+    private func makeProcess(_ args: [String], extraEnv: [String: String] = [:]) throws -> Process {
         guard FileManager.default.fileExists(atPath: enginePath) else { throw EngineError.engineNotFound }
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/bin/bash")
         proc.arguments = [enginePath] + args
         var env = ProcessInfo.processInfo.environment
         env["MACBROOM_MOLE_DIR"] = moleDir
+        for (k, v) in extraEnv { env[k] = v }
         proc.environment = env
         return proc
     }

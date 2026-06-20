@@ -81,11 +81,30 @@ path_size_bytes() {
 
 # --------------------------------------------------------------------------
 # Deletion sink. Isolated so the Trash-vs-permanent policy lives in one place.
-# Default: permanent removal of the (already protection-checked, regenerable)
-# path, matching `mo clean`. Returns 0 on success.
+# Honors MACBROOM_DELETE_MODE: "trash" moves to ~/.Trash (reversible),
+# anything else permanently removes (matching `mo clean`). The path has already
+# passed mole's protection + whitelist checks. Returns 0 on success.
 # --------------------------------------------------------------------------
 _mb_remove() {
-    rm -rf -- "$1" 2>/dev/null
+    if [[ "${MACBROOM_DELETE_MODE:-permanent}" == "trash" ]]; then
+        _mb_trash "$1"
+    else
+        rm -rf -- "$1" 2>/dev/null
+    fi
+}
+
+# Move a path into the user's Trash, disambiguating name collisions.
+_mb_trash() {
+    local src="$1"
+    local trash="$HOME/.Trash"
+    [[ -d "$trash" ]] || mkdir -p "$trash" 2>/dev/null || return 1
+    local base dest
+    base="$(basename "$src")"
+    dest="$trash/$base"
+    if [[ -e "$dest" ]]; then
+        dest="$trash/${base} $(date +%Y%m%d-%H%M%S)-$$"
+    fi
+    mv -f -- "$src" "$dest" 2>/dev/null
 }
 
 # --------------------------------------------------------------------------

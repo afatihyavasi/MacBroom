@@ -143,3 +143,16 @@ PLIST
     [ "$status" -ne 0 ]
     [[ "$output" == *'"error"'* ]]
 }
+
+# --- deletion policy ------------------------------------------------------
+
+@test "clean with trash mode moves to ~/.Trash instead of deleting" {
+    mkdir -p "$HOME/.gemini/tmp" "$HOME/.Trash"
+    head -c 4096 /dev/zero > "$HOME/.gemini/tmp/trashme.bin"
+    printf '%s\n' "$HOME/.gemini/tmp/trashme.bin" > "$HOME/approved.txt"
+
+    run env MACBROOM_DELETE_MODE=trash bash "$ENGINE" ai-clean --paths-file="$HOME/approved.txt"
+    [ "$status" -eq 0 ]
+    [ ! -e "$HOME/.gemini/tmp/trashme.bin" ]   # gone from origin
+    [ -e "$HOME/.Trash/trashme.bin" ]          # recoverable in Trash
+}
