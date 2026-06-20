@@ -20,11 +20,12 @@ struct AICacheView: View {
                     }
                     .padding(.vertical, 4)
                 }
-                .frame(maxHeight: 320)
+                .frame(maxHeight: .infinity)
 
                 safetyFootnote
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     private var emptyState: some View {
@@ -57,9 +58,7 @@ private struct AIToolSection: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 8) {
                 tristateBox
-                Image(systemName: group.tool.systemImage)
-                    .frame(width: 18)
-                    .foregroundStyle(.tint)
+                AIToolIconView(tool: group.tool, size: 18)
                 Text(group.tool.displayName).font(.callout.weight(.medium))
                 Spacer()
                 Text("\(group.count) · \(Format.bytes(group.totalBytes))")

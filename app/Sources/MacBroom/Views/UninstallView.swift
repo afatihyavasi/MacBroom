@@ -52,7 +52,7 @@ struct UninstallView: View {
                         ForEach(state.apps) { app in
                             Button { Task { await state.reviewApp(app) } } label: {
                                 HStack(spacing: 8) {
-                                    Image(systemName: "app.dashed").foregroundStyle(.tint)
+                                    AppIconView(path: app.path)
                                     Text(app.name).font(.callout).lineLimit(1)
                                     Spacer()
                                     Image(systemName: "chevron.right")
@@ -65,9 +65,10 @@ struct UninstallView: View {
                             Divider().opacity(0.3)
                         }
                     }
-                }.frame(maxHeight: 320)
+                }.frame(maxHeight: .infinity)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     // MARK: review + remove

@@ -8,9 +8,8 @@ final class AppState: ObservableObject {
     enum Phase: Equatable {
         case idle
         case discovering
-        case selecting          // user chooses which targets to analyze
+        case selecting          // interactive: per-tab picker or results
         case scanning
-        case ready
         case cleaning(done: Int, total: Int)
         case finished(freedBytes: Int64)
         case error(String)
@@ -109,6 +108,10 @@ final class AppState: ObservableObject {
             let found = try await engine.discover()
             targets = found
             selectedTargets = Set(found.filter { $0.installed && $0.category == "ai" }.map(\.id))
+            candidates = []
+            selected = []
+            scannedCategories = []
+            scannedTargets = []
             phase = .selecting
             await refreshStatus()
         } catch {
@@ -122,28 +125,53 @@ final class AppState: ObservableObject {
 
     var installedTargets: [AnalysisTarget] { targets.filter { $0.installed } }
 
-    /// Scan only the targets the user selected.
-    func scanSelected() async {
-        let ids = Array(selectedTargets)
+    /// Installed targets for one category (drives the per-tab selection screen).
+    func installedTargets(in category: CleanCategory) -> [AnalysisTarget] {
+        installedTargets.filter { $0.category == category.rawValue }
+    }
+
+    /// Selected target count within a category (for the per-tab button label).
+    func selectedTargetCount(in category: CleanCategory) -> Int {
+        installedTargets(in: category).filter { selectedTargets.contains($0.id) }.count
+    }
+
+    /// Categories the user has already analyzed (drives selection-vs-results).
+    @Published var scannedCategories: Set<String> = []
+
+    func isScanned(_ category: CleanCategory) -> Bool { scannedCategories.contains(category.rawValue) }
+
+    /// Scan only the selected targets in ONE category, keeping other categories'
+    /// results intact — so AI and System tabs analyze independently.
+    func scanSelected(category: CleanCategory) async {
+        let ids = installedTargets(in: category)
+            .map(\.id).filter { selectedTargets.contains($0) }
         guard !ids.isEmpty else { return }
-        scannedTargets = ids
+        scannedTargets = Array(Set(scannedTargets).union(ids))
         phase = .scanning
         do {
             let result = try await engine.scan(targetIds: ids)
-            candidates = result.candidates.sorted { $0.sizeBytes > $1.sizeBytes }
+            // Replace this category's candidates, keep the others.
+            candidates.removeAll { $0.category == category.rawValue }
+            candidates.append(contentsOf: result.candidates)
+            candidates.sort { $0.sizeBytes > $1.sizeBytes }
             // Pre-select AI caches; system caches stay opt-in.
-            selected = Set(candidates.filter { $0.category == "ai" }.map(\.path))
-            phase = .ready
+            if category == .ai {
+                selected.formUnion(result.candidates.map(\.path))
+            }
+            scannedCategories.insert(category.rawValue)
+            phase = .selecting
             await refreshStatus()
         } catch {
             phase = .error(error.localizedDescription)
         }
     }
 
-    /// Return to the target selection screen.
-    func backToSelection() {
-        candidates = []
-        selected = []
+    /// Return one category to its selection screen.
+    func backToSelection(category: CleanCategory) {
+        let paths = Set(candidates.filter { $0.category == category.rawValue }.map(\.path))
+        candidates.removeAll { $0.category == category.rawValue }
+        selected.subtract(paths)
+        scannedCategories.remove(category.rawValue)
         phase = .selecting
     }
 

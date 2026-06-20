@@ -22,13 +22,14 @@ struct SystemCacheView: View {
                         }
                     }
                 }
-                .frame(maxHeight: 300)
+                .frame(maxHeight: .infinity)
 
                 Label("Önce gözden geçirin — yalnızca yeniden oluşturulabilir önbellekler listelenir.",
                       systemImage: "lock.shield")
                     .font(.caption2).foregroundStyle(.secondary).padding(.top, 8)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     private var selectAllHeader: some View {

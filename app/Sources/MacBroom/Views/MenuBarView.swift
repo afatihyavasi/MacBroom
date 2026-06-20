@@ -39,12 +39,12 @@ struct MenuBarView: View {
             .labelsHidden()
 
             content
+                .frame(maxHeight: .infinity)
 
             if section != .apps {
                 Divider()
                 cleanControls
             }
-            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(14)
@@ -110,22 +110,15 @@ struct MenuBarView: View {
         }
     }
 
+    /// The cleaning category for the current tab (Apps handled separately).
+    private var category: CleanCategory { section == .system ? .system : .ai }
+
     @ViewBuilder private var cleanContent: some View {
         switch state.phase {
         case .idle, .discovering:
-            HStack(spacing: 8) {
-                ProgressView().controlSize(.small)
-                Text("Hedefler aranıyor…").font(.callout).foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
-        case .selecting:
-            AnalysisSelectionView()
+            loading("Hedefler aranıyor…")
         case .scanning:
-            HStack(spacing: 8) {
-                ProgressView().controlSize(.small)
-                Text("Seçili hedefler taranıyor…").font(.callout).foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
+            loading("Seçili hedefler taranıyor…")
         case let .cleaning(done, total):
             VStack(alignment: .leading, spacing: 6) {
                 ProgressView(value: Double(done), total: Double(max(total, 1)))
@@ -135,21 +128,40 @@ struct MenuBarView: View {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.largeTitle).foregroundStyle(.green)
                 Text("\(Format.bytes(freed)) boşaltıldı").font(.title3.weight(.semibold))
-            }.frame(maxWidth: .infinity).padding(.vertical, 16)
+            }.frame(maxWidth: .infinity, maxHeight: .infinity)
         case let .error(msg):
             Label(msg, systemImage: "exclamationmark.triangle")
                 .font(.caption).foregroundStyle(.red).padding(.vertical, 8)
-        case .ready:
-            if section == .ai { AICacheView() } else { SystemCacheView() }
+        case .selecting:
+            // Per-tab: show this category's results if already analyzed, else
+            // its target picker. AI and System are fully independent here.
+            if state.isScanned(category) {
+                if category == .ai { AICacheView() } else { SystemCacheView() }
+            } else {
+                AnalysisSelectionView(category: category)
+            }
         }
+    }
+
+    private func loading(_ text: String) -> some View {
+        HStack(spacing: 8) {
+            ProgressView().controlSize(.small)
+            Text(text).font(.callout).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: clean controls
 
+    private var showResults: Bool {
+        if case .selecting = state.phase { return state.isScanned(category) }
+        return false
+    }
+
     private var cleanControls: some View {
         HStack {
-            if case .ready = state.phase {
-                Button { state.backToSelection() } label: {
+            if showResults {
+                Button { state.backToSelection(category: category) } label: {
                     Image(systemName: "chevron.left"); Text("Hedefler")
                 }
                 .buttonStyle(.borderless).font(.caption)
@@ -157,7 +169,7 @@ struct MenuBarView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            if case .ready = state.phase {
+            if showResults {
                 Button("Temizle") { Task { await state.clean() } }
                     .buttonStyle(.borderedProminent)
                     .disabled(state.selected.isEmpty)
