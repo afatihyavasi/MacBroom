@@ -61,11 +61,23 @@ struct AnalysisSelectionView: View {
         )) {
             HStack(spacing: 8) {
                 icon(for: t)
-                Text(t.label).font(.callout)
+                Text(label(for: t)).font(.callout)
             }
         }
         .toggleStyle(.checkbox)
         .padding(.vertical, 2)
+    }
+
+    /// System target labels arrive from the engine in Turkish; localize the
+    /// known ones. AI targets keep their (language-neutral) brand labels.
+    private func label(for t: AnalysisTarget) -> String {
+        switch t.id {
+        case "system:app-caches": return loc.t(.targetAppCaches)
+        case "system:editors":    return loc.t(.targetEditors)
+        case "system:gui-apps":   return loc.t(.targetGuiApps)
+        case "system:dev-misc":   return loc.t(.targetDevMisc)
+        default:                  return t.label
+        }
     }
 
     @ViewBuilder

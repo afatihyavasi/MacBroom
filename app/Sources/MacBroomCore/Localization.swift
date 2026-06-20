@@ -50,6 +50,7 @@ public enum L10n: String, CaseIterable {
     case settingsTitle, done, deletionMethod, about, aboutVersion, engineAttribution
     case language, languageSystem, disk, memory, diskFree, memoryTotal
     case categoryAI, categorySystem
+    case targetAppCaches, targetEditors, targetGuiApps, targetDevMisc
     case deletePermanentTitle, deleteTrashTitle, deletePermanentDetail, deleteTrashDetail
     case errEngineNotFound, errNonZero, errDecode
 }
@@ -115,6 +116,8 @@ public enum Localization {
         .language: "Language", .languageSystem: "System (automatic)",
         .disk: "Disk", .memory: "Memory", .diskFree: "%@ free", .memoryTotal: "%@ total",
         .categoryAI: "AI Tools", .categorySystem: "System",
+        .targetAppCaches: "App caches", .targetEditors: "Code editors",
+        .targetGuiApps: "GUI app caches", .targetDevMisc: "Developer leftovers",
         .deletePermanentTitle: "Delete permanently", .deleteTrashTitle: "Move to Trash",
         .deletePermanentDetail: "Reclaims space immediately (can’t be undone).",
         .deleteTrashDetail: "Reversible; space frees up when the Trash is emptied.",
@@ -159,6 +162,8 @@ public enum Localization {
         .language: "Dil", .languageSystem: "Sistem (otomatik)",
         .disk: "Disk", .memory: "Bellek", .diskFree: "%@ boş", .memoryTotal: "%@ toplam",
         .categoryAI: "AI Araçları", .categorySystem: "Sistem",
+        .targetAppCaches: "Uygulama önbellekleri", .targetEditors: "Kod editörleri",
+        .targetGuiApps: "GUI uygulama önbellekleri", .targetDevMisc: "Geliştirici artıkları",
         .deletePermanentTitle: "Kalıcı olarak sil", .deleteTrashTitle: "Çöp Kutusu’na taşı",
         .deletePermanentDetail: "Alanı hemen geri kazanır (geri alınamaz).",
         .deleteTrashDetail: "Geri alınabilir; alan Çöp boşaltılınca boşalır.",
@@ -203,6 +208,8 @@ public enum Localization {
         .language: "Idioma", .languageSystem: "Sistema (automático)",
         .disk: "Disco", .memory: "Memoria", .diskFree: "%@ libres", .memoryTotal: "%@ en total",
         .categoryAI: "Herramientas de IA", .categorySystem: "Sistema",
+        .targetAppCaches: "Cachés de apps", .targetEditors: "Editores de código",
+        .targetGuiApps: "Cachés de apps con interfaz", .targetDevMisc: "Restos de desarrollo",
         .deletePermanentTitle: "Eliminar permanentemente", .deleteTrashTitle: "Mover a la Papelera",
         .deletePermanentDetail: "Libera espacio de inmediato (no se puede deshacer).",
         .deleteTrashDetail: "Reversible; el espacio se libera al vaciar la Papelera.",
@@ -247,6 +254,8 @@ public enum Localization {
         .language: "Langue", .languageSystem: "Système (automatique)",
         .disk: "Disque", .memory: "Mémoire", .diskFree: "%@ libres", .memoryTotal: "%@ au total",
         .categoryAI: "Outils d’IA", .categorySystem: "Système",
+        .targetAppCaches: "Caches d’apps", .targetEditors: "Éditeurs de code",
+        .targetGuiApps: "Caches d’apps graphiques", .targetDevMisc: "Restes de développement",
         .deletePermanentTitle: "Supprimer définitivement", .deleteTrashTitle: "Mettre à la corbeille",
         .deletePermanentDetail: "Libère l’espace immédiatement (irréversible).",
         .deleteTrashDetail: "Réversible ; l’espace est libéré en vidant la corbeille.",

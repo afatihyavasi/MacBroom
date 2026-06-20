@@ -117,27 +117,36 @@ struct MenuBarView: View {
     private var category: CleanCategory { section == .system ? .system : .ai }
 
     @ViewBuilder private var cleanContent: some View {
+        // A transient state is shown on a tab only if it owns it (`phaseCategory`
+        // == this tab, or nil for a global discovery state). Otherwise the tab
+        // falls through to its own resting view — so scanning/cleaning/finishing
+        // one tab never hijacks the other.
+        let owns = state.phaseCategory == nil || state.phaseCategory == category
         switch state.phase {
         case .idle, .discovering:
             loading(loc.t(.searchingTargets))
-        case .scanning:
+        case .scanning where owns:
             loading(loc.t(.scanningTargets))
-        case let .cleaning(done, total):
+        case let .cleaning(done, total) where owns:
             VStack(alignment: .leading, spacing: 6) {
                 ProgressView(value: Double(done), total: Double(max(total, 1)))
                 Text(loc.t(.cleaningProgress, done, total)).font(.caption).foregroundStyle(.secondary)
             }.padding(.vertical, 8)
-        case let .finished(freed):
-            VStack(spacing: 8) {
+        case let .finished(freed) where owns:
+            VStack(spacing: 10) {
                 Image(systemName: "sparkles").font(.largeTitle).foregroundStyle(.green)
                 Text(loc.t(.freed, Format.bytes(freed))).font(.title3.weight(.semibold))
+                Button(loc.t(.done)) { state.dismissCacheResult() }.buttonStyle(.link)
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
-        case let .error(msg):
-            Label(msg, systemImage: "exclamationmark.triangle")
-                .font(.caption).foregroundStyle(.red).padding(.vertical, 8)
-        case .selecting:
-            // Per-tab: show this category's results if already analyzed, else
-            // its target picker. AI and System are fully independent here.
+        case let .error(msg) where owns:
+            VStack(spacing: 10) {
+                Label(msg, systemImage: "exclamationmark.triangle")
+                    .font(.caption).foregroundStyle(.red)
+                Button(loc.t(.back)) { state.dismissCacheResult() }.buttonStyle(.link)
+            }.frame(maxWidth: .infinity, maxHeight: .infinity).padding(.vertical, 8)
+        default:
+            // Resting (or a transient state owned by the OTHER tab): show this
+            // category's results if already analyzed, else its target picker.
             if state.isScanned(category) {
                 if category == .ai { AICacheView() } else { SystemCacheView() }
             } else {
@@ -156,9 +165,16 @@ struct MenuBarView: View {
 
     // MARK: clean controls
 
+    /// True exactly when this tab is showing its results list (so the Clean
+    /// controls belong on screen). Mirrors the `default` branch of `cleanContent`.
     private var showResults: Bool {
-        if case .selecting = state.phase { return state.isScanned(category) }
-        return false
+        guard state.isScanned(category) else { return false }
+        let owns = state.phaseCategory == nil || state.phaseCategory == category
+        switch state.phase {
+        case .idle, .discovering: return false
+        case .selecting: return true
+        case .scanning, .cleaning, .finished, .error: return !owns
+        }
     }
 
     private var cleanControls: some View {
@@ -168,14 +184,14 @@ struct MenuBarView: View {
                     Image(systemName: "chevron.left"); Text(loc.t(.backTargets))
                 }
                 .buttonStyle(.borderless).font(.caption)
-                Text(loc.t(.selectedSuffix, Format.bytes(state.selectedBytes)))
+                Text(loc.t(.selectedSuffix, Format.bytes(state.selectedBytes(in: category))))
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
             if showResults {
-                Button(loc.t(.clean)) { Task { await state.clean() } }
+                Button(loc.t(.clean)) { Task { await state.clean(category: category) } }
                     .buttonStyle(.borderedProminent)
-                    .disabled(state.selected.isEmpty)
+                    .disabled(!state.hasSelection(in: category))
             }
             Button(loc.t(.quit)) { NSApplication.shared.terminate(nil) }
                 .buttonStyle(.borderless)

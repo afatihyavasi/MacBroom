@@ -16,6 +16,10 @@ final class AppState: ObservableObject {
     }
 
     @Published var phase: Phase = .idle
+    /// Which cache tab a transient phase (scanning/cleaning/finished/error)
+    /// belongs to. `nil` = a global phase (discovery) shown on every tab. This
+    /// keeps the AI and System tabs from leaking each other's progress/results.
+    @Published var phaseCategory: CleanCategory?
     @Published var candidates: [CleanCandidate] = []
     @Published var selected: Set<String> = []          // selected candidate paths
     @Published var status: SystemStatus?
@@ -103,6 +107,7 @@ final class AppState: ObservableObject {
     /// Fast: find what's present and present the selection screen. AI targets
     /// are pre-checked (the safe headline); system targets are opt-in.
     func discover() async {
+        phaseCategory = nil          // discovery is global (both tabs)
         phase = .discovering
         do {
             let found = try await engine.discover()
@@ -147,6 +152,7 @@ final class AppState: ObservableObject {
             .map(\.id).filter { selectedTargets.contains($0) }
         guard !ids.isEmpty else { return }
         scannedTargets = Array(Set(scannedTargets).union(ids))
+        phaseCategory = category
         phase = .scanning
         do {
             let result = try await engine.scan(targetIds: ids)
@@ -175,15 +181,32 @@ final class AppState: ObservableObject {
         phase = .selecting
     }
 
-    func clean() async {
-        let approved = Array(selected)
-        guard !approved.isEmpty else { return }
+    /// Any selected candidate in this category? (drives the Clean button.)
+    func hasSelection(in category: CleanCategory) -> Bool {
+        candidates(in: category).contains { selected.contains($0.path) }
+    }
+
+    /// Leave a finished/error screen and return the tab to its resting view.
+    func dismissCacheResult() {
+        phaseCategory = nil
+        phase = .selecting
+    }
+
+    /// Clean ONLY the selected items in `category` — scoped so cleaning the AI
+    /// tab never touches System selections (and vice versa).
+    func clean(category: CleanCategory) async {
+        let categoryPaths = Set(candidates(in: category).map(\.path))
+        let approvedSet = selected.intersection(categoryPaths)
+        guard !approvedSet.isEmpty else { return }
+        let approved = Array(approvedSet)
+        let ids = scannedTargets.filter { $0.hasPrefix(category.rawValue + ":") }
         let total = approved.count
+        phaseCategory = category
         phase = .cleaning(done: 0, total: total)
         var freed: Int64 = 0
         var done = 0
         do {
-            for try await event in engine.clean(approvedPaths: approved, targetIds: scannedTargets, deleteMode: deleteMode) {
+            for try await event in engine.clean(approvedPaths: approved, targetIds: ids, deleteMode: deleteMode) {
                 switch event {
                 case let .progress(_, bytes):
                     freed += bytes
@@ -196,9 +219,9 @@ final class AppState: ObservableObject {
                     freed = max(freed, freedBytes)
                 }
             }
-            // Drop cleaned items from the list.
-            candidates.removeAll { selected.contains($0.path) }
-            selected.removeAll()
+            // Drop only the cleaned items; keep the other tab's selection intact.
+            candidates.removeAll { approvedSet.contains($0.path) }
+            selected.subtract(approvedSet)
             phase = .finished(freedBytes: freed)
             await refreshStatus()
         } catch {
