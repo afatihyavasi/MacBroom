@@ -5,7 +5,8 @@ help:
 	@echo "  engine-test   Run bats tests for the engine bridge"
 	@echo "  engine-lint   Run shellcheck on the engine"
 	@echo "  app-build     swift build the menu bar app"
-	@echo "  app-test      swift test"
+	@echo "  app-test      run the framework-free Swift self-tests"
+	@echo "  app-run       launch the menu bar app (swift run)"
 	@echo "  test          engine-lint + engine-test + app-test"
 
 engine-test:
@@ -18,7 +19,10 @@ app-build:
 	cd app && swift build
 
 app-test:
-	cd app && swift test
+	cd app && swift run MacBroomSelfTest
+
+app-run:
+	cd app && swift run MacBroom
 
 test: engine-lint engine-test app-test
 
