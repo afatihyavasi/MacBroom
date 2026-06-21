@@ -664,6 +664,49 @@ cmd_version() {
 }
 
 # --------------------------------------------------------------------------
+# Disk analysis (read-only large-file finder)
+# --------------------------------------------------------------------------
+# List the largest files under --root over the --min-mb threshold as JSON.
+# READ-ONLY: this never deletes anything. No mole load needed (pure find/stat).
+# `find -size +Nm` cheaply narrows to the few big files first, then we stat each.
+cmd_analyze() {
+    local root="$HOME" limit=50 min_mb=100 arg
+    for arg in "$@"; do
+        case "$arg" in
+            --root=*)   root="${arg#*=}" ;;
+            --limit=*)  limit="${arg#*=}" ;;
+            --min-mb=*) min_mb="${arg#*=}" ;;
+        esac
+    done
+    [[ -d "$root" ]] || die "analyze: not a directory: $root" 4
+    [[ "$limit" -gt 0 ]] 2>/dev/null || limit=50
+    [[ "$min_mb" -gt 0 ]] 2>/dev/null || min_mb=100
+
+    # Collect "size<TAB>mtime<TAB>path" rows, biggest first, capped to limit.
+    # stat -f %z (size bytes) %m (mtime epoch). All stderr suppressed: scanning
+    # $HOME hits many permission-denied paths and that noise must not leak.
+    local rows
+    rows="$(
+        find "$root" -type f -size +"${min_mb}"M \
+            -exec stat -f '%z	%m	%N' {} + \
+            2>/dev/null \
+            | sort -t'	' -k1,1 -rn \
+            | head -n "$limit"
+    )"
+
+    local out="" first=1 size mtime path count=0
+    while IFS=$'\t' read -r size mtime path; do
+        [[ -n "$path" ]] || continue
+        [[ $first -eq 1 ]] || out+=","
+        first=0
+        out+="{\"path\":$(json_string "$path"),\"size_bytes\":${size:-0},\"mtime\":${mtime:-0}}"
+        count=$((count + 1))
+    done <<< "$rows"
+
+    emit "{\"files\":[$out],\"count\":$count}"
+}
+
+# --------------------------------------------------------------------------
 # Dispatch
 # --------------------------------------------------------------------------
 main() {
@@ -679,10 +722,11 @@ main() {
         apps)      cmd_apps "$@" ;;
         app-scan)  cmd_app_scan "$@" ;;
         app-clean) cmd_app_clean "$@" ;;
+        analyze)   cmd_analyze "$@" ;;
         status)    cmd_status "$@" ;;
         version)   cmd_version "$@" ;;
         ""|-h|--help)
-            emit '{"usage":"macbroom-engine.sh {discover|scan|clean|ai-scan|ai-clean|apps|app-scan|app-clean|status|version}"}' ;;
+            emit '{"usage":"macbroom-engine.sh {discover|scan|clean|ai-scan|ai-clean|apps|app-scan|app-clean|analyze|status|version}"}' ;;
         *) die "unknown subcommand: $sub" 64 ;;
     esac
 }

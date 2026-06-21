@@ -59,6 +59,15 @@ public struct EngineBridge {
         return try decodeLast(ScanResult.self, from: data)
     }
 
+    // MARK: Disk analysis (read-only large-file finder)
+
+    /// Read-only scan for the largest user files under `$HOME` over a threshold.
+    /// Lists only — never deletes. Deletion goes through `appClean` (Trash).
+    public func analyze(minMB: Int = 100, limit: Int = 50) async throws -> [LargeFile] {
+        let (data, _) = try await runCollecting(["analyze", "--min-mb=\(minMB)", "--limit=\(limit)"])
+        return try decodeLast(AnalyzeResult.self, from: data).files
+    }
+
     // MARK: App uninstaller
 
     public func apps() async throws -> [AppInfo] {

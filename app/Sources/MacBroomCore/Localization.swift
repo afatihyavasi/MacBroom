@@ -60,6 +60,8 @@ public enum L10n: String, CaseIterable {
     case everyNHours, weekdayLabel, timeLabel, monthDayLabel, intervalLabel
     case deletePermanentTitle, deleteTrashTitle, deletePermanentDetail, deleteTrashDetail
     case errEngineNotFound, errNonZero, errDecode
+    case diskAnalysisTitle, diskAnalysisOpen, diskAnalysisDesc, analyzing, largeFilesEmpty
+    case revealInFinder, deleteFilesButton, largeFilesWarning
 }
 
 /// String lookup + persisted language selection. Core display strings
@@ -144,6 +146,14 @@ public enum Localization {
         .deleteTrashDetail: "Reversible; space frees up when the Trash is emptied.",
         .errEngineNotFound: "Cleaning engine not found.",
         .errNonZero: "Engine failed (%d): %@", .errDecode: "Couldn’t parse engine output: %@",
+        .diskAnalysisTitle: "Disk Analysis",
+        .diskAnalysisOpen: "Find large files",
+        .diskAnalysisDesc: "The largest files in your home folder. These are your own files, not caches.",
+        .analyzing: "Scanning for large files…",
+        .largeFilesEmpty: "No large files found.",
+        .revealInFinder: "Reveal in Finder",
+        .deleteFilesButton: "Delete %d file(s)",
+        .largeFilesWarning: "These are your personal files, not regenerable caches. They will be moved to the Trash — this can’t be undone from here.",
     ]
 
     // MARK: - Turkish
@@ -204,6 +214,14 @@ public enum Localization {
         .deleteTrashDetail: "Geri alınabilir; alan Çöp boşaltılınca boşalır.",
         .errEngineNotFound: "Temizleme motoru bulunamadı.",
         .errNonZero: "Motor hata verdi (%d): %@", .errDecode: "Motor çıktısı çözümlenemedi: %@",
+        .diskAnalysisTitle: "Disk Analizi",
+        .diskAnalysisOpen: "Büyük dosyaları bul",
+        .diskAnalysisDesc: "Ev klasörünüzdeki en büyük dosyalar. Bunlar önbellek değil, kendi dosyalarınızdır.",
+        .analyzing: "Büyük dosyalar taranıyor…",
+        .largeFilesEmpty: "Büyük dosya bulunamadı.",
+        .revealInFinder: "Finder’da göster",
+        .deleteFilesButton: "%d dosyayı sil",
+        .largeFilesWarning: "Bunlar yeniden oluşan önbellekler değil, kişisel dosyalarınızdır. Çöp Kutusu’na taşınır — buradan geri alınamaz.",
     ]
 
     // MARK: - Spanish
@@ -264,6 +282,14 @@ public enum Localization {
         .deleteTrashDetail: "Reversible; el espacio se libera al vaciar la Papelera.",
         .errEngineNotFound: "No se encontró el motor de limpieza.",
         .errNonZero: "El motor falló (%d): %@", .errDecode: "No se pudo analizar la salida del motor: %@",
+        .diskAnalysisTitle: "Análisis de disco",
+        .diskAnalysisOpen: "Buscar archivos grandes",
+        .diskAnalysisDesc: "Los archivos más grandes de tu carpeta de inicio. Son tus propios archivos, no cachés.",
+        .analyzing: "Buscando archivos grandes…",
+        .largeFilesEmpty: "No se encontraron archivos grandes.",
+        .revealInFinder: "Mostrar en Finder",
+        .deleteFilesButton: "Eliminar %d archivo(s)",
+        .largeFilesWarning: "Son tus archivos personales, no cachés regenerables. Se moverán a la Papelera — esto no se puede deshacer desde aquí.",
     ]
 
     // MARK: - French
@@ -324,5 +350,13 @@ public enum Localization {
         .deleteTrashDetail: "Réversible ; l’espace est libéré en vidant la corbeille.",
         .errEngineNotFound: "Moteur de nettoyage introuvable.",
         .errNonZero: "Le moteur a échoué (%d) : %@", .errDecode: "Impossible d’analyser la sortie du moteur : %@",
+        .diskAnalysisTitle: "Analyse du disque",
+        .diskAnalysisOpen: "Trouver les gros fichiers",
+        .diskAnalysisDesc: "Les plus gros fichiers de votre dossier personnel. Ce sont vos fichiers, pas des caches.",
+        .analyzing: "Recherche de gros fichiers…",
+        .largeFilesEmpty: "Aucun gros fichier trouvé.",
+        .revealInFinder: "Afficher dans le Finder",
+        .deleteFilesButton: "Supprimer %d fichier(s)",
+        .largeFilesWarning: "Ce sont vos fichiers personnels, pas des caches régénérables. Ils seront placés dans la Corbeille — irréversible depuis ici.",
     ]
 }

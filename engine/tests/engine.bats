@@ -246,3 +246,17 @@ PLIST
     [[ "$output" == *'"freed_bytes":0'* ]]
     [[ "$output" == *'"count":0'* ]]
 }
+
+# --- analyze: read-only large-file finder ---------------------------------
+
+@test "analyze lists large files over the threshold with size_bytes (read-only)" {
+    mkdir -p "$HOME/big"
+    # ~3 MiB file, comfortably over a 1 MB threshold.
+    head -c 3145728 /dev/zero > "$HOME/big/huge.bin"
+
+    run bash "$ENGINE" analyze --root="$HOME" --min-mb=1
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"$HOME/big/huge.bin"* ]]   # the big file is surfaced
+    [[ "$output" == *'"size_bytes":3145728'* ]] # with its real byte size
+    [ -e "$HOME/big/huge.bin" ]                  # and was NOT deleted (read-only)
+}

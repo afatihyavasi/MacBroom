@@ -80,6 +80,11 @@ struct MenuBarView: View {
             }
             .disabled(state.isBusy)
             .keyboardShortcut("r", modifiers: .command)
+            SHIconButton(system: "chart.bar.doc.horizontal", help: loc.t(.diskAnalysisOpen)) {
+                // Disk Analysis opens in its own AppKit window (the tab strip is
+                // full at 4) — see DiskAnalysisWindowController.
+                DiskAnalysisWindowController.shared.show(state: state, loc: loc)
+            }
             SHIconButton(system: "gearshape", help: loc.t(.settingsHelp)) {
                 // Settings opens in its own AppKit window (deterministic for a
                 // menu-bar app; see SettingsWindowController) so its NSMenu

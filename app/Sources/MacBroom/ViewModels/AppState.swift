@@ -269,6 +269,90 @@ final class AppState: ObservableObject {
         if selected.contains(path) { selected.remove(path) } else { selected.insert(path) }
     }
 
+    // MARK: - Disk analysis (read-only large-file finder)
+    //
+    // Independent of the cache `phase` (like the app uninstaller flow), so opening
+    // the Disk Analysis window never disturbs the menu-bar cache tabs.
+
+    enum AnalyzeFlow: Equatable {
+        case scanning
+        case ready
+        case deleting(done: Int, total: Int, freedBytes: Int64)
+        case finished(freedBytes: Int64, failed: Int, permissionBlocked: Bool)
+        case error(String)
+    }
+
+    @Published var largeFiles: [LargeFile] = []
+    @Published var largeSelected: Set<String> = []
+    @Published var analyzeFlow: AnalyzeFlow = .scanning
+
+    var largeSelectedBytes: Int64 {
+        largeFiles.filter { largeSelected.contains($0.path) }.reduce(0) { $0 + $1.sizeBytes }
+    }
+
+    /// Tri-state selection across the listed large files (drives select-all).
+    var largeSelectionState: Bool? {
+        if largeSelected.isEmpty { return false }
+        if largeSelected.count == largeFiles.count { return true }
+        return nil
+    }
+
+    func toggleLargeFile(_ path: String) {
+        if largeSelected.contains(path) { largeSelected.remove(path) } else { largeSelected.insert(path) }
+    }
+
+    func toggleAllLargeFiles() {
+        if largeSelectionState == true { largeSelected.removeAll() }
+        else { largeSelected = Set(largeFiles.map(\.path)) }
+    }
+
+    /// Read-only scan for the largest user files. Never deletes.
+    func analyzeDisk() async {
+        analyzeFlow = .scanning
+        largeSelected = []
+        do {
+            largeFiles = try await engine.analyze()
+            analyzeFlow = .ready
+        } catch {
+            analyzeFlow = .error(error.localizedDescription)
+        }
+    }
+
+    /// Delete the given large files. SAFETY: these are user data, not caches, so
+    /// deletion ALWAYS goes to Trash (regardless of the user's deletion setting)
+    /// through the same protection-gated `appClean` sink the uninstaller uses.
+    func deleteLargeFiles(_ paths: [String]) async {
+        guard !paths.isEmpty else { return }
+        let total = paths.count
+        analyzeFlow = .deleting(done: 0, total: total, freedBytes: 0)
+        var freed: Int64 = 0, done = 0, failed = 0, permissionBlocked = false
+        var removed = Set<String>()
+        do {
+            for try await event in engine.appClean(approvedPaths: paths, deleteMode: .trash) {
+                switch event {
+                case let .progress(path, bytes):
+                    freed += bytes; done += 1; removed.insert(path)
+                    analyzeFlow = .deleting(done: done, total: total, freedBytes: freed)
+                case let .skipped(_, reason):
+                    failed += 1; done += 1
+                    if reason == "permission" { permissionBlocked = true }
+                    analyzeFlow = .deleting(done: done, total: total, freedBytes: freed)
+                case let .done(freedBytes, _, failedCount):
+                    freed = max(freed, freedBytes)
+                    failed = max(failed, failedCount)
+                }
+            }
+            // Drop only the files actually removed; keep failed ones so the user
+            // can see what remained.
+            largeFiles.removeAll { removed.contains($0.path) }
+            largeSelected.subtract(removed)
+            analyzeFlow = .finished(freedBytes: freed, failed: failed, permissionBlocked: permissionBlocked)
+            await refreshStatus()
+        } catch {
+            analyzeFlow = .error(error.localizedDescription)
+        }
+    }
+
     // MARK: - App uninstaller flow
 
     enum UninstallFlow: Equatable {

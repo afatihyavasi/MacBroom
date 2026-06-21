@@ -62,6 +62,36 @@ public struct AppsResult: Codable {
     public var apps: [AppInfo]
 }
 
+/// A large user file surfaced by the read-only `analyze` (disk analysis) scan.
+/// Unlike `CleanCandidate` these are NOT regenerable caches — they are real user
+/// data, so deletion is always confirmed and defaults to Trash.
+public struct LargeFile: Codable, Identifiable, Hashable {
+    public var path: String
+    public var sizeBytes: Int64
+    /// Last-modified time, epoch seconds.
+    public var mtime: Double
+
+    /// Stable identity = absolute path.
+    public var id: String { path }
+
+    enum CodingKeys: String, CodingKey {
+        case path, mtime
+        case sizeBytes = "size_bytes"
+    }
+
+    public init(path: String, sizeBytes: Int64, mtime: Double) {
+        self.path = path
+        self.sizeBytes = sizeBytes
+        self.mtime = mtime
+    }
+}
+
+/// Result of an `analyze` invocation.
+public struct AnalyzeResult: Codable {
+    public var files: [LargeFile]
+    public var count: Int
+}
+
 /// Disk usage from `status`.
 public struct DiskInfo: Codable {
     public var total: Int64
