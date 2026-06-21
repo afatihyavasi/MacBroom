@@ -247,6 +247,26 @@ PLIST
     [[ "$output" == *'"count":0'* ]]
 }
 
+@test "auto-clean records freed bytes to the ledger when MACBROOM_RECLAIMED_LEDGER is set" {
+    mkdir -p "$HOME/.gemini/tmp"
+    head -c 50000 /dev/zero > "$HOME/.gemini/tmp/cache.bin"
+
+    run env MACBROOM_RECLAIMED_LEDGER="$HOME/ledger" bash "$ENGINE" auto-clean --targets=ai:gemini
+    [ "$status" -eq 0 ]
+    [ -f "$HOME/ledger" ]
+    [[ "$(cat "$HOME/ledger")" =~ ^[0-9]+$ ]]
+    [ "$(cat "$HOME/ledger")" -gt 0 ]
+}
+
+@test "auto-clean does NOT write a ledger when the env var is unset (interactive path)" {
+    mkdir -p "$HOME/.gemini/tmp"
+    head -c 50000 /dev/zero > "$HOME/.gemini/tmp/cache.bin"
+
+    run bash "$ENGINE" auto-clean --targets=ai:gemini
+    [ "$status" -eq 0 ]
+    [ ! -e "$HOME/ledger" ]
+}
+
 # --- analyze: read-only large-file finder ---------------------------------
 
 @test "analyze lists large files over the threshold with size_bytes (read-only)" {

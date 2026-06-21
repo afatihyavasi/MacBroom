@@ -11,7 +11,6 @@ final class AutomationWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
 
     func show(state: AppState, loc: LocalizationManager) {
-        NSApp.setActivationPolicy(.regular)
         if window == nil {
             let hosting = NSHostingController(
                 rootView: AutomationView().environmentObject(state).environmentObject(loc)
@@ -24,6 +23,7 @@ final class AutomationWindowController: NSObject, NSWindowDelegate {
             w.center()
             window = w
         }
+        if let w = window { ManagedWindows.opened(w) }
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -31,6 +31,6 @@ final class AutomationWindowController: NSObject, NSWindowDelegate {
     func close() { window?.performClose(nil) }
 
     func windowWillClose(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        if let w = notification.object as? NSWindow { ManagedWindows.closed(w) }
     }
 }

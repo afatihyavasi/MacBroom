@@ -15,7 +15,6 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
 
     func show(state: AppState, loc: LocalizationManager, appearance: AppearanceManager) {
-        NSApp.setActivationPolicy(.regular)
         if window == nil {
             let hosting = NSHostingController(
                 rootView: SettingsView()
@@ -29,6 +28,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             w.center()
             window = w
         }
+        if let w = window { ManagedWindows.opened(w) }
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -37,7 +37,6 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     func close() { window?.performClose(nil) }
 
     func windowWillClose(_ notification: Notification) {
-        // Back to a pure menu-bar app — drops the temporary Dock icon.
-        NSApp.setActivationPolicy(.accessory)
+        if let w = notification.object as? NSWindow { ManagedWindows.closed(w) }
     }
 }

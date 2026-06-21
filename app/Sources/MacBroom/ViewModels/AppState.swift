@@ -48,6 +48,7 @@ final class AppState: ObservableObject {
         totalReclaimed = UserDefaults.standard.object(forKey: totalReclaimedKey) as? Int64
             ?? Int64(UserDefaults.standard.integer(forKey: totalReclaimedKey))
         loadSchedules()
+        foldReclaimedLedger()
         startScheduler()
     }
 
@@ -56,6 +57,18 @@ final class AppState: ObservableObject {
         guard bytes > 0 else { return }
         totalReclaimed += bytes
         UserDefaults.standard.set(totalReclaimed, forKey: totalReclaimedKey)
+    }
+
+    /// Fold in bytes freed by launchd-triggered cleans (which ran with no app)
+    /// from the ledger file, then reset it — so the all-time stat stays accurate
+    /// even when scheduled cleaning happened while MacBroom was quit.
+    private func foldReclaimedLedger() {
+        let url = LaunchAgentManager.ledgerURL
+        guard let text = try? String(contentsOf: url, encoding: .utf8),
+              let bytes = Int64(text.trimmingCharacters(in: .whitespacesAndNewlines)), bytes > 0
+        else { return }
+        addReclaimed(bytes)
+        try? "0".write(to: url, atomically: true, encoding: .utf8)
     }
 
     /// User-chosen deletion policy (mirrors @AppStorage("deletionMode")).
@@ -500,9 +513,14 @@ final class AppState: ObservableObject {
     }
 
     /// Install/refresh launchd agents so schedules also fire when the app is quit.
+    /// Runs off the main actor — launchctl is a blocking subprocess and there may
+    /// be one call per rule.
     private func syncLaunchAgents() {
-        LaunchAgentManager.sync(rules: rules, enginePath: engine.enginePath,
-                                moleDir: engine.moleDir, deleteMode: deleteMode.rawValue)
+        let snapshot = rules
+        let enginePath = engine.enginePath, moleDir = engine.moleDir, mode = deleteMode.rawValue
+        Task.detached {
+            LaunchAgentManager.sync(rules: snapshot, enginePath: enginePath, moleDir: moleDir, deleteMode: mode)
+        }
     }
 
     private func loadSchedules() {
@@ -543,6 +561,7 @@ final class AppState: ObservableObject {
     }
 
     private func runDueSchedules() async {
+        foldReclaimedLedger()           // pick up any launchd-run cleans
         guard !isBusy else { return }   // never fight a manual operation
         let now = Date()
         for (id, rule) in rules where rule.isDue(lastRun: lastRun[id], now: now) {

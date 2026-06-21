@@ -467,6 +467,20 @@ _mb_notify() {
     osascript -e "display notification \"$msg\" with title \"MacBroom\"" >/dev/null 2>&1 || true
 }
 
+# When invoked by a launchd agent (no running app), accumulate freed bytes into
+# a ledger file so the app can fold them into its all-time "reclaimed" stat on
+# next launch. Only active when MACBROOM_RECLAIMED_LEDGER is set (the app's
+# interactive path leaves it unset and counts in-process, avoiding double-count).
+_mb_record_reclaimed() {
+    local ledger="${MACBROOM_RECLAIMED_LEDGER:-}"
+    [[ -n "$ledger" ]] || return 0
+    mkdir -p "$(dirname "$ledger")" 2>/dev/null || return 0
+    local cur=0
+    [[ -f "$ledger" ]] && cur="$(cat "$ledger" 2>/dev/null)"
+    [[ "$cur" =~ ^[0-9]+$ ]] || cur=0
+    printf '%s' "$((cur + ${1:-0}))" > "$ledger" 2>/dev/null || true
+}
+
 # Scheduled automation: scan the target(s) and clean everything they surface,
 # in one shot. Same safety contract as a manual clean (mole-protection-filtered
 # candidates only); honors MACBROOM_DELETE_MODE. Posts a notification on success
@@ -496,6 +510,7 @@ cmd_auto_clean() {
 
     if [[ "${MB_FREED_BYTES:-0}" -gt 0 ]]; then
         _mb_notify "$(_human_bytes "$MB_FREED_BYTES") boşaltıldı"
+        _mb_record_reclaimed "$MB_FREED_BYTES"
     fi
     emit "{\"event\":\"done\",\"freed_bytes\":$MB_FREED_BYTES,\"count\":$MB_COUNT,\"failed\":${MB_FAILED:-0}}"
 }
@@ -697,6 +712,10 @@ cmd_analyze() {
     local out="" first=1 size mtime path count=0
     while IFS=$'\t' read -r size mtime path; do
         [[ -n "$path" ]] || continue
+        # Guard against a path containing a newline (its trailing part lands on a
+        # new line with a non-numeric "size") — skip such rows rather than emit
+        # garbage into a list that feeds a delete UI.
+        [[ "$size" =~ ^[0-9]+$ && "$mtime" =~ ^[0-9]+$ ]] || continue
         [[ $first -eq 1 ]] || out+=","
         first=0
         out+="{\"path\":$(json_string "$path"),\"size_bytes\":${size:-0},\"mtime\":${mtime:-0}}"

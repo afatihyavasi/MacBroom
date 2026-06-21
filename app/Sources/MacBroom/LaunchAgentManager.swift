@@ -11,6 +11,13 @@ enum LaunchAgentManager {
             .appendingPathComponent("Library/LaunchAgents", isDirectory: true)
     }
 
+    /// Ledger where launchd-triggered cleans record freed bytes, folded into the
+    /// app's all-time "reclaimed" stat on next launch.
+    static var ledgerURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/MacBroom/reclaimed", isDirectory: false)
+    }
+
     /// Replace all MacBroom auto-clean agents with ones matching `rules`.
     static func sync(rules: [String: AutoCleanRule], enginePath: String,
                      moleDir: String, deleteMode: String) {
@@ -21,7 +28,9 @@ enum LaunchAgentManager {
         for (id, rule) in enabled {
             let label = LaunchAgent.label(for: id)
             let args = ["/bin/bash", enginePath, "auto-clean", "--targets=\(id)"]
-            let env = ["MACBROOM_MOLE_DIR": moleDir, "MACBROOM_DELETE_MODE": deleteMode]
+            let env = ["MACBROOM_MOLE_DIR": moleDir,
+                       "MACBROOM_DELETE_MODE": deleteMode,
+                       "MACBROOM_RECLAIMED_LEDGER": ledgerURL.path]
             guard let data = LaunchAgent.plistData(label: label, programArguments: args,
                                                    environment: env, rule: rule) else { continue }
             let file = dir.appendingPathComponent("\(label).plist")
