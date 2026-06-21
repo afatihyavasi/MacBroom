@@ -68,6 +68,24 @@ public struct AutoCleanRule: Codable, Equatable, Sendable {
         }
     }
 
+    // MARK: launchd mapping
+
+    /// `StartInterval` seconds for hourly schedules (nil for calendar-based ones).
+    public var launchdStartInterval: Int? {
+        frequency == .hourly ? max(1, hourInterval) * 3600 : nil
+    }
+
+    /// `StartCalendarInterval` entry for daily/weekly/monthly (nil otherwise).
+    /// launchd uses Weekday 0=Sunday … 6=Saturday; our `weekday` is 1=Sun … 7=Sat.
+    public var launchdCalendarInterval: [String: Int]? {
+        switch frequency {
+        case .daily:   return ["Hour": hour, "Minute": minute]
+        case .weekly:  return ["Weekday": (weekday - 1) % 7, "Hour": hour, "Minute": minute]
+        case .monthly: return ["Day": min(dayOfMonth, 28), "Hour": hour, "Minute": minute]
+        case .hourly, .off: return nil
+        }
+    }
+
     /// Today at `hour:minute` if that's already passed, else yesterday at `hour:minute`.
     private func latestTimeOfDay(onOrBefore now: Date, calendar: Calendar) -> Date? {
         var comps = calendar.dateComponents([.year, .month, .day], from: now)

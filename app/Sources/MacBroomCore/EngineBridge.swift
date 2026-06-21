@@ -81,6 +81,23 @@ public struct EngineBridge {
         return streamingClean(subcommand: "clean", extraArgs: [arg], approvedPaths: approvedPaths, deleteMode: deleteMode)
     }
 
+    /// Scheduled automation: scan a target and clean everything it surfaces in
+    /// one shot (the engine posts a native notification on success). Returns the
+    /// final freed/failed totals.
+    public func autoClean(targetId: String, deleteMode: DeleteMode = .permanent) async throws -> (freed: Int64, failed: Int) {
+        let (data, _) = try await runCollecting(
+            ["auto-clean", "--targets=\(targetId)"],
+            extraEnv: ["MACBROOM_DELETE_MODE": deleteMode.rawValue]
+        )
+        let text = String(data: data, encoding: .utf8) ?? ""
+        for line in text.split(separator: "\n").reversed() {
+            if case let .done(freed, _, failed)? = EngineEvent(jsonLine: String(line)) {
+                return (freed, failed)
+            }
+        }
+        return (0, 0)
+    }
+
     /// Shared streaming runner for `clean` / `app-clean`.
     private func streamingClean(subcommand: String, extraArgs: [String], approvedPaths: [String], deleteMode: DeleteMode) -> AsyncThrowingStream<EngineEvent, Error> {
         AsyncThrowingStream { continuation in
@@ -184,8 +201,8 @@ public struct EngineBridge {
     }
 
     /// Run the engine and collect full stdout (for non-streaming subcommands).
-    private func runCollecting(_ args: [String]) async throws -> (Data, Int32) {
-        let proc = try makeProcess(args)
+    private func runCollecting(_ args: [String], extraEnv: [String: String] = [:]) async throws -> (Data, Int32) {
+        let proc = try makeProcess(args, extraEnv: extraEnv)
         let out = Pipe()
         let err = Pipe()
         proc.standardOutput = out

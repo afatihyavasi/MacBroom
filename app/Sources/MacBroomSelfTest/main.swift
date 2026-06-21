@@ -134,6 +134,30 @@ check("monthly/15: not due before the 15th when lastRun is this month",
       monthly15.isDue(lastRun: dt(2024,1,1), now: dt(2024,1,10), calendar: utc) == false)
 check("rule off never due", AutoCleanRule.off.isDue(lastRun: nil, now: dt(2024,1,1), calendar: utc) == false)
 
+// launchd schedule mapping
+check("hourly/3 → StartInterval 10800", AutoCleanRule(frequency: .hourly, hourInterval: 3).launchdStartInterval == 10800)
+check("daily has no StartInterval", AutoCleanRule(frequency: .daily).launchdStartInterval == nil)
+check("weekly Mon(2) → launchd Weekday 1",
+      AutoCleanRule(frequency: .weekly, weekday: 2).launchdCalendarInterval?["Weekday"] == 1)
+check("weekly Sun(1) → launchd Weekday 0",
+      AutoCleanRule(frequency: .weekly, weekday: 1).launchdCalendarInterval?["Weekday"] == 0)
+check("monthly/15 → Day 15", AutoCleanRule(frequency: .monthly, dayOfMonth: 15).launchdCalendarInterval?["Day"] == 15)
+// plist serializes to a valid, re-parseable property list with the schedule key.
+if let data = LaunchAgent.plistData(
+        label: "com.macbroom.autoclean.ai.gemini",
+        programArguments: ["/bin/bash", "/x/engine.sh", "auto-clean", "--targets=ai:gemini"],
+        environment: ["MACBROOM_DELETE_MODE": "trash"],
+        rule: AutoCleanRule(frequency: .weekly, hour: 3, weekday: 6)),
+   let obj = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] {
+    check("plist has Label", (obj["Label"] as? String) == "com.macbroom.autoclean.ai.gemini")
+    check("plist has StartCalendarInterval", obj["StartCalendarInterval"] is [String: Int])
+    check("plist Weekday is Friday (5)", (obj["StartCalendarInterval"] as? [String: Int])?["Weekday"] == 5)
+} else {
+    check("plist serializes", false)
+}
+check("plist nil for disabled rule",
+      LaunchAgent.plistData(label: "x", programArguments: [], environment: [:], rule: .off) == nil)
+
 // Localization: every key must be translated in all 4 languages (no fallback
 // gaps), and format placeholders must match across languages.
 for lang in [AppLanguage.en, .tr, .es, .fr] {

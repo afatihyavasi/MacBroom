@@ -396,6 +396,13 @@ final class AppState: ObservableObject {
         rules = next
         persistRules()
         persistLastRun()
+        syncLaunchAgents()
+    }
+
+    /// Install/refresh launchd agents so schedules also fire when the app is quit.
+    private func syncLaunchAgents() {
+        LaunchAgentManager.sync(rules: rules, enginePath: engine.enginePath,
+                                moleDir: engine.moleDir, deleteMode: deleteMode.rawValue)
     }
 
     private func loadSchedules() {
@@ -423,6 +430,9 @@ final class AppState: ObservableObject {
         guard !schedulerStarted else { return }
         schedulerStarted = true
         Task { [weak self] in
+            // Refresh launchd agents to the current rules + engine path (the app
+            // may have moved since last launch), then run the in-app catch-up.
+            self?.syncLaunchAgents()
             await self?.runDueSchedules()
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 300 * 1_000_000_000)   // 5 min
@@ -448,17 +458,9 @@ final class AppState: ObservableObject {
     /// whatever the user is looking at. Candidates are mole-protection-filtered,
     /// so cleaning all of them is the same safety contract as a manual clean.
     private func autoCleanTarget(_ targetId: String) async {
-        do {
-            let result = try await engine.scan(targetIds: [targetId])
-            let paths = result.candidates.map(\.path)
-            guard !paths.isEmpty else { return }
-            for try await _ in engine.clean(approvedPaths: paths, targetIds: [targetId], deleteMode: deleteMode) {}
-            // If the cleaned target is currently shown, drop the gone items.
-            let goneSet = Set(paths)
-            candidates.removeAll { goneSet.contains($0.path) }
-            selected.subtract(goneSet)
-        } catch {
-            // Auto-clean is best-effort; surface nothing on failure.
-        }
+        // One engine call scans + cleans + posts a notification on success — the
+        // same path the launchd agent uses, so behavior is identical whether the
+        // app or launchd triggers it.
+        _ = try? await engine.autoClean(targetId: targetId, deleteMode: deleteMode)
     }
 }
