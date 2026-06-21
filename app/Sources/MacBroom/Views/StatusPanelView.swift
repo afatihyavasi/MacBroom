@@ -55,5 +55,8 @@ private struct UsageCard: View {
         }
         .shCard()
         .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(title))
+        .accessibilityValue(Text("\(percent)% — \(detail)"))
     }
 }

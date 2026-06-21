@@ -77,6 +77,7 @@ private struct AIToolSection: View {
     @EnvironmentObject var loc: LocalizationManager
     let group: AIToolGroup
     @State private var expanded = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -96,13 +97,17 @@ private struct AIToolSection: View {
 
     private var header: some View {
         HStack(spacing: Theme.Space.sm) {
-            SHTriCheckbox(state: state.selectionState(for: group)) { state.toggleGroup(group) }
+            SHTriCheckbox(state: state.selectionState(for: group), label: group.tool.displayName) { state.toggleGroup(group) }
             AIToolIconView(tool: group.tool, size: 18)
             Text(group.tool.displayName).font(.shLabel)
             Spacer()
             SHBadge(text: loc.t(.groupCountBytes, group.count, Format.bytes(group.totalBytes)))
             Button {
-                withAnimation(.snappy(duration: 0.18)) { expanded.toggle() }
+                if reduceMotion {
+                    expanded.toggle()
+                } else {
+                    withAnimation(.snappy(duration: 0.18)) { expanded.toggle() }
+                }
             } label: {
                 Image(systemName: "chevron.right")
                     .rotationEffect(.degrees(expanded ? 90 : 0))
@@ -110,6 +115,7 @@ private struct AIToolSection: View {
                     .foregroundStyle(Theme.mutedForeground)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(Text(expanded ? "Collapse" : "Expand"))
         }
     }
 

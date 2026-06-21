@@ -50,6 +50,7 @@ private struct SHButtonBackground: ViewModifier {
     let size: SHSize
     let isPressed: Bool
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hovering = false
     func body(content: Content) -> some View {
         content
@@ -69,8 +70,8 @@ private struct SHButtonBackground: ViewModifier {
             .opacity(isEnabled ? 1 : 0.45)
             .scaleEffect(isPressed ? 0.97 : 1)
             .onHover { hovering = $0 }
-            .animation(.easeOut(duration: 0.12), value: hovering)
-            .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isPressed)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovering)
+            .animation(reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.7), value: isPressed)
             .contentShape(Rectangle())
     }
 }
@@ -145,6 +146,7 @@ struct SHIconButton: View {
     let system: String
     var help: String = ""
     let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hovering = false
     var body: some View {
         Button(action: action) {
@@ -160,8 +162,9 @@ struct SHIconButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .animation(.easeOut(duration: 0.12), value: hovering)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovering)
         .help(help)
+        .accessibilityLabel(help.isEmpty ? Text("") : Text(help))
     }
 }
 
@@ -192,6 +195,7 @@ struct SHSeparator: View {
 
 private struct HoverHighlight: ViewModifier {
     var radius: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hovering = false
     func body(content: Content) -> some View {
         content
@@ -200,7 +204,7 @@ private struct HoverHighlight: ViewModifier {
                     .fill(hovering ? Theme.muted.opacity(0.6) : .clear)
             )
             .onHover { hovering = $0 }
-            .animation(.easeOut(duration: 0.12), value: hovering)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovering)
     }
 }
 
@@ -229,18 +233,20 @@ struct SHSectionHeader: View {
 // MARK: - Checkbox (shadcn-style square)
 
 struct SHCheckboxStyle: ToggleStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     func makeBody(configuration: Configuration) -> some View {
         Button {
             configuration.isOn.toggle()
         } label: {
             HStack(spacing: Theme.Space.sm) {
                 box(configuration.isOn ? .on : .off)
-                    .animation(.snappy(duration: 0.12), value: configuration.isOn)
+                    .animation(reduceMotion ? nil : .snappy(duration: 0.12), value: configuration.isOn)
                 configuration.label
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(configuration.isOn ? [.isButton, .isSelected] : .isButton)
     }
 
     enum BoxState { case on, off, mixed }
@@ -275,29 +281,43 @@ struct SHSelectAllToggle: View {
     let selectTitle: String
     let deselectTitle: String
     let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         Button(action: action) {
             HStack(spacing: Theme.Space.sm) {
                 SHCheckboxStyle().box(state == true ? .on : (state == nil ? .mixed : .off))
-                    .animation(.snappy(duration: 0.12), value: state)
+                    .animation(reduceMotion ? nil : .snappy(duration: 0.12), value: state)
                 Text(state == true ? deselectTitle : selectTitle).font(.shLabel)
             }
+            .padding(.vertical, 4)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(state == true ? deselectTitle : selectTitle))
+        .accessibilityValue(Text(state == true ? "all" : (state == nil ? "mixed" : "none")))
+        .accessibilityAddTraits(.isButton)
     }
 }
 
 /// A standalone tri-state checkbox (for "select all" headers).
 struct SHTriCheckbox: View {
     let state: Bool?   // true=all, false=none, nil=mixed
+    var label: String = "Select all"
     let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         Button(action: action) {
             SHCheckboxStyle().box(state == true ? .on : (state == nil ? .mixed : .off))
-                .animation(.snappy(duration: 0.12), value: state)
+                .animation(reduceMotion ? nil : .snappy(duration: 0.12), value: state)
+                .padding(6)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(label))
+        .accessibilityValue(Text(state == true ? "all" : (state == nil ? "mixed" : "none")))
+        .accessibilityAddTraits(.isButton)
     }
 }
 
@@ -307,12 +327,17 @@ struct SHTabs<T: Hashable>: View {
     @Binding var selection: T
     let items: [(value: T, label: String)]
     @Namespace private var ns
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         HStack(spacing: 2) {
             ForEach(items, id: \.value) { item in
                 let isSel = item.value == selection
                 Button {
-                    withAnimation(.snappy(duration: 0.18)) { selection = item.value }
+                    if reduceMotion {
+                        selection = item.value
+                    } else {
+                        withAnimation(.snappy(duration: 0.18)) { selection = item.value }
+                    }
                 } label: {
                     Text(item.label)
                         .font(.shLabel)
@@ -332,6 +357,8 @@ struct SHTabs<T: Hashable>: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(Text(item.label))
+                .accessibilityAddTraits(isSel ? [.isButton, .isSelected] : .isButton)
             }
         }
         .padding(3)
@@ -356,5 +383,6 @@ struct SHProgressBar: View {
             }
         }
         .frame(height: 6)
+        .accessibilityValue(Text("\(Int(min(max(value, 0), 1) * 100)) percent"))
     }
 }
