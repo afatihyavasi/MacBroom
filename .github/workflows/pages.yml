@@ -1,0 +1,48 @@
+name: Deploy landing page
+
+# docs/site/ içeriğini GitHub Pages'e yayınlar.
+# GitHub Pages'i etkinleştirmek gerekir: Settings → Pages → Source: "GitHub Actions".
+# Pages etkin değilse deploy adımı atlanır; akış başarısız olmaz.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/site/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Aynı anda tek bir deploy çalışsın.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+        continue-on-error: true
+
+      - name: Upload artifact
+        if: ${{ steps.pages.outcome == 'success' }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        if: ${{ steps.pages.outcome == 'success' }}
+        uses: actions/deploy-pages@v4

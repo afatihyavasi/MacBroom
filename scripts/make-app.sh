@@ -50,4 +50,14 @@ cat > "$CONTENTS/Info.plist" <<PLIST
 </plist>
 PLIST
 
+# Optional local code signing. Only runs if MACBROOM_SIGN_IDENTITY is set;
+# otherwise the .app is left unsigned (default, unchanged behavior). CI handles
+# signing/notarization in .github/workflows/release.yml instead.
+if [[ -n "${MACBROOM_SIGN_IDENTITY:-}" ]]; then
+  echo "==> codesign (Developer ID, hardened runtime + timestamp)"
+  codesign --force --deep --options runtime --timestamp \
+    --sign "$MACBROOM_SIGN_IDENTITY" "$APP"
+  codesign --verify --strict --verbose=2 "$APP"
+fi
+
 echo "==> done: $APP"

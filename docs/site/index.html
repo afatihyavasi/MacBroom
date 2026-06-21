@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MacBroom — Safe, open-source AI &amp; system cache cleaner for the macOS menu bar</title>
+  <meta name="description" content="MacBroom is a safe, open-source AI and system cache cleaner that lives in your macOS menu bar. Preview and confirm before anything is deleted." />
+  <style>
+    :root {
+      --bg: #09090B;
+      --bg-elev: #0E0E11;
+      --text: #FAFAFA;
+      --muted: #A1A1AA;
+      --border: #27272A;
+      --accent: #6366F1;
+      --accent-light: #818CF8;
+      --radius: 14px;
+      --max: 1080px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
+
+    /* Header */
+    header {
+      position: sticky; top: 0; z-index: 10;
+      backdrop-filter: blur(10px);
+      background: rgba(9, 9, 11, 0.72);
+      border-bottom: 1px solid var(--border);
+    }
+    header .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+    .brand .logo { font-size: 22px; }
+    nav a { color: var(--muted); margin-left: 22px; font-size: 14px; }
+    nav a:hover { color: var(--text); text-decoration: none; }
+
+    /* Hero */
+    .hero { text-align: center; padding: 110px 0 80px; position: relative; }
+    .hero::before {
+      content: ""; position: absolute; inset: 0;
+      background: radial-gradient(600px 300px at 50% 0%, rgba(99, 102, 241, 0.18), transparent 70%);
+      pointer-events: none;
+    }
+    .badge {
+      display: inline-block; font-size: 13px; color: var(--accent-light);
+      border: 1px solid var(--border); border-radius: 999px;
+      padding: 5px 14px; margin-bottom: 26px; background: var(--bg-elev);
+    }
+    .hero h1 { font-size: clamp(38px, 6vw, 64px); line-height: 1.08; letter-spacing: -0.02em; font-weight: 800; }
+    .hero h1 .accent { color: var(--accent-light); }
+    .hero p.lead { font-size: clamp(17px, 2.4vw, 21px); color: var(--muted); max-width: 640px; margin: 22px auto 36px; }
+    .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-block; font-weight: 600; font-size: 15px;
+      padding: 13px 26px; border-radius: 10px; border: 1px solid transparent;
+      transition: transform .12s ease, background .12s ease;
+    }
+    .btn:hover { text-decoration: none; transform: translateY(-1px); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-light); }
+    .btn-ghost { background: var(--bg-elev); color: var(--text); border-color: var(--border); }
+    .btn-ghost:hover { border-color: var(--accent); }
+
+    /* Screenshot placeholder */
+    .shot {
+      margin: 60px auto 0; max-width: 860px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--bg-elev);
+      aspect-ratio: 16 / 9;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-size: 14px;
+    }
+
+    /* Sections */
+    section { padding: 80px 0; }
+    .section-title { text-align: center; font-size: clamp(28px, 4vw, 40px); font-weight: 800; letter-spacing: -0.02em; }
+    .section-sub { text-align: center; color: var(--muted); margin: 14px auto 50px; max-width: 560px; }
+
+    /* Features grid */
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--bg-elev); padding: 26px;
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .card .icon { font-size: 26px; margin-bottom: 14px; }
+    .card h3 { font-size: 17px; margin-bottom: 8px; }
+    .card p { color: var(--muted); font-size: 14.5px; }
+
+    /* Safety */
+    .safety {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--bg-elev); padding: 40px;
+    }
+    .safety ul { list-style: none; margin-top: 18px; display: grid; gap: 12px; }
+    .safety li { color: var(--muted); padding-left: 28px; position: relative; }
+    .safety li::before { content: "✓"; position: absolute; left: 0; color: var(--accent-light); font-weight: 700; }
+
+    /* Download */
+    .download { text-align: center; }
+    .download .card { max-width: 560px; margin: 0 auto; padding: 44px; }
+    .download code {
+      display: block; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px; margin: 22px 0; font-size: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent-light);
+    }
+
+    /* Footer */
+    footer { border-top: 1px solid var(--border); padding: 40px 0; color: var(--muted); font-size: 14px; }
+    footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="brand"><span class="logo">🧹</span> MacBroom</div>
+      <nav>
+        <a href="#features">Features</a>
+        <a href="#safety">Safety</a>
+        <a href="#download">Download</a>
+        <!-- Set OWNER below -->
+        <a href="https://github.com/<OWNER>/macbroom">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===================== HERO ===================== -->
+  <section class="hero">
+    <div class="wrap">
+      <span class="badge">Open-source · GPL-3.0 · macOS menu bar</span>
+      <h1>Clean caches.<br /><span class="accent">Keep your data.</span></h1>
+      <p class="lead">Safe, open-source AI &amp; system cache cleaner for the macOS menu bar.</p>
+      <div class="cta-row">
+        <!-- Set OWNER: links to the GitHub Releases page -->
+        <a class="btn btn-primary" href="https://github.com/<OWNER>/macbroom/releases/latest">Download for macOS</a>
+        <a class="btn btn-ghost" href="#features">See features</a>
+      </div>
+      <!-- SCREENSHOT: replace with a real menu-bar screenshot (e.g. docs/site/img/hero.png) -->
+      <div class="shot">[ Screenshot: MacBroom menu-bar panel ]</div>
+    </div>
+  </section>
+
+  <!-- ===================== FEATURES ===================== -->
+  <section id="features">
+    <div class="wrap">
+      <h2 class="section-title">Everything in your menu bar</h2>
+      <p class="section-sub">No terminal required. Preview, confirm, done.</p>
+      <div class="grid">
+        <div class="card">
+          <div class="icon">🤖</div>
+          <h3>AI cache cleanup</h3>
+          <p>Reclaim space from Codex, Claude, Gemini &amp; Cursor — without touching auth, sessions, or memory.</p>
+        </div>
+        <div class="card">
+          <div class="icon">🧽</div>
+          <h3>System &amp; Developer caches</h3>
+          <p>Clear regenerable system and developer caches with a dry-run preview first.</p>
+        </div>
+        <div class="card">
+          <div class="icon">🗑️</div>
+          <h3>App uninstaller</h3>
+          <p>Remove apps along with the leftovers they scatter across your Library.</p>
+        </div>
+        <div class="card">
+          <div class="icon">📊</div>
+          <h3>Disk analysis</h3>
+          <p>See what is using your disk and where your space actually went.</p>
+        </div>
+        <div class="card">
+          <div class="icon">⏱️</div>
+          <h3>Scheduled automation</h3>
+          <p>Set it and forget it — automatic, safe clean-ups on your schedule.</p>
+        </div>
+        <div class="card">
+          <div class="icon">🌍</div>
+          <h3>4 languages</h3>
+          <p>Fully localized so it feels native wherever you are.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SAFETY ===================== -->
+  <section id="safety">
+    <div class="wrap">
+      <h2 class="section-title">Safe by default</h2>
+      <p class="section-sub">Destructive actions are gated behind preview and explicit confirmation.</p>
+      <div class="safety">
+        <ul>
+          <li>Never touches auth tokens, sessions, or memory data.</li>
+          <li>Every clean-up is previewed first — nothing is deleted before you confirm.</li>
+          <li>System-critical and expensive-to-rebuild paths are protected and whitelisted.</li>
+          <li>Powered by <a href="https://github.com/tw93/mole">tw93/mole</a>'s safety-first cleaning engine.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== DOWNLOAD ===================== -->
+  <section id="download" class="download">
+    <div class="wrap">
+      <h2 class="section-title">Get MacBroom</h2>
+      <p class="section-sub">Notarized DMG or one-line Homebrew install.</p>
+      <div class="card">
+        <!-- Set OWNER on both the button and the brew command -->
+        <a class="btn btn-primary" href="https://github.com/<OWNER>/macbroom/releases/latest">Download the DMG</a>
+        <code>brew install --cask &lt;OWNER&gt;/tap/macbroom</code>
+        <p style="color: var(--muted); font-size: 13.5px;">Requires macOS Ventura (13) or later.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer>
+    <div class="wrap">
+      <div>MacBroom — distributed under <strong>GPL-3.0-or-later</strong>.</div>
+      <div>
+        <!-- Set OWNER -->
+        <a href="https://github.com/<OWNER>/macbroom">Repository</a> ·
+        Cleaning engine: <a href="https://github.com/tw93/mole">tw93/mole</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

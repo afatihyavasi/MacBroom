@@ -1,5 +1,26 @@
 name: Release
 
+# ============================================================================
+# Sürüm yayınlama akışı (v* etiketinde tetiklenir).
+#
+# İmzalama ve notarization VARSAYILAN davranıştır; gerekli secret'lar repo
+# ayarlarında tanımlıysa otomatik çalışır. Secret'lar YOKSA akış yine de
+# imzasız bir DMG üretir ve BAŞARISIZ OLMAZ (graceful fallback).
+#
+# Gerekli secret'lar (Settings → Secrets and variables → Actions):
+#   MACOS_CERTIFICATE     — "Developer ID Application" .p12 sertifikasının
+#                           base64 hali:  base64 -i cert.p12 | pbcopy
+#   MACOS_CERTIFICATE_PWD — .p12 dışa aktarımında verilen parola
+#   MACOS_SIGN_IDENTITY   — imza kimliği, örn:
+#                           "Developer ID Application: Ad Soyad (TEAMID)"
+#   AC_API_KEY            — App Store Connect API anahtarı (.p8) base64 hali:
+#                           base64 -i AuthKey_XXXX.p8 | pbcopy
+#   AC_API_KEY_ID         — API anahtarı ID'si (örn. ABCD1234EF)
+#   AC_API_ISSUER_ID      — App Store Connect issuer ID (UUID)
+#
+# Ayrıntılı edinme adımları için: docs/RELEASING.md
+# ============================================================================
+
 on:
   push:
     tags: ["v*"]
@@ -11,8 +32,9 @@ jobs:
   release:
     runs-on: macos-14
     env:
-      # Mapped here so they can gate steps via `env.* != ''` (the secrets context
-      # is not reliably available in step-level `if:`).
+      # Buraya map'lendi ki adım seviyesindeki `if:` içinde `env.* != ''` ile
+      # kontrol edilebilsin (secrets context step-level if: içinde güvenilir
+      # değildir).
       MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
       MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
       MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
@@ -31,18 +53,20 @@ jobs:
       - name: Assemble .app
         run: bash scripts/make-app.sh "${{ steps.ver.outputs.version }}"
 
-      # --- Optional code signing (runs only if signing secrets are configured) ---
+      # --- İsteğe bağlı kod imzalama (yalnızca imza secret'ları varsa çalışır) ---
       - name: Import signing certificate
-        if: ${{ env.MACOS_CERTIFICATE != '' }}
+        if: ${{ env.MACOS_CERTIFICATE != '' && env.MACOS_CERTIFICATE_PWD != '' }}
         run: |
           echo "$MACOS_CERTIFICATE" | base64 --decode > /tmp/cert.p12
           security create-keychain -p actions build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p actions build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
           security import /tmp/cert.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k actions build.keychain
+          rm -f /tmp/cert.p12
 
-      - name: Codesign app
+      - name: Codesign app (Developer ID, hardened runtime + timestamp)
         if: ${{ env.MACOS_SIGN_IDENTITY != '' }}
         run: |
           codesign --force --deep --options runtime --timestamp \
@@ -52,9 +76,9 @@ jobs:
       - name: Build DMG
         run: bash scripts/make-dmg.sh "${{ steps.ver.outputs.version }}"
 
-      # --- Optional notarization (App Store Connect API key) ---
-      - name: Notarize DMG
-        if: ${{ env.AC_API_KEY != '' }}
+      # --- İsteğe bağlı notarization (App Store Connect API key) + staple ---
+      - name: Notarize & staple DMG
+        if: ${{ env.AC_API_KEY != '' && env.AC_API_KEY_ID != '' && env.AC_API_ISSUER_ID != '' }}
         run: |
           echo "$AC_API_KEY" | base64 --decode > /tmp/ac_key.p8
           xcrun notarytool submit "build/MacBroom-${{ steps.ver.outputs.version }}.dmg" \
@@ -63,6 +87,8 @@ jobs:
             --issuer "$AC_API_ISSUER_ID" \
             --wait
           xcrun stapler staple "build/MacBroom-${{ steps.ver.outputs.version }}.dmg"
+          xcrun stapler validate "build/MacBroom-${{ steps.ver.outputs.version }}.dmg"
+          rm -f /tmp/ac_key.p8
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
