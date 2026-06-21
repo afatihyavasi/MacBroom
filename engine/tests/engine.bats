@@ -226,3 +226,23 @@ PLIST
     [ "$status" -eq 0 ]
     [ ! -e "$HOME/Library/Developer/Xcode/DerivedData/Foo-abc" ]   # approved removed
 }
+
+# --- auto-clean: scan + clean a target in one shot (used by scheduling) ----
+
+@test "auto-clean scans and cleans a target's caches in one shot" {
+    mkdir -p "$HOME/.gemini/tmp"
+    head -c 100000 /dev/zero > "$HOME/.gemini/tmp/cache.bin"
+
+    run bash "$ENGINE" auto-clean --targets=ai:gemini
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"event":"done"'* ]]
+    [[ "$output" == *'"freed_bytes":'* ]]
+    [ ! -e "$HOME/.gemini/tmp/cache.bin" ]   # surfaced and removed without a paths file
+}
+
+@test "auto-clean on an empty target reports zero, deletes nothing" {
+    run bash "$ENGINE" auto-clean --targets=ai:gemini
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"freed_bytes":0'* ]]
+    [[ "$output" == *'"count":0'* ]]
+}

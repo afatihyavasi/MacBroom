@@ -85,6 +85,7 @@ MB_FREED_BYTES=0
 MB_COUNT=0
 MB_PATHS_FILE=""          # clean mode: file of approved absolute paths (one per line)
 declare -a MB_CANDIDATES=()   # JSON object strings (scan mode)
+declare -a MB_SCAN_PATHS=()   # raw candidate paths (scan mode; used by auto-clean)
 # NOTE: macOS ships bash 3.2 (no associative arrays), so the approved-path set
 # is kept as a file and membership is tested with a fixed-string grep.
 
@@ -237,6 +238,7 @@ _mb_handle() {
     if [[ "$MB_MODE" == "scan" ]]; then
         local size; size="$(path_size_bytes "$path")"
         MB_CANDIDATES+=("{\"category\":$(json_string "$MB_CATEGORY"),\"label\":$(json_string "$label"),\"path\":$(json_string "$path"),\"size_bytes\":$size}")
+        MB_SCAN_PATHS+=("$path")   # raw paths, for auto-clean's scan→clean
         MB_COUNT=$((MB_COUNT + 1))
         return 0
     fi
@@ -449,6 +451,55 @@ cmd_clean() {
     emit "{\"event\":\"done\",\"freed_bytes\":$MB_FREED_BYTES,\"count\":$MB_COUNT,\"failed\":${MB_FAILED:-0}}"
 }
 
+# Human-readable byte count for notifications (e.g. "1.2 GB").
+_human_bytes() {
+    awk -v b="$1" 'BEGIN {
+        split("B KB MB GB TB", u); i = 1
+        while (b >= 1024 && i < 5) { b /= 1024; i++ }
+        printf (i == 1 ? "%d %s" : "%.1f %s"), b, u[i]
+    }'
+}
+
+# Best-effort native banner (works even when launched from launchd, no app).
+_mb_notify() {
+    command -v osascript >/dev/null 2>&1 || return 0
+    local msg="$1"
+    osascript -e "display notification \"$msg\" with title \"MacBroom\"" >/dev/null 2>&1 || true
+}
+
+# Scheduled automation: scan the target(s) and clean everything they surface,
+# in one shot. Same safety contract as a manual clean (mole-protection-filtered
+# candidates only); honors MACBROOM_DELETE_MODE. Posts a notification on success
+# so the user knows a background clean happened. Used by the launchd agent.
+cmd_auto_clean() {
+    local targets="" arg
+    for arg in "$@"; do case "$arg" in --targets=*) targets="${arg#*=}" ;; esac; done
+    [[ -n "$targets" ]] || die "auto-clean requires --targets=ID[,ID]" 4
+
+    load_mole
+
+    # Phase 1 — scan to collect candidate paths.
+    MB_MODE="scan"; MB_CANDIDATES=(); MB_SCAN_PATHS=()
+    { _run_targets "$targets"; } >/dev/null 2>&1
+
+    if [[ ${#MB_SCAN_PATHS[@]} -eq 0 ]]; then
+        emit "{\"event\":\"done\",\"freed_bytes\":0,\"count\":0,\"failed\":0}"
+        return 0
+    fi
+
+    # Phase 2 — clean exactly those paths.
+    local tmp; tmp="$(mktemp)"
+    printf '%s\n' "${MB_SCAN_PATHS[@]}" > "$tmp"
+    MB_MODE="clean"; MB_PATHS_FILE="$tmp"; MB_FREED_BYTES=0; MB_COUNT=0; MB_FAILED=0
+    { _run_targets "$targets"; } >/dev/null 2>&1
+    rm -f "$tmp"
+
+    if [[ "${MB_FREED_BYTES:-0}" -gt 0 ]]; then
+        _mb_notify "$(_human_bytes "$MB_FREED_BYTES") boşaltıldı"
+    fi
+    emit "{\"event\":\"done\",\"freed_bytes\":$MB_FREED_BYTES,\"count\":$MB_COUNT,\"failed\":${MB_FAILED:-0}}"
+}
+
 # --------------------------------------------------------------------------
 # App uninstaller
 # --------------------------------------------------------------------------
@@ -622,6 +673,7 @@ main() {
         discover)  cmd_discover "$@" ;;
         scan)      cmd_scan "$@" ;;
         clean)     cmd_clean "$@" ;;
+        auto-clean) cmd_auto_clean "$@" ;;
         ai-scan)   cmd_scan --categories=ai "$@" ;;
         ai-clean)  cmd_clean --categories=ai "$@" ;;
         apps)      cmd_apps "$@" ;;
