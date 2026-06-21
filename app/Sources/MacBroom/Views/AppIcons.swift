@@ -2,11 +2,27 @@ import SwiftUI
 import AppKit
 import MacBroomCore
 
+/// In-memory icon cache. Resolving NSImages via `NSWorkspace` is surprisingly
+/// expensive to do in a view body on every redraw; memoizing each icon once
+/// keeps long, scrolling app lists smooth. Main-actor isolated so the static
+/// dictionaries need no extra synchronization.
+@MainActor
+private enum IconCache {
+    static var files: [String: NSImage] = [:]
+    /// AI-tool icons (nil = resolved-but-not-installed, still worth caching to
+    /// avoid repeated filesystem probes).
+    static var aiTools: [AITool: NSImage?] = [:]
+}
+
 /// Resolves real macOS icons for apps and AI tools, with SF Symbol fallbacks.
+@MainActor
 enum Icons {
-    /// The Finder icon for a file/app bundle path.
+    /// The Finder icon for a file/app bundle path (cached after first lookup).
     static func file(_ path: String) -> NSImage {
-        NSWorkspace.shared.icon(forFile: path)
+        if let cached = IconCache.files[path] { return cached }
+        let img = NSWorkspace.shared.icon(forFile: path)
+        IconCache.files[path] = img
+        return img
     }
 
     /// Candidate app bundles per AI tool — first existing one wins.
@@ -21,12 +37,16 @@ enum Icons {
         }
     }
 
-    /// An installed AI tool's real app icon, if we can find its bundle.
+    /// An installed AI tool's real app icon, if we can find its bundle (cached).
     static func aiToolImage(_ tool: AITool) -> NSImage? {
+        if let cached = IconCache.aiTools[tool] { return cached }
+        var resolved: NSImage?
         for p in appPaths(for: tool) where FileManager.default.fileExists(atPath: p) {
-            return NSWorkspace.shared.icon(forFile: p)
+            resolved = NSWorkspace.shared.icon(forFile: p)
+            break
         }
-        return nil
+        IconCache.aiTools[tool] = resolved
+        return resolved
     }
 }
 

@@ -24,6 +24,10 @@ final class AppState: ObservableObject {
     }
 
     @Published var phase: Phase = .idle
+    /// All-time bytes reclaimed across every successful clean path, persisted in
+    /// UserDefaults so it survives launches (a small trust/payoff stat).
+    @Published private(set) var totalReclaimed: Int64 = 0
+    private let totalReclaimedKey = "totalReclaimedBytes"
     /// Which cache tab a transient phase (scanning/cleaning/finished/error)
     /// belongs to. `nil` = a global phase (discovery) shown on every tab. This
     /// keeps the AI and System tabs from leaking each other's progress/results.
@@ -41,8 +45,17 @@ final class AppState: ObservableObject {
 
     init(engine: EngineBridge = EngineBridge()) {
         self.engine = engine
+        totalReclaimed = UserDefaults.standard.object(forKey: totalReclaimedKey) as? Int64
+            ?? Int64(UserDefaults.standard.integer(forKey: totalReclaimedKey))
         loadSchedules()
         startScheduler()
+    }
+
+    /// Increment the all-time reclaimed total and persist it. No-op for ≤0.
+    private func addReclaimed(_ bytes: Int64) {
+        guard bytes > 0 else { return }
+        totalReclaimed += bytes
+        UserDefaults.standard.set(totalReclaimed, forKey: totalReclaimedKey)
     }
 
     /// User-chosen deletion policy (mirrors @AppStorage("deletionMode")).
@@ -258,6 +271,7 @@ final class AppState: ObservableObject {
             // other tab's selection) intact so the user can retry.
             candidates.removeAll { removed.contains($0.path) }
             selected.subtract(removed)
+            addReclaimed(freed)
             phase = .finished(freedBytes: freed, failed: failed, permissionBlocked: permissionBlocked)
             await refreshStatus()
         } catch {
@@ -346,6 +360,7 @@ final class AppState: ObservableObject {
             // can see what remained.
             largeFiles.removeAll { removed.contains($0.path) }
             largeSelected.subtract(removed)
+            addReclaimed(freed)
             analyzeFlow = .finished(freedBytes: freed, failed: failed, permissionBlocked: permissionBlocked)
             await refreshStatus()
         } catch {
@@ -440,6 +455,7 @@ final class AppState: ObservableObject {
             appSelected = []
             // Drop the uninstalled app from the list (path no longer exists).
             apps.removeAll { !FileManager.default.fileExists(atPath: $0.path) }
+            addReclaimed(freed)
             appFlow = .uninstalled(freedBytes: freed, failed: failed, permissionBlocked: permissionBlocked)
         } catch {
             appFlow = .error(error.localizedDescription)
@@ -545,6 +561,8 @@ final class AppState: ObservableObject {
         // One engine call scans + cleans + posts a notification on success — the
         // same path the launchd agent uses, so behavior is identical whether the
         // app or launchd triggers it.
-        _ = try? await engine.autoClean(targetId: targetId, deleteMode: deleteMode)
+        if let result = try? await engine.autoClean(targetId: targetId, deleteMode: deleteMode) {
+            addReclaimed(result.freed)
+        }
     }
 }

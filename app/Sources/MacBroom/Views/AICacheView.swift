@@ -79,6 +79,12 @@ private struct AIToolSection: View {
     @State private var expanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// Largest candidate's size in this group, for per-row relative bars
+    /// (0 when ≤1 item, which suppresses the bar).
+    private var maxBytes: Int64 {
+        group.candidates.count > 1 ? (group.candidates.map(\.sizeBytes).max() ?? 0) : 0
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
@@ -124,10 +130,17 @@ private struct AIToolSection: View {
             get: { state.isSelected(c.path) },
             set: { _ in state.toggle(c.path) }
         )) {
-            HStack(spacing: Theme.Space.sm) {
-                Text(c.label).font(.shCaption).lineLimit(1)
-                Spacer()
-                Text(Format.bytes(c.sizeBytes)).font(.shMono).foregroundStyle(Theme.mutedForeground)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: Theme.Space.sm) {
+                    Text(c.label).font(.shCaption).lineLimit(1)
+                    Spacer()
+                    Text(Format.bytes(c.sizeBytes)).font(.shMono).foregroundStyle(Theme.mutedForeground)
+                }
+                if maxBytes > 0 {
+                    SHProgressBar(value: Double(c.sizeBytes) / Double(maxBytes),
+                                  tint: Theme.mutedForeground.opacity(0.35))
+                        .frame(height: 3)
+                }
             }
         }
         .toggleStyle(SHCheckboxStyle())

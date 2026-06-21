@@ -122,6 +122,11 @@ struct DiskAnalysisView: View {
         }
     }
 
+    /// Largest listed file's size, for per-row relative bars (0 when ≤1 item).
+    private var maxBytes: Int64 {
+        state.largeFiles.count > 1 ? (state.largeFiles.map(\.sizeBytes).max() ?? 0) : 0
+    }
+
     private func row(_ file: LargeFile) -> some View {
         Toggle(isOn: Binding(
             get: { state.largeSelected.contains(file.path) },
@@ -134,6 +139,11 @@ struct DiskAnalysisView: View {
                     Text(Self.relative.localizedString(
                         for: Date(timeIntervalSince1970: file.mtime), relativeTo: Date()))
                         .font(.shCaption).foregroundStyle(Theme.mutedForeground)
+                    if maxBytes > 0 {
+                        SHProgressBar(value: Double(file.sizeBytes) / Double(maxBytes),
+                                      tint: Theme.mutedForeground.opacity(0.35))
+                            .frame(height: 3).padding(.top, 2)
+                    }
                 }
                 Spacer()
                 SHBadge(text: Format.bytes(file.sizeBytes))

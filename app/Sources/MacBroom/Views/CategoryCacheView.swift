@@ -15,6 +15,11 @@ struct CategoryCacheView: View {
         state.candidates(in: category).sorted { $0.sizeBytes > $1.sizeBytes }
     }
 
+    /// Largest item's size, for per-row relative bars (0 when ≤1 item).
+    private var maxBytes: Int64 {
+        items.count > 1 ? (items.map(\.sizeBytes).max() ?? 0) : 0
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.sm) {
             if items.isEmpty {
@@ -60,10 +65,17 @@ struct CategoryCacheView: View {
             get: { state.isSelected(c.path) },
             set: { _ in state.toggle(c.path) }
         )) {
-            HStack(spacing: Theme.Space.sm) {
-                Text(c.label).font(.shCaption).lineLimit(1)
-                Spacer()
-                Text(Format.bytes(c.sizeBytes)).font(.shMono).foregroundStyle(Theme.mutedForeground)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: Theme.Space.sm) {
+                    Text(c.label).font(.shCaption).lineLimit(1)
+                    Spacer()
+                    Text(Format.bytes(c.sizeBytes)).font(.shMono).foregroundStyle(Theme.mutedForeground)
+                }
+                if maxBytes > 0 {
+                    SHProgressBar(value: Double(c.sizeBytes) / Double(maxBytes),
+                                  tint: Theme.mutedForeground.opacity(0.35))
+                        .frame(height: 3)
+                }
             }
         }
         .toggleStyle(SHCheckboxStyle())

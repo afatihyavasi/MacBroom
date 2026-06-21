@@ -48,7 +48,7 @@ public enum L10n: String, CaseIterable {
     case removableEmpty, itemsBytes, remove, confirmDeleteTitle, cancel, confirmDeleteMessage
     case aiEmpty, aiSafety, groupCountBytes, systemSafety, selectAll, deselectAll, systemEmpty
     case analyzeQuestion, analyzeSubtitle, noTargetsInCategory, clearSelection, analyzeButton
-    case settingsTitle, done, deletionMethod, about, aboutVersion, engineAttribution
+    case settingsTitle, done, deletionMethod, about, aboutVersion, engineAttribution, totalReclaimed
     case language, languageSystem, disk, memory, diskFree, memoryTotal
     case categoryAI, categorySystem, categoryDeveloper
     case targetAppCaches, targetEditors, targetGuiApps, targetDevMisc
@@ -124,6 +124,7 @@ public enum Localization {
         .settingsTitle: "Settings", .done: "Done", .deletionMethod: "Deletion method",
         .about: "About", .aboutVersion: "MacBroom %@ · GPL-3.0",
         .engineAttribution: "Cleaning engine provided by tw93/mole (GPL-3.0).",
+        .totalReclaimed: "Total reclaimed: %@",
         .language: "Language", .languageSystem: "System (automatic)",
         .disk: "Disk", .memory: "Memory", .diskFree: "%@ free", .memoryTotal: "%@ total",
         .categoryAI: "AI Tools", .categorySystem: "System", .categoryDeveloper: "Developer",
@@ -192,6 +193,7 @@ public enum Localization {
         .settingsTitle: "Ayarlar", .done: "Bitti", .deletionMethod: "Silme yöntemi",
         .about: "Hakkında", .aboutVersion: "MacBroom %@ · GPL-3.0",
         .engineAttribution: "Temizleme motoru tw93/mole (GPL-3.0) tarafından sağlanır.",
+        .totalReclaimed: "Toplam kazanılan: %@",
         .language: "Dil", .languageSystem: "Sistem (otomatik)",
         .disk: "Disk", .memory: "Bellek", .diskFree: "%@ boş", .memoryTotal: "%@ toplam",
         .categoryAI: "AI Araçları", .categorySystem: "Sistem", .categoryDeveloper: "Geliştirici",
@@ -260,6 +262,7 @@ public enum Localization {
         .settingsTitle: "Ajustes", .done: "Listo", .deletionMethod: "Método de eliminación",
         .about: "Acerca de", .aboutVersion: "MacBroom %@ · GPL-3.0",
         .engineAttribution: "Motor de limpieza proporcionado por tw93/mole (GPL-3.0).",
+        .totalReclaimed: "Total recuperado: %@",
         .language: "Idioma", .languageSystem: "Sistema (automático)",
         .disk: "Disco", .memory: "Memoria", .diskFree: "%@ libres", .memoryTotal: "%@ en total",
         .categoryAI: "Herramientas de IA", .categorySystem: "Sistema", .categoryDeveloper: "Desarrollo",
@@ -328,6 +331,7 @@ public enum Localization {
         .settingsTitle: "Réglages", .done: "Terminé", .deletionMethod: "Méthode de suppression",
         .about: "À propos", .aboutVersion: "MacBroom %@ · GPL-3.0",
         .engineAttribution: "Moteur de nettoyage fourni par tw93/mole (GPL-3.0).",
+        .totalReclaimed: "Total récupéré : %@",
         .language: "Langue", .languageSystem: "Système (automatique)",
         .disk: "Disque", .memory: "Mémoire", .diskFree: "%@ libres", .memoryTotal: "%@ au total",
         .categoryAI: "Outils d’IA", .categorySystem: "Système", .categoryDeveloper: "Développeur",

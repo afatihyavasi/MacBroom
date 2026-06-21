@@ -63,6 +63,8 @@ struct SettingsView: View {
                 SHSectionHeader(title: loc.t(.about), systemImage: "info.circle")
                 Text(loc.t(.aboutVersion, appVersion))
                     .font(.shCaption).foregroundStyle(Theme.mutedForeground)
+                Text(loc.t(.totalReclaimed, Format.bytes(state.totalReclaimed)))
+                    .font(.shCaption).foregroundStyle(Theme.mutedForeground)
                 Text(loc.t(.engineAttribution))
                     .font(.shCaption).foregroundStyle(Theme.mutedForeground)
                 Link("github.com/tw93/mole", destination: URL(string: "https://github.com/tw93/mole")!)
