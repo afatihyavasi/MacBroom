@@ -30,9 +30,11 @@ macOS zamanla cache, log, tarayıcı kalıntısı ve özellikle **AI geliştirme
 4. App uninstaller (kalıntılarıyla).
 
 **Hedef değil (şimdilik)**
-- Mac App Store sürümü (sandbox kısıtları).
+- Mac App Store sürümü (GPL-3.0 + Tam Disk Erişimi → sandbox kısıtları).
 - Windows/Linux.
-- Zamanlanmış otomatik temizlik (v2).
+
+> Not: Zamanlanmış otomatik temizlik ve disk analizi **v2'de gönderildi**
+> (aşağıdaki yol haritasına bakın).
 
 ## 4. Temel İlkeler
 
@@ -87,8 +89,13 @@ Köprü, mole'un etkileşimli `clean` komutunu değil, `lib/clean/*.sh` içindek
 
 ## 9. Yol Haritası
 - **v1.0 (MVP):** F1–F4, notarized DMG, CI.
-- **v1.1:** zamanlanmış temizlik, Homebrew cask, yerelleştirme (TR/EN).
-- **v2:** disk analiz görselleştirme (mole `analyze`), kurallar/whitelist UI.
+- **v2 (gönderildi):** shadcn tasarım sistemi + açık/koyu tema; 4 dil (TR/EN/ES/FR);
+  Geliştirici temizleme kategorisi; disk analizi / büyük dosya bulucu;
+  zamanlanmış otomatik temizleme (saatlik/günlük/haftalık/aylık) + launchd ile
+  uygulama kapalıyken çalışma + bildirim; erişilebilirlik; toplam kazanılan alan;
+  Homebrew cask + imzalı/notarized sürüm + açılış sayfası.
+- **Sonraki:** kurallar/whitelist UI; tarayıcı & bakım temizleme kategorileri;
+  Sparkle otomatik güncelleme; temizlik geçmişi grafiği.
 
 ## 10. Atıf & Lisans
 MacBroom, `tw93/mole`'un temizleme motorunu paketler ve onun `lib/` modüllerine bağımlıdır. Bu nedenle **GPL-3.0-or-later** altında dağıtılır. mole'a tam atıf README ve uygulama "Hakkında" ekranında yer alır.

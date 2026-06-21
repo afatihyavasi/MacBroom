@@ -5,12 +5,12 @@ cask "macbroom" do
   # İmzasız/notarize edilmemiş yerel test DMG'leri için ":no_check" kullanın.
   sha256 "0000000000000000000000000000000000000000000000000000000000000000"
 
-  # <OWNER> yerine GitHub kullanıcı/organizasyon adınızı yazın.
-  url "https://github.com/<OWNER>/macbroom/releases/download/v#{version}/MacBroom-#{version}.dmg",
-      verified: "github.com/<OWNER>/macbroom/"
+  # afatihyavasi yerine GitHub kullanıcı/organizasyon adınızı yazın.
+  url "https://github.com/afatihyavasi/MacBroom/releases/download/v#{version}/MacBroom-#{version}.dmg",
+      verified: "github.com/afatihyavasi/MacBroom/"
   name "MacBroom"
   desc "Safe, open-source AI & system cache cleaner for the macOS menu bar"
-  homepage "https://github.com/<OWNER>/macbroom"
+  homepage "https://github.com/afatihyavasi/MacBroom"
 
   depends_on macos: ">= :ventura"
 

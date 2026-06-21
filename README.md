@@ -6,7 +6,7 @@
 
 Powered by [`tw93/mole`](https://github.com/tw93/mole) · SwiftUI · GPL-3.0
 
-[Website](https://github.com/<OWNER>/macbroom) · Install: `brew install --cask <OWNER>/tap/macbroom`
+[Website](https://github.com/afatihyavasi/MacBroom) · Install: `brew install --cask afatihyavasi/tap/macbroom`
 
 </div>
 
