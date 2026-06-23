@@ -13,18 +13,20 @@ struct MenuBarView: View {
     /// and Apps is appended, so a future category case yields a tab for free.
     enum Section: Hashable, Identifiable {
         case category(CleanCategory)
+        case automation
         case apps
 
         var id: String {
             switch self {
             case .category(let c): return c.rawValue
+            case .automation: return "automation"
             case .apps: return "apps"
             }
         }
 
-        /// The ordered tab list: every cleaning category, then Apps.
+        /// The ordered tab list: every cleaning category, then Automation, then Apps.
         static var allCases: [Section] {
-            CleanCategory.allCases.map(Section.category) + [.apps]
+            CleanCategory.allCases.map(Section.category) + [.automation, .apps]
         }
 
         var titleKey: L10n {
@@ -32,7 +34,16 @@ struct MenuBarView: View {
             case .category(.ai): return .tabAI
             case .category(.system): return .tabSystem
             case .category(.developer): return .tabDeveloper
+            case .automation: return .tabAutomation
             case .apps: return .tabApps
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .category(let c): return c.systemImage
+            case .automation: return "clock.arrow.circlepath"
+            case .apps: return "macwindow"
             }
         }
     }
@@ -46,7 +57,7 @@ struct MenuBarView: View {
             if let status = state.status { StatusPanelView(status: status) }
 
             SHTabs(selection: $section,
-                   items: Section.allCases.map { ($0, loc.t($0.titleKey)) })
+                   items: Section.allCases.map { ($0, loc.t($0.titleKey), $0.systemImage) })
 
             content.frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -137,14 +148,14 @@ struct MenuBarView: View {
     // MARK: content
 
     @ViewBuilder private var content: some View {
-        if category != nil {
-            cleanContent
-        } else {
-            UninstallView()
+        switch section {
+        case .category:   cleanContent
+        case .automation: AutomationView()
+        case .apps:       UninstallView()
         }
     }
 
-    /// The cleaning category for the current tab, or nil for the Apps tab.
+    /// The cleaning category for the current tab, or nil for Automation/Apps.
     private var category: CleanCategory? {
         if case .category(let c) = section { return c }
         return nil

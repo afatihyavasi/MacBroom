@@ -1,22 +1,21 @@
 import SwiftUI
 import MacBroomCore
 
-/// Rich per-AI-tool automatic-clean scheduling. Edits a local DRAFT; nothing is
-/// applied until the user presses Save (then AppState.applyRules commits it and
-/// the scheduler picks it up).
+/// The Automation tab: per-AI-tool automatic-clean scheduling, INSIDE the
+/// menu-bar panel. Every control is panel-safe (segmented / DatePicker /
+/// Stepper) — never an NSMenu picker, which would steal focus and dismiss the
+/// panel. Edits a local DRAFT; nothing applies until "Save" (AppState.applyRules).
 struct AutomationView: View {
     @EnvironmentObject var state: AppState
     @EnvironmentObject var loc: LocalizationManager
     @State private var draft: [String: AutoCleanRule] = [:]
 
     private var tools: [AnalysisTarget] { state.installedTargets(in: .ai) }
+    private var dirty: Bool { tools.contains { draft[$0.id] != state.rule(for: $0.id) } }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Space.md) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(loc.t(.automationTitle)).font(.shTitle)
-                Text(loc.t(.automationDesc)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
-            }
+        VStack(alignment: .leading, spacing: Theme.Space.sm) {
+            Text(loc.t(.automationDesc)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
 
             if tools.isEmpty {
                 Spacer()
@@ -30,24 +29,17 @@ struct AutomationView: View {
                     }
                 }
                 .frame(maxHeight: .infinity)
-            }
 
-            SHSeparator()
-            HStack {
-                Button(loc.t(.cancel)) { AutomationWindowController.shared.close() }
-                    .buttonStyle(.shOutline(.sm)).keyboardShortcut(.cancelAction)
-                Spacer()
-                Button(loc.t(.save)) {
-                    state.applyRules(draft)
-                    AutomationWindowController.shared.close()
+                SHSeparator()
+                HStack {
+                    Spacer()
+                    Button(loc.t(.save)) { state.applyRules(draft) }
+                        .buttonStyle(.shPrimary(.sm))
+                        .disabled(!dirty)
                 }
-                .buttonStyle(.shPrimary(.sm)).keyboardShortcut(.defaultAction)
             }
         }
-        .padding(Theme.Space.xl)
-        .frame(width: 460, height: 560)
-        .background(Theme.background)
-        .foregroundStyle(Theme.foreground)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onAppear(perform: seedDraft)
     }
 
@@ -69,12 +61,15 @@ struct AutomationView: View {
                 AIToolIconView(tool: AITool(rawValue: String(t.id.dropFirst(3))) ?? .other, size: 18)
                 Text(t.label).font(.shLabel)
                 Spacer()
-                Picker("", selection: r.frequency) {
-                    ForEach(CleanFrequency.selectable) { Text(loc.t($0.titleKey)).tag($0) }
-                }
-                .pickerStyle(.menu).labelsHidden().fixedSize()
             }
+            // Frequency as a full-width segmented control (no NSMenu).
+            Picker("", selection: r.frequency) {
+                ForEach(CleanFrequency.selectable) { Text(loc.t($0.titleKey)).tag($0) }
+            }
+            .pickerStyle(.segmented).labelsHidden()
+
             conditionalControls(r)
+
             if enabled, let last = state.lastRun(for: t.id) {
                 Text(loc.t(.autoCleanLast, Self.relative.localizedString(for: last, relativeTo: Date())))
                     .font(.shCaption).foregroundStyle(Theme.mutedForeground)
@@ -95,12 +90,11 @@ struct AutomationView: View {
         case .daily:
             timeRow(r)
         case .weekly:
-            labeledRow(loc.t(.weekdayLabel)) {
-                Picker("", selection: r.weekday) {
-                    ForEach(1...7, id: \.self) { Text(weekdayName($0)).tag($0) }
-                }
-                .pickerStyle(.menu).labelsHidden().fixedSize()
+            // Weekday as a 7-segment control (short localized day names).
+            Picker("", selection: r.weekday) {
+                ForEach(1...7, id: \.self) { Text(weekdayShort($0)).tag($0) }
             }
+            .pickerStyle(.segmented).labelsHidden()
             timeRow(r)
         case .monthly:
             labeledRow(loc.t(.monthDayLabel)) {
@@ -145,13 +139,13 @@ struct AutomationView: View {
         )
     }
 
-    /// Localized weekday name for Calendar weekday index (1=Sun … 7=Sat).
-    private func weekdayName(_ weekday: Int) -> String {
+    /// Short localized weekday name for Calendar weekday index (1=Sun … 7=Sat).
+    private func weekdayShort(_ weekday: Int) -> String {
         var cal = Calendar(identifier: .gregorian)
         cal.locale = Locale(identifier: loc.language.resolved.rawValue)
-        let symbols = cal.weekdaySymbols
+        let symbols = cal.shortWeekdaySymbols
         let idx = (weekday - 1) % 7
-        return symbols.indices.contains(idx) ? symbols[idx].capitalized : "\(weekday)"
+        return symbols.indices.contains(idx) ? symbols[idx] : "\(weekday)"
     }
 
     private static let relative: RelativeDateTimeFormatter = {

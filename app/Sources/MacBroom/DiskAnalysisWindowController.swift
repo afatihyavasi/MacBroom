@@ -3,7 +3,7 @@ import SwiftUI
 
 /// Hosts the Disk Analysis (large-file finder) UI in its own AppKit window.
 ///
-/// Same rationale as SettingsWindowController / AutomationWindowController: a
+/// Same rationale as SettingsWindowController: a
 /// menu-bar (.accessory) app needs a real window with a `.regular` activation
 /// policy to reliably present + focus, and reverts to `.accessory` on close so
 /// the app stays a pure menu-bar app (no lingering Dock icon).

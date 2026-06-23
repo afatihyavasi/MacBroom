@@ -39,7 +39,7 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
 /// Every user-facing string key. Values with `%@` / `%d` are `String(format:)`
 /// templates; see `Localization.tables`.
 public enum L10n: String, CaseIterable {
-    case tabAI, tabSystem, tabDeveloper, tabApps
+    case tabAI, tabSystem, tabDeveloper, tabApps, tabAutomation
     case refreshHelp, settingsHelp, open, quit, clean, loading, back, backToList
     case fdaTitle, fdaBannerDesc, fdaSettingsDesc, openFDA, openInSettings
     case searchingTargets, scanningTargets, cleaningProgress, freed, backTargets, selectedSuffix
@@ -90,7 +90,7 @@ public enum Localization {
 
     // MARK: - English (also the fallback)
     private static let en: [L10n: String] = [
-        .tabAI: "AI", .tabSystem: "System", .tabDeveloper: "Developer", .tabApps: "Apps",
+        .tabAI: "AI", .tabSystem: "System", .tabDeveloper: "Developer", .tabApps: "Apps", .tabAutomation: "Automation",
         .refreshHelp: "Rediscover targets", .settingsHelp: "Settings",
         .open: "Open", .quit: "Quit", .clean: "Clean", .loading: "Loading…",
         .back: "Back", .backToList: "Back to list",
@@ -159,7 +159,7 @@ public enum Localization {
 
     // MARK: - Turkish
     private static let tr: [L10n: String] = [
-        .tabAI: "AI", .tabSystem: "Sistem", .tabDeveloper: "Geliştirici", .tabApps: "Uygulamalar",
+        .tabAI: "AI", .tabSystem: "Sistem", .tabDeveloper: "Geliştirici", .tabApps: "Uygulamalar", .tabAutomation: "Otomasyon",
         .refreshHelp: "Hedefleri yeniden bul", .settingsHelp: "Ayarlar",
         .open: "Aç", .quit: "Çıkış", .clean: "Temizle", .loading: "Yükleniyor…",
         .back: "Geri", .backToList: "Listeye dön",
@@ -228,7 +228,7 @@ public enum Localization {
 
     // MARK: - Spanish
     private static let es: [L10n: String] = [
-        .tabAI: "IA", .tabSystem: "Sistema", .tabDeveloper: "Desarrollo", .tabApps: "Apps",
+        .tabAI: "IA", .tabSystem: "Sistema", .tabDeveloper: "Desarrollo", .tabApps: "Apps", .tabAutomation: "Automatización",
         .refreshHelp: "Volver a buscar objetivos", .settingsHelp: "Ajustes",
         .open: "Abrir", .quit: "Salir", .clean: "Limpiar", .loading: "Cargando…",
         .back: "Atrás", .backToList: "Volver a la lista",
@@ -297,7 +297,7 @@ public enum Localization {
 
     // MARK: - French
     private static let fr: [L10n: String] = [
-        .tabAI: "IA", .tabSystem: "Système", .tabDeveloper: "Développeur", .tabApps: "Apps",
+        .tabAI: "IA", .tabSystem: "Système", .tabDeveloper: "Développeur", .tabApps: "Apps", .tabAutomation: "Automatisation",
         .refreshHelp: "Rechercher à nouveau les cibles", .settingsHelp: "Réglages",
         .open: "Ouvrir", .quit: "Quitter", .clean: "Nettoyer", .loading: "Chargement…",
         .back: "Retour", .backToList: "Retour à la liste",
