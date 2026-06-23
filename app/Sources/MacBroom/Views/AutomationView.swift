@@ -70,7 +70,7 @@ struct AutomationView: View {
                 Text(t.label).font(.shLabel)
                 Spacer()
                 Picker("", selection: r.frequency) {
-                    ForEach(CleanFrequency.allCases) { Text(loc.t($0.titleKey)).tag($0) }
+                    ForEach(CleanFrequency.selectable) { Text(loc.t($0.titleKey)).tag($0) }
                 }
                 .pickerStyle(.menu).labelsHidden().fixedSize()
             }
@@ -90,13 +90,8 @@ struct AutomationView: View {
 
     @ViewBuilder private func conditionalControls(_ r: Binding<AutoCleanRule>) -> some View {
         switch r.wrappedValue.frequency {
-        case .off:
-            EmptyView()
-        case .hourly:
-            labeledRow(loc.t(.intervalLabel)) {
-                Stepper(loc.t(.everyNHours, r.wrappedValue.hourInterval), value: r.hourInterval, in: 1...12)
-                    .labelsHidden().fixedSize()
-            }
+        case .off, .hourly:
+            EmptyView()   // hourly is no longer selectable (migrated to .daily)
         case .daily:
             timeRow(r)
         case .weekly:
@@ -109,7 +104,10 @@ struct AutomationView: View {
             timeRow(r)
         case .monthly:
             labeledRow(loc.t(.monthDayLabel)) {
-                Stepper("\(r.wrappedValue.dayOfMonth)", value: r.dayOfMonth, in: 1...28).labelsHidden().fixedSize()
+                HStack(spacing: Theme.Space.xs) {
+                    Text("\(r.wrappedValue.dayOfMonth)").font(.shCaption).monospacedDigit()
+                    Stepper("", value: r.dayOfMonth, in: 1...28).labelsHidden().fixedSize()
+                }
             }
             timeRow(r)
         }

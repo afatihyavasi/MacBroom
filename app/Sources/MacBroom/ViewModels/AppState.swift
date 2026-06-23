@@ -526,7 +526,15 @@ final class AppState: ObservableObject {
     private func loadSchedules() {
         if let data = UserDefaults.standard.data(forKey: rulesKey),
            let decoded = try? JSONDecoder().decode([String: AutoCleanRule].self, from: data) {
-            rules = decoded.filter { $0.value.isEnabled }
+            var migratedAny = false
+            let migrated = decoded.mapValues { rule -> AutoCleanRule in
+                // Hourly was removed from the UI — migrate any saved rule to daily.
+                guard rule.frequency == .hourly else { return rule }
+                migratedAny = true
+                var r = rule; r.frequency = .daily; return r
+            }
+            rules = migrated.filter { $0.value.isEnabled }
+            if migratedAny { persistRules() }
         }
         if let raw = UserDefaults.standard.dictionary(forKey: lastRunKey) as? [String: Double] {
             lastRun = raw.mapValues { Date(timeIntervalSince1970: $0) }

@@ -1,10 +1,17 @@
 import Foundation
 
 /// How often an AI tool's caches are cleaned automatically.
+///
+/// `hourly` is retained only so older persisted rules still decode; it is NOT
+/// offered in the UI (see `selectable`) — too aggressive for cache cleaning and
+/// confusing in practice. Such rules are migrated to `.daily` on load.
 public enum CleanFrequency: String, CaseIterable, Identifiable, Sendable, Codable {
     case off, hourly, daily, weekly, monthly
 
     public var id: String { rawValue }
+
+    /// Frequencies offered to the user (hourly intentionally excluded).
+    public static var selectable: [CleanFrequency] { [.off, .daily, .weekly, .monthly] }
 
     /// Seconds between automatic cleans (`0` when disabled).
     public var interval: TimeInterval {
