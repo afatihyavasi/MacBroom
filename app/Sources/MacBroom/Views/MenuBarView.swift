@@ -33,17 +33,8 @@ struct MenuBarView: View {
             switch self {
             case .category(.ai): return .tabAI
             case .category(.system): return .tabSystem
-            case .category(.developer): return .tabDeveloper
             case .automation: return .tabAutomation
             case .apps: return .tabApps
-            }
-        }
-
-        var systemImage: String {
-            switch self {
-            case .category(let c): return c.systemImage
-            case .automation: return "clock.arrow.circlepath"
-            case .apps: return "macwindow"
             }
         }
     }
@@ -57,7 +48,7 @@ struct MenuBarView: View {
             if let status = state.status { StatusPanelView(status: status) }
 
             SHTabs(selection: $section,
-                   items: Section.allCases.map { ($0, loc.t($0.titleKey), $0.systemImage) })
+                   items: Section.allCases.map { ($0, loc.t($0.titleKey)) })
 
             content.frame(maxWidth: .infinity, maxHeight: .infinity)
 

@@ -326,8 +326,8 @@ system:app-caches|Uygulama önbellekleri|system|*|clean_app_caches
 system:editors|Kod editörleri|system|~/Library/Application Support/Code:~/Library/Application Support/Cursor:~/Library/Application Support/JetBrains|clean_code_editors
 system:gui-apps|GUI uygulama önbellekleri|system|*|clean_user_gui_applications
 system:dev-misc|Geliştirici artıkları|system|*|clean_dev_misc
-developer:xcode|Xcode DerivedData|developer|~/Library/Developer/Xcode/DerivedData|clean_xcode_derived_data
-developer:pkg-caches|Paket yöneticisi önbellekleri|developer|~/.npm:~/.yarn/cache:~/Library/Caches/pip:~/.cache/poetry|clean_dev_npm clean_dev_python
+system:xcode|Xcode DerivedData|system|~/Library/Developer/Xcode/DerivedData|clean_xcode_derived_data
+system:pkg-caches|Paket yöneticisi önbellekleri|system|~/.npm:~/.yarn/cache:~/Library/Caches/pip:~/.cache/poetry|clean_dev_npm clean_dev_python
 EOF
 }
 

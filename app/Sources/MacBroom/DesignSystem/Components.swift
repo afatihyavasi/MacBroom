@@ -325,7 +325,7 @@ struct SHTriCheckbox: View {
 
 struct SHTabs<T: Hashable>: View {
     @Binding var selection: T
-    let items: [(value: T, label: String, systemImage: String)]
+    let items: [(value: T, label: String)]
     @Namespace private var ns
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
@@ -339,16 +339,12 @@ struct SHTabs<T: Hashable>: View {
                         withAnimation(.snappy(duration: 0.18)) { selection = item.value }
                     }
                 } label: {
-                    VStack(spacing: 2) {
-                        Image(systemName: item.systemImage).font(.system(size: 12, weight: .medium))
-                        Text(item.label)
-                            .font(.system(size: 10, weight: .medium))
-                            .lineLimit(1).minimumScaleFactor(0.65)
-                    }
+                    Text(item.label)
+                        .font(.shLabel)
+                        .lineLimit(1).minimumScaleFactor(0.8)
                         .foregroundStyle(isSel ? Theme.foreground : Theme.mutedForeground)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 5)
-                        .padding(.horizontal, 2)
                         .background(
                             ZStack {
                                 if isSel {
