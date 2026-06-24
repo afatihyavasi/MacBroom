@@ -1,5 +1,10 @@
 import SwiftUI
+import AppKit
 import MacBroomCore
+
+/// Lightweight stderr logging for diagnosing UI interaction issues. Visible when
+/// the app is launched from a terminal. Temporary.
+func mbDebug(_ msg: String) { fputs("[MacBroom] \(msg)\n", stderr) }
 
 /// Root menu bar panel (v2 shadcn design): header + live status, then a
 /// three-way section switch (AI caches · System caches · Apps uninstaller).
@@ -63,6 +68,12 @@ struct MenuBarView: View {
         .foregroundStyle(Theme.foreground)
         .background(tabShortcuts)
         .task {
+            mbDebug("panel appeared (task ran)")
+            // Make the menu-bar panel the key window so its controls receive
+            // clicks. An accessory app's panel can open non-key, which swallows
+            // taps (tabs won't switch, buttons don't fire). Deferred to the next
+            // runloop so the panel is fully presented first.
+            DispatchQueue.main.async { NSApp.activate(ignoringOtherApps: true) }
             await state.refreshStatus()
             if case .idle = state.phase { await state.discover() }
         }
@@ -88,6 +99,7 @@ struct MenuBarView: View {
                 DiskAnalysisWindowController.shared.show(state: state, loc: loc)
             }
             SHIconButton(system: "gearshape", help: loc.t(.settingsHelp)) {
+                mbDebug("gear button tapped → opening Settings")
                 // Settings opens in its own AppKit window (deterministic for a
                 // menu-bar app; see SettingsWindowController) so its NSMenu
                 // pickers can't dismiss this panel.

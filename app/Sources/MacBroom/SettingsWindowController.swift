@@ -15,6 +15,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
 
     func show(state: AppState, loc: LocalizationManager, appearance: AppearanceManager, updater: UpdaterController) {
+        mbDebug("SettingsWindowController.show called")
         if window == nil {
             let hosting = NSHostingController(
                 rootView: SettingsView()
