@@ -1,33 +1,33 @@
-# MacBroom'a Katkı
+# Contributing to MacBroom
 
-Teşekkürler! MacBroom açık kaynak (GPL-3.0) bir projedir.
+Thank you! MacBroom is an open-source (GPL-3.0) project.
 
-## Geliştirme ortamı
+## Development environment
 
 ```bash
 git clone --recurse-submodules <repo>
 cd macbroom
-# Köprü motoru
+# Bridge engine
 shellcheck engine/macbroom-engine.sh
 bats engine/tests/
-# Uygulama
+# App
 swift build && swift test
 ```
 
-## Kurallar
+## Rules
 
-- **Güvenlik kritik.** Silme mantığına dokunan her PR, dry-run davranışını ve korunan yolların (auth/sessions/memory) **silinmediğini** kanıtlayan bats testi içermelidir.
-- mole `vendor/` submodule'ü **doğrudan değiştirilmez**; düzeltmeler upstream'e gönderilir. Sürüm yükseltmeleri ayrı commit.
-- Commit mesajları [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `chore:`, `docs:`, `ci:`.
-- Swift: `swift-format` / 4 boşluk. Shell: `shellcheck` temiz olmalı.
+- **Safety critical.** Every PR that touches deletion logic must include a bats test proving the dry-run behavior and that protected paths (auth/sessions/memory) are **not deleted**.
+- The mole `vendor/` submodule is **never modified directly**; fixes are submitted upstream. Version bumps go in a separate commit.
+- Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `chore:`, `docs:`, `ci:`.
+- Swift: `swift-format` / 4 spaces. Shell: `shellcheck` must be clean.
 
-## mole submodule güncelleme
+## Updating the mole submodule
 
 ```bash
-cd vendor/mole && git fetch && git checkout <yeni-tag>
+cd vendor/mole && git fetch && git checkout <new-tag>
 cd ../.. && git add vendor/mole && git commit -m "chore: bump mole to <tag>"
 ```
 
-## Lisans
+## License
 
-Katkılarınız GPL-3.0-or-later altında lisanslanır.
+Your contributions are licensed under GPL-3.0-or-later.

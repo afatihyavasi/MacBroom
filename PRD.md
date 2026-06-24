@@ -1,101 +1,101 @@
 # MacBroom — Product Requirements Document (PRD)
 
-> macOS menü çubuğu için güvenli, açık kaynak sistem & AI cache temizleyici.
-> Motor olarak [`tw93/mole`](https://github.com/tw93/mole) (GPL-3.0) kullanır.
+> A safe, open-source system & AI cache cleaner for the macOS menu bar.
+> Uses [`tw93/mole`](https://github.com/tw93/mole) (GPL-3.0) as its engine.
 
-- **Durum:** Taslak v0.1 · 2026-06-20
-- **Lisans:** GPL-3.0-or-later (mole türevi)
+- **Status:** Draft v0.1 · 2026-06-20
+- **License:** GPL-3.0-or-later (mole derivative)
 - **Platform:** macOS 13+ (Apple Silicon & Intel)
-- **Dağıtım:** Notarized DMG (sandbox dışı, Full Disk Access)
+- **Distribution:** Notarized DMG (non-sandboxed, Full Disk Access)
 
 ---
 
-## 1. Problem & Vizyon
+## 1. Problem & Vision
 
-macOS zamanla cache, log, tarayıcı kalıntısı ve özellikle **AI geliştirme araçlarının** (Codex, Claude, Gemini, Cursor) ürettiği büyük cache dosyalarıyla dolar. Mevcut çözümler ya kapalı kaynak/ücretli (CleanMyMac), ya da terminal bilgisi gerektirir (mole CLI).
+Over time, macOS fills up with caches, logs, browser leftovers, and especially the large cache files produced by **AI development tools** (Codex, Claude, Gemini, Cursor). Existing solutions are either closed-source/paid (CleanMyMac) or require terminal knowledge (the mole CLI).
 
-**Vizyon:** mole'un savaş-test edilmiş, güvenlik-öncelikli temizleme motorunu, Mac tasarım diline uygun bir **menü çubuğu uygulamasının** arkasına koymak. Tek tık ile güvenli önizleme ve temizlik; AI araç cache'leri birinci sınıf özellik.
+**Vision:** Put mole's battle-tested, safety-first cleaning engine behind a **menu bar app** that fits the Mac design language. One-click safe preview and cleanup; AI tool caches as a first-class feature.
 
-## 2. Hedef Kitle
+## 2. Target Audience
 
-- AI araçlarını yoğun kullanan geliştiriciler (cache'ler hızla GB'lara ulaşır).
-- Terminal istemeyen, görsel ve güvenli temizlik isteyen Mac kullanıcıları.
+- Developers who use AI tools heavily (their caches quickly grow into GBs).
+- Mac users who don't want the terminal and want visual, safe cleanup.
 
-## 3. Hedefler / Hedef Olmayanlar
+## 3. Goals / Non-Goals
 
-**Hedefler (MVP)**
-1. AI araç cache'lerinin **güvenli** temizliği (state'e dokunmadan).
-2. Sistem cache temizliği (dry-run önizleme + onay).
-3. Disk/sistem durumu paneli.
-4. App uninstaller (kalıntılarıyla).
+**Goals (MVP)**
+1. **Safe** cleanup of AI tool caches (without touching state).
+2. System cache cleanup (dry-run preview + confirmation).
+3. Disk/system status panel.
+4. App uninstaller (with leftovers).
 
-**Hedef değil (şimdilik)**
-- Mac App Store sürümü (GPL-3.0 + Tam Disk Erişimi → sandbox kısıtları).
+**Non-goals (for now)**
+- A Mac App Store version (GPL-3.0 + Full Disk Access → sandbox restrictions).
 - Windows/Linux.
 
-> Not: Zamanlanmış otomatik temizlik ve disk analizi **v2'de gönderildi**
-> (aşağıdaki yol haritasına bakın).
+> Note: Scheduled automatic cleanup and disk analysis **shipped in v2**
+> (see the roadmap below).
 
-## 4. Temel İlkeler
+## 4. Core Principles
 
-1. **Güvenlik önce gelir.** Hiçbir şey önizleme (dry-run) ve açık onay olmadan silinmez. mole'un `should_protect_path` / whitelist / path-traversal korumaları korunur.
-2. **State asla varsayılan silinmez.** AI araçlarının kimlik (auth), oturum (sessions), hafıza (memory), geçmiş (history) verileri varsayılan olarak korunur.
-3. **Şeffaflık.** Her aday dosya: yol + boyut + neden + kategori ile listelenir.
-4. **Native his.** macOS tasarım dili (MenuBarExtra, SF Symbols, materyal).
+1. **Safety comes first.** Nothing is deleted without a preview (dry-run) and explicit confirmation. mole's `should_protect_path` / whitelist / path-traversal protections are preserved.
+2. **State is never deleted by default.** The credentials (auth), sessions, memory, and history data of AI tools are protected by default.
+3. **Transparency.** Every candidate file is listed with path + size + reason + category.
+4. **Native feel.** The macOS design language (MenuBarExtra, SF Symbols, materials).
 
-## 5. Mimari (özet)
+## 5. Architecture (overview)
 
 ```
 MacBroom.app (SwiftUI MenuBarExtra)
    │  Process + JSON/NDJSON
-macbroom-engine.sh (köprü, mole lib'ini source eder)
+macbroom-engine.sh (bridge, sources the mole lib)
    │  source
 vendor/mole/ (git submodule, pinned: V1.43.1)
 ```
 
-Köprü, mole'un etkileşimli `clean` komutunu değil, `lib/clean/*.sh` içindeki fonksiyonları **non-interactive + DRY_RUN** çağırarak JSON üretir. Bu, kategori-bazlı seçmeli kontrol ve kırılgan TUI scraping'den kaçınma sağlar.
+Rather than mole's interactive `clean` command, the bridge calls the functions inside `lib/clean/*.sh` in a **non-interactive + DRY_RUN** manner to produce JSON. This enables category-based selective control and avoids fragile TUI scraping.
 
-## 6. Özellik Gereksinimleri
+## 6. Feature Requirements
 
-### F1 — AI Cache Temizliği (P0)
-- Araç-bazlı kartlar: **Codex, Claude (Code + Desktop), Gemini, Cursor**.
-- Her araç için "Güvenli (cache)" vs "İleri (state)" ayrımı; ikincisi varsayılan kapalı + ayrı onay.
-- Çalışan araç tespiti (`pgrep`) → çalışıyorsa atla/uyar.
-- Korunan: Codex `auth.json`/`sessions/`/`history.jsonl`/`*.sqlite`; Claude `memory/`/projeler/`.claude/worktrees`/auth; Gemini kimlik/state.
-- Temizlenen (güvenli): Gemini `tmp/` & `antigravity-browser-profile/`, codex runtimes, eski Claude Desktop bundled sürümleri, Cursor agent session logları.
+### F1 — AI Cache Cleanup (P0)
+- Tool-based cards: **Codex, Claude (Code + Desktop), Gemini, Cursor**.
+- A "Safe (cache)" vs "Advanced (state)" distinction for each tool; the latter is off by default + a separate confirmation.
+- Running-tool detection (`pgrep`) → skip/warn if running.
+- Protected: Codex `auth.json`/`sessions/`/`history.jsonl`/`*.sqlite`; Claude `memory/`/projects/`.claude/worktrees`/auth; Gemini credentials/state.
+- Cleaned (safe): Gemini `tmp/` & `antigravity-browser-profile/`, codex runtimes, old bundled Claude Desktop versions, Cursor agent session logs.
 
-### F2 — Sistem Cache Temizliği (P0)
-- Kategoriler (mole `lib/clean/*`): user caches, app caches, logs, browser leftovers, .DS_Store, dev caches.
-- Dry-run önizleme zorunlu → kategori/öğe seçimi → onay → canlı ilerleme → "X GB boşaltıldı" özeti.
+### F2 — System Cache Cleanup (P0)
+- Categories (mole `lib/clean/*`): user caches, app caches, logs, browser leftovers, .DS_Store, dev caches.
+- Dry-run preview required → category/item selection → confirmation → live progress → "X GB freed" summary.
 
-### F3 — Disk/Sistem Durumu (P1)
-- Menü çubuğu ikonunda disk doluluk yüzdesi/rozet.
-- Panel: disk kullanımı, temizlenebilir tahmini alan, CPU/RAM (mole `status`).
+### F3 — Disk/System Status (P1)
+- Disk usage percentage/badge on the menu bar icon.
+- Panel: disk usage, estimated reclaimable space, CPU/RAM (mole `status`).
 
 ### F4 — App Uninstaller (P1)
-- Yüklü uygulamalar + kalıntı tarama (Application Support, Caches, Preferences, Logs...).
-- Seçmeli kaldırma + onay; sistem-kritik uygulamalar korunur.
+- Installed apps + leftover scan (Application Support, Caches, Preferences, Logs...).
+- Selective removal + confirmation; system-critical apps are protected.
 
-## 7. Güvenlik & Gizlilik
-- Tamamen yerel; ağ erişimi yok (telemetri yok).
-- Tüm silmeler mole güvenlik katmanından geçer.
-- Geçmiş/günlük: mole `history` ile kaydedilir; UI'dan görülebilir.
-- Full Disk Access ilk açılışta açıkça istenir/yönlendirilir.
+## 7. Security & Privacy
+- Fully local; no network access (no telemetry).
+- All deletions pass through the mole security layer.
+- History/log: recorded via mole `history`; viewable from the UI.
+- Full Disk Access is explicitly requested/guided on first launch.
 
-## 8. Başarı Metrikleri
-- İlk taramadan temizliğe < 3 tık.
-- Sıfır yanlış-pozitif state silme (test edilmiş).
-- Dry-run önizleme < 5 sn (tipik makine).
+## 8. Success Metrics
+- < 3 clicks from first scan to cleanup.
+- Zero false-positive state deletion (tested).
+- Dry-run preview < 5 s (typical machine).
 
-## 9. Yol Haritası
+## 9. Roadmap
 - **v1.0 (MVP):** F1–F4, notarized DMG, CI.
-- **v2 (gönderildi):** shadcn tasarım sistemi + açık/koyu tema; 4 dil (TR/EN/ES/FR);
-  Geliştirici temizleme kategorisi; disk analizi / büyük dosya bulucu;
-  zamanlanmış otomatik temizleme (saatlik/günlük/haftalık/aylık) + launchd ile
-  uygulama kapalıyken çalışma + bildirim; erişilebilirlik; toplam kazanılan alan;
-  Homebrew cask + imzalı/notarized sürüm + açılış sayfası.
-- **Sonraki:** kurallar/whitelist UI; tarayıcı & bakım temizleme kategorileri;
-  Sparkle otomatik güncelleme; temizlik geçmişi grafiği.
+- **v2 (shipped):** shadcn design system + light/dark theme; 4 languages (TR/EN/ES/FR);
+  Developer cleanup category; disk analysis / large file finder;
+  scheduled automatic cleanup (hourly/daily/weekly/monthly) + running while the
+  app is closed via launchd + notifications; accessibility; total reclaimed space;
+  Homebrew cask + signed/notarized release + landing page.
+- **Next:** rules/whitelist UI; browser & maintenance cleanup categories;
+  Sparkle automatic updates; cleanup history chart.
 
-## 10. Atıf & Lisans
-MacBroom, `tw93/mole`'un temizleme motorunu paketler ve onun `lib/` modüllerine bağımlıdır. Bu nedenle **GPL-3.0-or-later** altında dağıtılır. mole'a tam atıf README ve uygulama "Hakkında" ekranında yer alır.
+## 10. Attribution & License
+MacBroom packages `tw93/mole`'s cleaning engine and depends on its `lib/` modules. For this reason it is distributed under **GPL-3.0-or-later**. Full attribution to mole appears in the README and in the app's "About" screen.

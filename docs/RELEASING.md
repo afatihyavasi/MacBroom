@@ -1,113 +1,112 @@
-# MacBroom Sürüm Yayınlama Rehberi
+# MacBroom Release Guide
 
-MacBroom GPL-3.0 lisanslı olduğu için **App Store'da dağıtılmaz**. Dağıtım üç
-kanaldan yapılır:
+Because MacBroom is licensed under GPL-3.0, it is **not distributed on the App Store**. Distribution is done through three
+channels:
 
-1. **Notarized DMG** — GitHub Releases üzerinde imzalı + notarize edilmiş `.dmg`.
+1. **Notarized DMG** — a signed + notarized `.dmg` on GitHub Releases.
 2. **Homebrew Cask** — `Casks/macbroom.rb` (`brew install --cask macbroom`).
 3. **Landing page** — GitHub Pages (`docs/site/`).
 
 ---
 
-## Sürüm çıkarma akışı
+## Release flow
 
-Yeni sürüm `v*` etiketi push'lanınca otomatik çalışır:
+It runs automatically when a new `v*` tag is pushed:
 
 ```bash
 git tag v2.0.0
 git push origin v2.0.0
 ```
 
-Bu, `.github/workflows/release.yml` akışını tetikler. Akış:
+This triggers the `.github/workflows/release.yml` workflow. The workflow:
 
-1. `.app` paketini oluşturur (`scripts/make-app.sh`).
-2. Secret'lar tanımlıysa Developer ID ile **imzalar** (hardened runtime + timestamp).
-3. DMG oluşturur (`scripts/make-dmg.sh`).
-4. Secret'lar tanımlıysa `notarytool` ile **notarize** eder ve ticket'ı **staple** eder.
-5. DMG'yi GitHub Releases'e yükler.
+1. Builds the `.app` bundle (`scripts/make-app.sh`).
+2. **Signs** it with a Developer ID if the secrets are defined (hardened runtime + timestamp).
+3. Creates the DMG (`scripts/make-dmg.sh`).
+4. **Notarizes** it with `notarytool` and **staples** the ticket if the secrets are defined.
+5. Uploads the DMG to GitHub Releases.
 
-> **Graceful fallback:** İmzalama/notarization secret'ları YOKSA akış yine de
-> çalışır ve **imzasız** bir DMG üretir; CI başarısız olmaz. İmzasız DMG'yi
-> kullanıcılar açarken "sağ tık → Aç" yapmak zorunda kalır.
+> **Graceful fallback:** If the signing/notarization secrets are NOT present, the workflow still
+> runs and produces an **unsigned** DMG; CI does not fail. When opening an unsigned DMG,
+> users have to "right-click → Open".
 
 ---
 
-## Gerekli secret'lar
+## Required secrets
 
-Repo ayarlarında tanımlanır: **Settings → Secrets and variables → Actions → New repository secret**.
+These are defined in the repository settings: **Settings → Secrets and variables → Actions → New repository secret**.
 
-| Secret | Açıklama |
+| Secret | Description |
 |--------|----------|
-| `MACOS_CERTIFICATE` | "Developer ID Application" sertifikasının `.p12` halinin base64 kodu |
-| `MACOS_CERTIFICATE_PWD` | `.p12` dışa aktarımında verilen parola |
-| `MACOS_SIGN_IDENTITY` | İmza kimliği, örn. `Developer ID Application: Ad Soyad (TEAMID)` |
-| `AC_API_KEY` | App Store Connect API anahtarının (`.p8`) base64 kodu |
-| `AC_API_KEY_ID` | API anahtarı ID'si (örn. `ABCD1234EF`) |
-| `AC_API_ISSUER_ID` | App Store Connect issuer ID (UUID) |
+| `MACOS_CERTIFICATE` | base64 encoding of the `.p12` form of the "Developer ID Application" certificate |
+| `MACOS_CERTIFICATE_PWD` | the password set during the `.p12` export |
+| `MACOS_SIGN_IDENTITY` | the signing identity, e.g. `Developer ID Application: Full Name (TEAMID)` |
+| `AC_API_KEY` | base64 encoding of the App Store Connect API key (`.p8`) |
+| `AC_API_KEY_ID` | the API key ID (e.g. `ABCD1234EF`) |
+| `AC_API_ISSUER_ID` | the App Store Connect issuer ID (UUID) |
 
 ---
 
-## Secret'ları nasıl edinirsiniz
+## How to obtain the secrets
 
-### 1. Developer ID sertifikası (`MACOS_CERTIFICATE`, `MACOS_CERTIFICATE_PWD`, `MACOS_SIGN_IDENTITY`)
+### 1. Developer ID certificate (`MACOS_CERTIFICATE`, `MACOS_CERTIFICATE_PWD`, `MACOS_SIGN_IDENTITY`)
 
-Apple Developer Program üyeliği gerekir (yıllık ücretli).
+An Apple Developer Program membership is required (paid annually).
 
-1. **Xcode → Settings → Accounts → Manage Certificates → "+" → Developer ID Application**
-   ile sertifika oluşturun (veya [developer.apple.com/account/resources/certificates](https://developer.apple.com/account/resources/certificates) üzerinden).
-2. **Keychain Access** uygulamasında bu sertifikayı (özel anahtarıyla birlikte)
-   seçin → sağ tık → **Export** → `.p12` formatında dışa aktarın, bir parola verin.
-   Bu parola → `MACOS_CERTIFICATE_PWD`.
-3. `.p12` dosyasını base64'e çevirip kopyalayın:
+1. Create a certificate via **Xcode → Settings → Accounts → Manage Certificates → "+" → Developer ID Application**
+   (or through [developer.apple.com/account/resources/certificates](https://developer.apple.com/account/resources/certificates)).
+2. In the **Keychain Access** application, select this certificate (together with its private key)
+   → right-click → **Export** → export it in `.p12` format and set a password.
+   This password → `MACOS_CERTIFICATE_PWD`.
+3. Convert the `.p12` file to base64 and copy it:
    ```bash
    base64 -i Certificates.p12 | pbcopy
    ```
-   Bu değer → `MACOS_CERTIFICATE`.
-4. İmza kimliğini öğrenin:
+   This value → `MACOS_CERTIFICATE`.
+4. Find the signing identity:
    ```bash
    security find-identity -v -p codesigning
    ```
-   Çıktıdaki `Developer ID Application: ... (TEAMID)` satırı → `MACOS_SIGN_IDENTITY`.
+   The `Developer ID Application: ... (TEAMID)` line in the output → `MACOS_SIGN_IDENTITY`.
 
-### 2. App Store Connect API anahtarı (`AC_API_KEY`, `AC_API_KEY_ID`, `AC_API_ISSUER_ID`)
+### 2. App Store Connect API key (`AC_API_KEY`, `AC_API_KEY_ID`, `AC_API_ISSUER_ID`)
 
-1. [App Store Connect → Users and Access → Integrations → App Store Connect API](https://appstoreconnect.apple.com/access/integrations/api)
-   bölümüne gidin.
-2. **Generate API Key** ile bir anahtar oluşturun (rol: **Developer** yeterli).
-3. Oluşan **Key ID** → `AC_API_KEY_ID`.
-4. Sayfanın üstündeki **Issuer ID** (UUID) → `AC_API_ISSUER_ID`.
-5. `.p8` dosyasını indirin (yalnızca bir kez indirilebilir), base64'e çevirin:
+1. Go to [App Store Connect → Users and Access → Integrations → App Store Connect API](https://appstoreconnect.apple.com/access/integrations/api).
+2. Create a key via **Generate API Key** (the **Developer** role is sufficient).
+3. The resulting **Key ID** → `AC_API_KEY_ID`.
+4. The **Issuer ID** (UUID) at the top of the page → `AC_API_ISSUER_ID`.
+5. Download the `.p8` file (it can only be downloaded once) and convert it to base64:
    ```bash
    base64 -i AuthKey_ABCD1234EF.p8 | pbcopy
    ```
-   Bu değer → `AC_API_KEY`.
+   This value → `AC_API_KEY`.
 
 ---
 
-## Yerelde test (isteğe bağlı)
+## Local testing (optional)
 
 ```bash
 make app VERSION=2.0.0     # build/MacBroom.app
 make dmg VERSION=2.0.0     # build/MacBroom-2.0.0.dmg
 ```
 
-İsteğe bağlı yerel imzalama, `make-app.sh` içinde `MACBROOM_SIGN_IDENTITY` ortam
-değişkeni ayarlıysa devreye girer (ayarlı değilse davranış değişmez):
+Optional local signing kicks in if the `MACBROOM_SIGN_IDENTITY` environment
+variable is set inside `make-app.sh` (if it is not set, the behavior does not change):
 
 ```bash
-MACBROOM_SIGN_IDENTITY="Developer ID Application: Ad Soyad (TEAMID)" \
+MACBROOM_SIGN_IDENTITY="Developer ID Application: Full Name (TEAMID)" \
   make app VERSION=2.0.0
 ```
 
 ---
 
-## Homebrew Cask güncelleme
+## Updating the Homebrew Cask
 
-Her sürümde `Casks/macbroom.rb` içindeki `version` ve `sha256` güncellenir:
+For each release, update the `version` and `sha256` in `Casks/macbroom.rb`:
 
 ```bash
 shasum -a 256 build/MacBroom-2.0.0.dmg
 ```
 
-Çıkan hash'i cask'taki `sha256` alanına yazın. `<OWNER>` placeholder'ını
-GitHub kullanıcı/organizasyon adınızla değiştirin.
+Write the resulting hash into the `sha256` field of the cask. Replace the `<OWNER>` placeholder
+with your GitHub user/organization name.

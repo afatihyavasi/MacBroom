@@ -1,16 +1,16 @@
-# MacBroom Mimarisi
+# MacBroom Architecture
 
-## Katmanlar
+## Layers
 
 ```
 ┌─────────────────────────────────────────────┐
 │  MacBroom.app  (SwiftUI, MenuBarExtra)        │  native UI
 │  Views / ViewModels / Models / EngineBridge   │
 └───────────────┬─────────────────────────────┘
-                │ Process spawn · stdin yok · stdout: JSON (sonuç) + NDJSON (ilerleme)
+                │ Process spawn · no stdin · stdout: JSON (result) + NDJSON (progress)
 ┌───────────────▼─────────────────────────────┐
-│  engine/macbroom-engine.sh   (köprü, GPL-3.0) │
-│  alt komutlar: scan | clean | status |        │
+│  engine/macbroom-engine.sh   (bridge, GPL-3.0) │
+│  subcommands: scan | clean | status |        │
 │                ai-scan | ai-clean | version    │
 └───────────────┬─────────────────────────────┘
                 │ source (bash)
@@ -20,36 +20,36 @@
 └─────────────────────────────────────────────┘
 ```
 
-## Neden köprü script?
+## Why a bridge script?
 
-mole'un `clean`/`uninstall` komutları **etkileşimlidir** (TTY prompt'ları, `-t 1` kontrolleri) ve `--json` çıktısı yoktur; ayrıca monolitiktir (kategori seçimi yok). Menü çubuğu uygulaması ise:
-- kategori/öğe-bazlı seçmeli kontrol,
-- yapısal (JSON) veri,
-- non-interactive çalışma ister.
+mole's `clean`/`uninstall` commands are **interactive** (TTY prompts, `-t 1` checks) and have no `--json` output; they are also monolithic (no category selection). The menu bar app, on the other hand, requires:
+- category/item-based selective control,
+- structured (JSON) data,
+- non-interactive operation.
 
-Bunu sağlamanın en sağlam yolu, mole'un etkileşimli giriş noktalarını taklit etmek yerine, `lib/clean/*.sh` içindeki **fonksiyonları doğrudan source edip** `DRY_RUN`/non-interactive çağırmaktır. Böylece mole'un denetlenmiş silme primitifi `safe_clean` ve koruma katmanı `should_protect_path` aynen korunur; sadece UI/protokol katmanı eklenir.
+The most robust way to provide this, instead of mimicking mole's interactive entry points, is to **source the functions in `lib/clean/*.sh` directly** and call them in `DRY_RUN`/non-interactive mode. This way mole's audited deletion primitive `safe_clean` and its protection layer `should_protect_path` are preserved exactly as-is; only the UI/protocol layer is added.
 
-## Köprü protokolü
+## Bridge protocol
 
-- **stdout son satır(lar)**: tek bir JSON nesnesi (komut sonucu).
-- **ara satırlar (NDJSON)**: `{"event":"progress", ...}` ilerleme olayları (uzun süren `clean` için).
-- **çıkış kodu**: 0 başarı, !=0 hata; hata JSON'u `{"error": "..."}`.
+- **stdout last line(s)**: a single JSON object (command result).
+- **intermediate lines (NDJSON)**: `{"event":"progress", ...}` progress events (for the long-running `clean`).
+- **exit code**: 0 on success, !=0 on error; error JSON `{"error": "..."}`.
 
-### Komutlar
-| Komut | Çıktı | Açıklama |
+### Commands
+| Command | Output | Description |
 |-------|-------|----------|
-| `scan --categories=ai,system` | `{candidates:[{category,label,path,size_bytes,protected,reason}]}` | dry-run tarama |
-| `clean --paths-file=F` | NDJSON progress + `{freed_bytes,count}` | seçili yolları siler |
-| `ai-scan` | AI araç-bazlı aday listesi | F1 için özel |
-| `ai-clean --tools=codex,gemini` | progress + özet | AI cache temizliği |
-| `status` | `{disk,cpu,memory,cleanable_bytes}` | mole status metrikleri |
-| `version` | `{macbroom,mole}` | sürümler |
+| `scan --categories=ai,system` | `{candidates:[{category,label,path,size_bytes,protected,reason}]}` | dry-run scan |
+| `clean --paths-file=F` | NDJSON progress + `{freed_bytes,count}` | deletes the selected paths |
+| `ai-scan` | AI tool-based candidate list | specific to F1 |
+| `ai-clean --tools=codex,gemini` | progress + summary | AI cache cleanup |
+| `status` | `{disk,cpu,memory,cleanable_bytes}` | mole status metrics |
+| `version` | `{macbroom,mole}` | versions |
 
-## Swift tarafı
+## Swift side
 
-- `EngineBridge`: `Process` ile bundle'lanmış scripti çalıştırır; satır-bazlı okur; JSON `Decodable` modellerine çözer; ilerlemeyi `AsyncStream` ile yayar.
-- Engine + `vendor/mole` build sırasında `.app/Contents/Resources/engine/` altına kopyalanır; script'e çalıştırma izni verilir.
+- `EngineBridge`: runs the bundled script via `Process`; reads line by line; decodes JSON into `Decodable` models; emits progress through an `AsyncStream`.
+- The engine + `vendor/mole` are copied under `.app/Contents/Resources/engine/` during the build; the script is granted execute permission.
 
-## Dağıtım
+## Distribution
 
-Notarized DMG (Developer ID). Sandbox YOK — temizleyici için Full Disk Access gerekir. İlk açılışta onboarding kullanıcıyı Sistem Ayarları > Gizlilik & Güvenlik > Full Disk Access'e yönlendirir.
+Notarized DMG (Developer ID). NO sandbox — the cleaner requires Full Disk Access. On first launch, onboarding directs the user to System Settings > Privacy & Security > Full Disk Access.

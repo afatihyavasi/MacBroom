@@ -1,8 +1,8 @@
 name: Deploy landing page
 
-# docs/site/ içeriğini GitHub Pages'e yayınlar.
-# GitHub Pages'i etkinleştirmek gerekir: Settings → Pages → Source: "GitHub Actions".
-# Pages etkin değilse deploy adımı atlanır; akış başarısız olmaz.
+# Publishes the contents of docs/site/ to GitHub Pages.
+# GitHub Pages must be enabled: Settings → Pages → Source: "GitHub Actions".
+# If Pages is not enabled, the deploy step is skipped; the workflow does not fail.
 
 on:
   push:
@@ -17,7 +17,7 @@ permissions:
   pages: write
   id-token: write
 
-# Aynı anda tek bir deploy çalışsın.
+# Allow only one deploy to run at a time.
 concurrency:
   group: "pages"
   cancel-in-progress: false

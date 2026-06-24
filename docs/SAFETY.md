@@ -1,31 +1,31 @@
-# MacBroom Güvenlik Modeli
+# MacBroom Safety Model
 
-MacBroom yıkıcı (silme) işlemleri yapabilir. Tasarım, **güvenli-varsayılan** ilkesine dayanır ve mole'un güvenlik katmanını miras alır.
+MacBroom can perform destructive (deletion) operations. The design is based on the **safe-by-default** principle and inherits mole's safety layer.
 
-## Çok katmanlı koruma
+## Multi-layered protection
 
-1. **Dry-run zorunlu** — her temizlik önce önizlenir; kullanıcı görmeden hiçbir şey silinmez.
-2. **mole `should_protect_path` / `should_protect_data`** — sistem-kritik yollar, korunan uygulama verileri reddedilir.
-3. **Whitelist** — `~/Library/Caches/com.apple.Spotlight*`, JetBrains, `.ollama/models` gibi yeniden-pahalı yollar varsayılan korunur.
-4. **Path-traversal reddi** — `..` içeren veya mutlak olmayan yollar reddedilir; `/`, `/System`, `/bin`, `/usr` vb. her zaman korunur.
-5. **Açık onay** — silmeden önce ayrı bir onay adımı.
+1. **Mandatory dry-run** — every cleanup is previewed first; nothing is deleted without the user seeing it.
+2. **mole `should_protect_path` / `should_protect_data`** — system-critical paths and protected application data are rejected.
+3. **Whitelist** — expensive-to-rebuild paths such as `~/Library/Caches/com.apple.Spotlight*`, JetBrains, `.ollama/models` are protected by default.
+4. **Path-traversal rejection** — paths containing `..` or that are not absolute are rejected; `/`, `/System`, `/bin`, `/usr`, etc. are always protected.
+5. **Explicit confirmation** — a separate confirmation step before deletion.
 
-## AI araçları: state asla varsayılan silinmez
+## AI tools: state is never deleted by default
 
-| Araç | Korunan (DOKUNULMAZ) | Temizlenebilir (güvenli) |
+| Tool | Protected (UNTOUCHED) | Cleanable (safe) |
 |------|----------------------|--------------------------|
-| **Codex** (`~/.codex`) | `auth.json`, `sessions/`, `history.jsonl`, `*.sqlite`, `session_index.jsonl` | runtime/geçici dosyalar |
-| **Claude** (`~/.claude`, `~/Library/Application Support/Claude`) | `memory/`, projeler, `.claude/worktrees`, auth | eski bundled Desktop sürümleri, yeniden üretilebilir cache |
-| **Gemini** (`~/.gemini`) | kimlik/state | `tmp/`, `antigravity-browser-profile/` |
-| **Cursor** | proje verisi, auth | agent session logları |
+| **Codex** (`~/.codex`) | `auth.json`, `sessions/`, `history.jsonl`, `*.sqlite`, `session_index.jsonl` | runtime/temporary files |
+| **Claude** (`~/.claude`, `~/Library/Application Support/Claude`) | `memory/`, projects, `.claude/worktrees`, auth | old bundled Desktop versions, regenerable cache |
+| **Gemini** (`~/.gemini`) | identity/state | `tmp/`, `antigravity-browser-profile/` |
+| **Cursor** | project data, auth | agent session logs |
 
-Ek koruma: **araç çalışıyorsa** (`pgrep` ile tespit) o araç atlanır ve kullanıcı uyarılır.
+Additional protection: **if a tool is running** (detected via `pgrep`), that tool is skipped and the user is warned.
 
-## "İleri" (state) temizliği
+## "Advanced" (state) cleanup
 
-state içeren ileri temizlik seçenekleri UI'da **varsayılan kapalıdır**, ayrı ve açık bir onay gerektirir, ve risk net biçimde belirtilir.
+Advanced cleanup options that include state are **disabled by default** in the UI, require a separate and explicit confirmation, and the risk is clearly stated.
 
-## Gizlilik
+## Privacy
 
-- Tümüyle yerel çalışır; ağ bağlantısı / telemetri yoktur.
-- Silme geçmişi mole `history` ile yerelde tutulur; UI'dan görüntülenebilir.
+- Runs entirely locally; there is no network connection / telemetry.
+- Deletion history is kept locally via mole `history`; it can be viewed from the UI.

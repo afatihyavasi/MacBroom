@@ -1,24 +1,25 @@
 name: Release
 
 # ============================================================================
-# Sürüm yayınlama akışı (v* etiketinde tetiklenir).
+# Release publishing workflow (triggered on a v* tag).
 #
-# İmzalama ve notarization VARSAYILAN davranıştır; gerekli secret'lar repo
-# ayarlarında tanımlıysa otomatik çalışır. Secret'lar YOKSA akış yine de
-# imzasız bir DMG üretir ve BAŞARISIZ OLMAZ (graceful fallback).
+# Signing and notarization are the DEFAULT behavior; they run automatically if
+# the required secrets are defined in the repo settings. If the secrets are
+# ABSENT, the workflow still produces an unsigned DMG and DOES NOT FAIL
+# (graceful fallback).
 #
-# Gerekli secret'lar (Settings → Secrets and variables → Actions):
-#   MACOS_CERTIFICATE     — "Developer ID Application" .p12 sertifikasının
-#                           base64 hali:  base64 -i cert.p12 | pbcopy
-#   MACOS_CERTIFICATE_PWD — .p12 dışa aktarımında verilen parola
-#   MACOS_SIGN_IDENTITY   — imza kimliği, örn:
-#                           "Developer ID Application: Ad Soyad (TEAMID)"
-#   AC_API_KEY            — App Store Connect API anahtarı (.p8) base64 hali:
+# Required secrets (Settings → Secrets and variables → Actions):
+#   MACOS_CERTIFICATE     — base64 of the "Developer ID Application" .p12
+#                           certificate:  base64 -i cert.p12 | pbcopy
+#   MACOS_CERTIFICATE_PWD — the password set when exporting the .p12
+#   MACOS_SIGN_IDENTITY   — the signing identity, e.g.:
+#                           "Developer ID Application: First Last (TEAMID)"
+#   AC_API_KEY            — base64 of the App Store Connect API key (.p8):
 #                           base64 -i AuthKey_XXXX.p8 | pbcopy
-#   AC_API_KEY_ID         — API anahtarı ID'si (örn. ABCD1234EF)
+#   AC_API_KEY_ID         — the API key ID (e.g. ABCD1234EF)
 #   AC_API_ISSUER_ID      — App Store Connect issuer ID (UUID)
 #
-# Ayrıntılı edinme adımları için: docs/RELEASING.md
+# For detailed setup steps see: docs/RELEASING.md
 # ============================================================================
 
 on:
@@ -32,9 +33,8 @@ jobs:
   release:
     runs-on: macos-14
     env:
-      # Buraya map'lendi ki adım seviyesindeki `if:` içinde `env.* != ''` ile
-      # kontrol edilebilsin (secrets context step-level if: içinde güvenilir
-      # değildir).
+      # Mapped here so step-level `if:` can check them via `env.* != ''`
+      # (the secrets context is not reliable inside a step-level if:).
       MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
       MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
       MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
@@ -53,7 +53,7 @@ jobs:
       - name: Assemble .app
         run: bash scripts/make-app.sh "${{ steps.ver.outputs.version }}"
 
-      # --- İsteğe bağlı kod imzalama (yalnızca imza secret'ları varsa çalışır) ---
+      # --- Optional code signing (runs only if the signing secrets exist) ---
       - name: Import signing certificate
         if: ${{ env.MACOS_CERTIFICATE != '' && env.MACOS_CERTIFICATE_PWD != '' }}
         run: |
@@ -76,7 +76,7 @@ jobs:
       - name: Build DMG
         run: bash scripts/make-dmg.sh "${{ steps.ver.outputs.version }}"
 
-      # --- İsteğe bağlı notarization (App Store Connect API key) + staple ---
+      # --- Optional notarization (App Store Connect API key) + staple ---
       - name: Notarize & staple DMG
         if: ${{ env.AC_API_KEY != '' && env.AC_API_KEY_ID != '' && env.AC_API_ISSUER_ID != '' }}
         run: |
@@ -97,5 +97,5 @@ jobs:
           body: |
             MacBroom ${{ steps.ver.outputs.version }}
 
-            > Not: İmzalama/notarization secret'ları ayarlı değilse DMG imzasızdır;
-            > açarken sağ tık → Aç gerekebilir.
+            > Note: if the signing/notarization secrets are not configured, the DMG
+            > is unsigned; you may need to right-click → Open the first time.
