@@ -28,6 +28,11 @@ final class AppState: ObservableObject {
     /// UserDefaults so it survives launches (a small trust/payoff stat).
     @Published private(set) var totalReclaimed: Int64 = 0
     private let totalReclaimedKey = "totalReclaimedBytes"
+
+    /// Recent cleanups (newest first), persisted; powers the history view.
+    @Published private(set) var history: [CleanRecord] = []
+    private let historyKey = "cleanHistory"
+    private let historyCap = 50
     /// Which cache tab a transient phase (scanning/cleaning/finished/error)
     /// belongs to. `nil` = a global phase (discovery) shown on every tab. This
     /// keeps the AI and System tabs from leaking each other's progress/results.
@@ -47,6 +52,10 @@ final class AppState: ObservableObject {
         self.engine = engine
         totalReclaimed = UserDefaults.standard.object(forKey: totalReclaimedKey) as? Int64
             ?? Int64(UserDefaults.standard.integer(forKey: totalReclaimedKey))
+        if let data = UserDefaults.standard.data(forKey: historyKey),
+           let decoded = try? JSONDecoder().decode([CleanRecord].self, from: data) {
+            history = decoded
+        }
         loadSchedules()
         foldReclaimedLedger()
         startScheduler()
@@ -57,6 +66,16 @@ final class AppState: ObservableObject {
         guard bytes > 0 else { return }
         totalReclaimed += bytes
         UserDefaults.standard.set(totalReclaimed, forKey: totalReclaimedKey)
+    }
+
+    /// Append a history entry (newest first, capped) and persist. No-op if empty.
+    private func recordClean(freed: Int64, count: Int, kind: String) {
+        guard freed > 0 || count > 0 else { return }
+        history.insert(CleanRecord(date: Date(), freedBytes: freed, count: count, kind: kind), at: 0)
+        if history.count > historyCap { history.removeLast(history.count - historyCap) }
+        if let data = try? JSONEncoder().encode(history) {
+            UserDefaults.standard.set(data, forKey: historyKey)
+        }
     }
 
     /// Fold in bytes freed by launchd-triggered cleans (which ran with no app)
@@ -285,6 +304,7 @@ final class AppState: ObservableObject {
             candidates.removeAll { removed.contains($0.path) }
             selected.subtract(removed)
             addReclaimed(freed)
+            recordClean(freed: freed, count: removed.count, kind: "cache")
             phase = .finished(freedBytes: freed, count: removed.count, failed: failed, permissionBlocked: permissionBlocked)
             await refreshStatus()
         } catch {
@@ -374,6 +394,7 @@ final class AppState: ObservableObject {
             largeFiles.removeAll { removed.contains($0.path) }
             largeSelected.subtract(removed)
             addReclaimed(freed)
+            recordClean(freed: freed, count: removed.count, kind: "disk")
             analyzeFlow = .finished(freedBytes: freed, count: removed.count, failed: failed, permissionBlocked: permissionBlocked)
             await refreshStatus()
         } catch {
@@ -469,6 +490,7 @@ final class AppState: ObservableObject {
             // Drop the uninstalled app from the list (path no longer exists).
             apps.removeAll { !FileManager.default.fileExists(atPath: $0.path) }
             addReclaimed(freed)
+            recordClean(freed: freed, count: removedCount, kind: "apps")
             appFlow = .uninstalled(freedBytes: freed, count: removedCount, failed: failed, permissionBlocked: permissionBlocked)
             await refreshStatus()   // every delete refreshes the disk/memory panel
         } catch {
@@ -591,6 +613,7 @@ final class AppState: ObservableObject {
         // app or launchd triggers it.
         if let result = try? await engine.autoClean(targetId: targetId, deleteMode: deleteMode) {
             addReclaimed(result.freed)
+            recordClean(freed: result.freed, count: result.count, kind: "auto")
         }
     }
 }

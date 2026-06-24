@@ -93,18 +93,18 @@ public struct EngineBridge {
     /// Scheduled automation: scan a target and clean everything it surfaces in
     /// one shot (the engine posts a native notification on success). Returns the
     /// final freed/failed totals.
-    public func autoClean(targetId: String, deleteMode: DeleteMode = .permanent) async throws -> (freed: Int64, failed: Int) {
+    public func autoClean(targetId: String, deleteMode: DeleteMode = .permanent) async throws -> (freed: Int64, count: Int, failed: Int) {
         let (data, _) = try await runCollecting(
             ["auto-clean", "--targets=\(targetId)"],
             extraEnv: ["MACBROOM_DELETE_MODE": deleteMode.rawValue]
         )
         let text = String(data: data, encoding: .utf8) ?? ""
         for line in text.split(separator: "\n").reversed() {
-            if case let .done(freed, _, failed)? = EngineEvent(jsonLine: String(line)) {
-                return (freed, failed)
+            if case let .done(freed, count, failed)? = EngineEvent(jsonLine: String(line)) {
+                return (freed, count, failed)
             }
         }
-        return (0, 0)
+        return (0, 0, 0)
     }
 
     /// Shared streaming runner for `clean` / `app-clean`.

@@ -58,6 +58,11 @@ struct SettingsView: View {
 
             SHSeparator()
 
+            // Cleaning history
+            historySection
+
+            SHSeparator()
+
             // About / attribution
             VStack(alignment: .leading, spacing: Theme.Space.xs) {
                 SHSectionHeader(title: loc.t(.about), systemImage: "info.circle")
@@ -77,6 +82,46 @@ struct SettingsView: View {
         .background(Theme.background)
         .foregroundStyle(Theme.foreground)
     }
+
+    // MARK: cleaning history
+
+    @ViewBuilder private var historySection: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.sm) {
+            SHSectionHeader(title: loc.t(.historyTitle), systemImage: "clock")
+            if state.history.isEmpty {
+                Text(loc.t(.historyEmpty)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
+            } else {
+                VStack(spacing: Theme.Space.xs) {
+                    ForEach(Array(state.history.prefix(12).enumerated()), id: \.offset) { _, rec in
+                        historyRow(rec)
+                    }
+                }
+            }
+        }
+    }
+
+    private func historyRow(_ rec: CleanRecord) -> some View {
+        HStack(spacing: Theme.Space.sm) {
+            Image(systemName: rec.iconName).font(.system(size: 12))
+                .foregroundStyle(Theme.accent).frame(width: 16)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(loc.t(rec.kindKey)).font(.shLabel)
+                Text(loc.t(.freedItems, rec.count, Format.bytes(rec.freedBytes)))
+                    .font(.shCaption).foregroundStyle(Theme.mutedForeground)
+            }
+            Spacer()
+            Text(Self.relative.localizedString(for: rec.date, relativeTo: Date()))
+                .font(.shCaption).foregroundStyle(Theme.mutedForeground)
+        }
+        .padding(.vertical, 5).padding(.horizontal, Theme.Space.sm)
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.card))
+        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+            .strokeBorder(Theme.border, lineWidth: 1))
+    }
+
+    private static let relative: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter(); f.unitsStyle = .abbreviated; return f
+    }()
 
     /// A selectable deletion-mode card (radio behavior).
     private func deletionRow(_ mode: DeleteMode) -> some View {
