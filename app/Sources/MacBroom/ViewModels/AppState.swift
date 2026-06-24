@@ -631,6 +631,10 @@ final class AppState: ObservableObject {
         if let result = try? await engine.autoClean(targetId: targetId, deleteMode: deleteMode) {
             addReclaimed(result.freed)
             recordClean(freed: result.freed, count: result.count, kind: "auto")
+            // The result is shown in the app (reclaimed total + history). No
+            // banner on the app path: the engine's osascript one is suppressed
+            // (it reads as "Script Editor"), and UNUserNotificationCenter crashes
+            // an unsigned/ad-hoc app, so we keep it silent here.
         }
     }
 }

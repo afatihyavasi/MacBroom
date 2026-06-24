@@ -463,8 +463,12 @@ _human_bytes() {
     }'
 }
 
-# Best-effort native banner (works even when launched from launchd, no app).
+# Best-effort banner. When the app drives the clean it sets
+# MACBROOM_SUPPRESS_NOTIFY so we skip the osascript banner — otherwise it'd be
+# attributed to "Script Editor" (and the app already surfaces the result). The
+# launchd path (no app running) still uses osascript.
 _mb_notify() {
+    [[ -n "${MACBROOM_SUPPRESS_NOTIFY:-}" ]] && return 0
     command -v osascript >/dev/null 2>&1 || return 0
     local msg="$1"
     osascript -e "display notification \"$msg\" with title \"MacBroom\"" >/dev/null 2>&1 || true
