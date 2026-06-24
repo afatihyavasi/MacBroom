@@ -229,6 +229,26 @@ PLIST
     [ ! -e "$HOME/Library/Developer/Xcode/DerivedData/Foo-abc" ]   # approved removed
 }
 
+# --- browser + maintenance targets (under System) -------------------------
+
+@test "discover lists browser/maintenance/trash targets under system" {
+    run bash "$ENGINE" discover
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"id":"system:browser","label":"Tarayıcı önbellekleri","category":"system"'* ]]
+    [[ "$output" == *'"id":"system:maintenance"'* ]]
+    [[ "$output" == *'"id":"system:trash"'* ]]
+}
+
+@test "system:trash scan lists Trash contents (empty-trash maintenance)" {
+    mkdir -p "$HOME/.Trash/old"
+    head -c 8192 /dev/zero > "$HOME/.Trash/old/junk.bin"
+
+    run bash "$ENGINE" scan --targets=system:trash
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"$HOME/.Trash"* ]]
+    [[ "$output" == *'"size_bytes":'* ]]
+}
+
 # --- auto-clean: scan + clean a target in one shot (used by scheduling) ----
 
 @test "auto-clean scans and cleans a target's caches in one shot" {

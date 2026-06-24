@@ -82,9 +82,12 @@ struct AnalysisSelectionView: View {
         case "system:editors":    return loc.t(.targetEditors)
         case "system:gui-apps":   return loc.t(.targetGuiApps)
         case "system:dev-misc":   return loc.t(.targetDevMisc)
-        case "system:xcode":      return loc.t(.targetXcode)
-        case "system:pkg-caches": return loc.t(.targetPkgCaches)
-        default:                  return t.label
+        case "system:xcode":       return loc.t(.targetXcode)
+        case "system:pkg-caches":  return loc.t(.targetPkgCaches)
+        case "system:browser":     return loc.t(.targetBrowser)
+        case "system:maintenance": return loc.t(.targetMaintenance)
+        case "system:trash":       return loc.t(.targetTrash)
+        default:                   return t.label
         }
     }
 

@@ -328,6 +328,9 @@ system:gui-apps|GUI uygulama önbellekleri|system|*|clean_user_gui_applications
 system:dev-misc|Geliştirici artıkları|system|*|clean_dev_misc
 system:xcode|Xcode DerivedData|system|~/Library/Developer/Xcode/DerivedData|clean_xcode_derived_data
 system:pkg-caches|Paket yöneticisi önbellekleri|system|~/.npm:~/.yarn/cache:~/Library/Caches/pip:~/.cache/poetry|clean_dev_npm clean_dev_python
+system:browser|Tarayıcı önbellekleri|system|~/Library/Caches/com.apple.Safari:~/Library/Caches/Google/Chrome:~/Library/Caches/com.microsoft.edgemac:~/Library/Caches/Chromium|clean_browsers clean_chromium_default_caches
+system:maintenance|Loglar ve .DS_Store|system|*|clean_application_support_logs clean_ds_store_tree
+system:trash|Çöp Kutusu (boşalt)|system|~/.Trash|clean_trash
 EOF
 }
 
