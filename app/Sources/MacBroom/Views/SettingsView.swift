@@ -8,6 +8,7 @@ struct SettingsView: View {
     @EnvironmentObject var state: AppState
     @EnvironmentObject var appearance: AppearanceManager
     @AppStorage("deletionMode") private var deletionMode: String = DeleteMode.permanent.rawValue
+    @State private var fdaGranted = FullDiskAccess.isGranted
 
     var body: some View {
         ScrollView {
@@ -51,13 +52,19 @@ struct SettingsView: View {
             // Exclusions (tools the user permanently excludes from cleaning)
             exclusionsSection
 
-            // Full Disk Access
+            // Full Disk Access — reflect the live permission state.
             VStack(alignment: .leading, spacing: Theme.Space.sm) {
                 SHSectionHeader(title: loc.t(.fdaTitle), systemImage: "lock.shield")
-                Text(loc.t(.fdaSettingsDesc))
-                    .font(.shCaption).foregroundStyle(Theme.mutedForeground)
-                Button(loc.t(.openInSettings)) { openFullDiskAccess() }.buttonStyle(.shOutline(.sm))
+                if fdaGranted {
+                    Label(loc.t(.fdaGranted), systemImage: "checkmark.seal.fill")
+                        .font(.shCaption).foregroundStyle(Theme.success)
+                } else {
+                    Text(loc.t(.fdaSettingsDesc))
+                        .font(.shCaption).foregroundStyle(Theme.mutedForeground)
+                    Button(loc.t(.openInSettings)) { openFullDiskAccess() }.buttonStyle(.shOutline(.sm))
+                }
             }
+            .onAppear { fdaGranted = FullDiskAccess.isGranted }
 
             SHSeparator()
 

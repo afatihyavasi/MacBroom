@@ -41,7 +41,7 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
 public enum L10n: String, CaseIterable {
     case tabAI, tabSystem, tabDeveloper, tabApps, tabAutomation
     case refreshHelp, settingsHelp, open, quit, clean, loading, back, backToList
-    case fdaTitle, fdaBannerDesc, fdaSettingsDesc, openFDA, openInSettings
+    case fdaTitle, fdaBannerDesc, fdaSettingsDesc, openFDA, openInSettings, fdaGranted
     case searchingTargets, scanningTargets, cleaningProgress, freed, backTargets, selectedSuffix
     case cleaningProgressBytes, removingProgressBytes
     case removingProgress, removedFreed, removedPartial, someProtected, itemsInUse
@@ -100,7 +100,7 @@ public enum Localization {
         .fdaTitle: "Full Disk Access",
         .fdaBannerDesc: "Grant access to clean all caches.",
         .fdaSettingsDesc: "MacBroom needs Full Disk Access to clean some system caches.",
-        .openFDA: "Open Full Disk Access", .openInSettings: "Open in System Settings",
+        .openFDA: "Open Full Disk Access", .openInSettings: "Open in System Settings", .fdaGranted: "Full Disk Access granted",
         .searchingTargets: "Searching targets…", .scanningTargets: "Scanning selected targets…",
         .cleaningProgress: "Cleaning… %d/%d", .freed: "%@ freed",
         .cleaningProgressBytes: "Cleaning… %d/%d · %@ freed",
@@ -171,7 +171,7 @@ public enum Localization {
         .fdaTitle: "Tam Disk Erişimi",
         .fdaBannerDesc: "Tüm önbellekleri temizlemek için izin verin.",
         .fdaSettingsDesc: "Bazı sistem önbelleklerini temizlemek için MacBroom’a Tam Disk Erişimi vermeniz gerekir.",
-        .openFDA: "Tam Disk Erişimi’ni Aç", .openInSettings: "Sistem Ayarları’nda Aç",
+        .openFDA: "Tam Disk Erişimi’ni Aç", .openInSettings: "Sistem Ayarları’nda Aç", .fdaGranted: "Tam Disk Erişimi verildi",
         .searchingTargets: "Hedefler aranıyor…", .scanningTargets: "Seçili hedefler taranıyor…",
         .cleaningProgress: "Temizleniyor… %d/%d", .freed: "%@ boşaltıldı",
         .cleaningProgressBytes: "Temizleniyor… %d/%d · %@ boşaltıldı",
@@ -242,7 +242,7 @@ public enum Localization {
         .fdaTitle: "Acceso a Todo el Disco",
         .fdaBannerDesc: "Concede acceso para limpiar todas las cachés.",
         .fdaSettingsDesc: "MacBroom necesita Acceso a Todo el Disco para limpiar algunas cachés del sistema.",
-        .openFDA: "Abrir Acceso a Todo el Disco", .openInSettings: "Abrir en Ajustes del Sistema",
+        .openFDA: "Abrir Acceso a Todo el Disco", .openInSettings: "Abrir en Ajustes del Sistema", .fdaGranted: "Acceso a Todo el Disco concedido",
         .searchingTargets: "Buscando objetivos…", .scanningTargets: "Analizando los objetivos seleccionados…",
         .cleaningProgress: "Limpiando… %d/%d", .freed: "%@ liberados",
         .cleaningProgressBytes: "Limpiando… %d/%d · %@ liberados",
@@ -313,7 +313,7 @@ public enum Localization {
         .fdaTitle: "Accès complet au disque",
         .fdaBannerDesc: "Autorisez l’accès pour nettoyer tous les caches.",
         .fdaSettingsDesc: "MacBroom a besoin de l’Accès complet au disque pour nettoyer certains caches système.",
-        .openFDA: "Ouvrir l’Accès complet au disque", .openInSettings: "Ouvrir dans Réglages Système",
+        .openFDA: "Ouvrir l’Accès complet au disque", .openInSettings: "Ouvrir dans Réglages Système", .fdaGranted: "Accès complet au disque accordé",
         .searchingTargets: "Recherche des cibles…", .scanningTargets: "Analyse des cibles sélectionnées…",
         .cleaningProgress: "Nettoyage… %d/%d", .freed: "%@ libérés",
         .cleaningProgressBytes: "Nettoyage… %d/%d · %@ libérés",

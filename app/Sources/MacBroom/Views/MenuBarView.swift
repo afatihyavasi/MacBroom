@@ -41,11 +41,13 @@ struct MenuBarView: View {
     }
     @State private var section: Section = .category(.ai)
     @AppStorage("didOnboard") private var didOnboard = false
+    /// Live Full Disk Access state; the banner only shows when access is missing.
+    @State private var fdaGranted = FullDiskAccess.isGranted
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.md) {
             header
-            if !didOnboard { onboardingBanner }
+            if !fdaGranted && !didOnboard { onboardingBanner }
             if let status = state.status { StatusPanelView(status: status) }
 
             SHTabs(selection: $section,
@@ -64,6 +66,7 @@ struct MenuBarView: View {
         .foregroundStyle(Theme.foreground)
         .background(tabShortcuts)
         .task {
+            fdaGranted = FullDiskAccess.isGranted   // re-check each time the panel opens
             await state.refreshStatus()
             if case .idle = state.phase { await state.discover() }
         }
