@@ -11,7 +11,7 @@ final class AppState: ObservableObject {
         case selecting          // interactive: per-tab picker or results
         case scanning
         case cleaning(done: Int, total: Int, freedBytes: Int64)
-        case finished(freedBytes: Int64, failed: Int, permissionBlocked: Bool)
+        case finished(freedBytes: Int64, count: Int, failed: Int, permissionBlocked: Bool)
         case error(String)
     }
 
@@ -285,7 +285,7 @@ final class AppState: ObservableObject {
             candidates.removeAll { removed.contains($0.path) }
             selected.subtract(removed)
             addReclaimed(freed)
-            phase = .finished(freedBytes: freed, failed: failed, permissionBlocked: permissionBlocked)
+            phase = .finished(freedBytes: freed, count: removed.count, failed: failed, permissionBlocked: permissionBlocked)
             await refreshStatus()
         } catch {
             phase = .error(error.localizedDescription)
@@ -305,7 +305,7 @@ final class AppState: ObservableObject {
         case scanning
         case ready
         case deleting(done: Int, total: Int, freedBytes: Int64)
-        case finished(freedBytes: Int64, failed: Int, permissionBlocked: Bool)
+        case finished(freedBytes: Int64, count: Int, failed: Int, permissionBlocked: Bool)
         case error(String)
     }
 
@@ -374,7 +374,7 @@ final class AppState: ObservableObject {
             largeFiles.removeAll { removed.contains($0.path) }
             largeSelected.subtract(removed)
             addReclaimed(freed)
-            analyzeFlow = .finished(freedBytes: freed, failed: failed, permissionBlocked: permissionBlocked)
+            analyzeFlow = .finished(freedBytes: freed, count: removed.count, failed: failed, permissionBlocked: permissionBlocked)
             await refreshStatus()
         } catch {
             analyzeFlow = .error(error.localizedDescription)
@@ -390,7 +390,7 @@ final class AppState: ObservableObject {
         case uninstalling(done: Int, total: Int, freedBytes: Int64)
         /// `failed` > 0 means some paths couldn't be removed; `permissionBlocked`
         /// flags that Full Disk Access / admin rights would likely unblock them.
-        case uninstalled(freedBytes: Int64, failed: Int, permissionBlocked: Bool)
+        case uninstalled(freedBytes: Int64, count: Int, failed: Int, permissionBlocked: Bool)
         case error(String)
     }
 
@@ -450,11 +450,11 @@ final class AppState: ObservableObject {
         guard !approved.isEmpty else { return }
         let total = approved.count
         appFlow = .uninstalling(done: 0, total: total, freedBytes: 0)
-        var freed: Int64 = 0, done = 0, failed = 0, permissionBlocked = false
+        var freed: Int64 = 0, done = 0, removedCount = 0, failed = 0, permissionBlocked = false
         do {
             for try await event in engine.appClean(approvedPaths: approved, deleteMode: deleteMode) {
                 switch event {
-                case let .progress(_, bytes): freed += bytes; done += 1
+                case let .progress(_, bytes): freed += bytes; done += 1; removedCount += 1
                     appFlow = .uninstalling(done: done, total: total, freedBytes: freed)
                 case let .skipped(_, reason): failed += 1; done += 1
                     if reason == "permission" { permissionBlocked = true }
@@ -469,7 +469,8 @@ final class AppState: ObservableObject {
             // Drop the uninstalled app from the list (path no longer exists).
             apps.removeAll { !FileManager.default.fileExists(atPath: $0.path) }
             addReclaimed(freed)
-            appFlow = .uninstalled(freedBytes: freed, failed: failed, permissionBlocked: permissionBlocked)
+            appFlow = .uninstalled(freedBytes: freed, count: removedCount, failed: failed, permissionBlocked: permissionBlocked)
+            await refreshStatus()   // every delete refreshes the disk/memory panel
         } catch {
             appFlow = .error(error.localizedDescription)
         }

@@ -166,8 +166,8 @@ struct MenuBarView: View {
                 loading(loc.t(.scanningTargets))
             case let .cleaning(done, total, freed) where owns:
                 cleaningView(done: done, total: total, freed: freed)
-            case let .finished(freed, failed, permissionBlocked) where owns:
-                cacheResult(freed: freed, failed: failed, permissionBlocked: permissionBlocked)
+            case let .finished(freed, count, failed, permissionBlocked) where owns:
+                cacheResult(freed: freed, count: count, failed: failed, permissionBlocked: permissionBlocked)
             case let .error(msg) where owns:
                 resultView(icon: "exclamationmark.triangle.fill", tint: Theme.destructive,
                            title: msg, action: loc.t(.back)) { state.dismissCacheResult() }
@@ -207,16 +207,16 @@ struct MenuBarView: View {
     /// the user how many items remained and offers Full Disk Access when the
     /// cause looks like a permission wall.
     @ViewBuilder
-    private func cacheResult(freed: Int64, failed: Int, permissionBlocked: Bool) -> some View {
+    private func cacheResult(freed: Int64, count: Int, failed: Int, permissionBlocked: Bool) -> some View {
         VStack(spacing: Theme.Space.md) {
-            if failed == 0 {
-                Image(systemName: "sparkles").font(.system(size: 30)).foregroundStyle(Theme.success)
-                Text(loc.t(.freed, Format.bytes(freed))).font(.shHeadline)
-            } else {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 30)).foregroundStyle(Theme.warning)
-                Text(loc.t(.removedPartial, Format.bytes(freed), failed))
-                    .font(.shHeadline).multilineTextAlignment(.center)
+            Image(systemName: failed == 0 ? "sparkles" : "exclamationmark.triangle.fill")
+                .font(.system(size: 30)).foregroundStyle(failed == 0 ? Theme.success : Theme.warning)
+            // Always show how many items were removed + how much space freed.
+            Text(loc.t(.freedItems, count, Format.bytes(freed)))
+                .font(.shHeadline).multilineTextAlignment(.center)
+            if failed > 0 {
+                Text(loc.t(.couldntRemove, failed))
+                    .font(.shCaption).foregroundStyle(Theme.warning)
                 if permissionBlocked {
                     Text(loc.t(.someProtected))
                         .font(.shCaption).foregroundStyle(Theme.mutedForeground)

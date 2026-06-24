@@ -30,8 +30,8 @@ struct UninstallView: View {
                         .font(.shCaption).foregroundStyle(Theme.mutedForeground)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            case let .uninstalled(freed, failed, permissionBlocked):
-                uninstalledResult(freed: freed, failed: failed, permissionBlocked: permissionBlocked)
+            case let .uninstalled(freed, count, failed, permissionBlocked):
+                uninstalledResult(freed: freed, count: count, failed: failed, permissionBlocked: permissionBlocked)
             case let .error(msg):
                 centered { Image(systemName: "exclamationmark.triangle").foregroundStyle(Theme.destructive)
                     Text(msg).font(.shCaption).foregroundStyle(Theme.destructive) }
@@ -52,16 +52,14 @@ struct UninstallView: View {
     // MARK: result
 
     @ViewBuilder
-    private func uninstalledResult(freed: Int64, failed: Int, permissionBlocked: Bool) -> some View {
+    private func uninstalledResult(freed: Int64, count: Int, failed: Int, permissionBlocked: Bool) -> some View {
         VStack(spacing: Theme.Space.md) {
-            if failed == 0 {
-                Image(systemName: "trash.slash").font(.system(size: 30)).foregroundStyle(Theme.success)
-                Text(loc.t(.removedFreed, Format.bytes(freed))).font(.shHeadline)
-            } else {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 30)).foregroundStyle(Theme.warning)
-                Text(loc.t(.removedPartial, Format.bytes(freed), failed))
-                    .font(.shHeadline).multilineTextAlignment(.center)
+            Image(systemName: failed == 0 ? "trash.slash" : "exclamationmark.triangle.fill")
+                .font(.system(size: 30)).foregroundStyle(failed == 0 ? Theme.success : Theme.warning)
+            Text(loc.t(.freedItems, count, Format.bytes(freed)))
+                .font(.shHeadline).multilineTextAlignment(.center)
+            if failed > 0 {
+                Text(loc.t(.couldntRemove, failed)).font(.shCaption).foregroundStyle(Theme.warning)
                 if permissionBlocked {
                     Text(loc.t(.someProtected))
                         .font(.shCaption).foregroundStyle(Theme.mutedForeground)

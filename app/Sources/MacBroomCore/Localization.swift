@@ -45,6 +45,7 @@ public enum L10n: String, CaseIterable {
     case searchingTargets, scanningTargets, cleaningProgress, freed, backTargets, selectedSuffix
     case cleaningProgressBytes, removingProgressBytes
     case removingProgress, removedFreed, removedPartial, someProtected, itemsInUse
+    case freedItems, couldntRemove
     case removableEmpty, itemsBytes, remove, confirmDeleteTitle, cancel, confirmDeleteMessage
     case aiEmpty, aiSafety, groupCountBytes, systemSafety, selectAll, deselectAll, systemEmpty
     case analyzeQuestion, analyzeSubtitle, noTargetsInCategory, clearSelection, analyzeButton
@@ -103,7 +104,7 @@ public enum Localization {
         .cleaningProgressBytes: "Cleaning… %d/%d · %@ freed",
         .removingProgressBytes: "Removing… %d/%d · %@ freed",
         .backTargets: "Targets", .selectedSuffix: "%@ selected",
-        .removingProgress: "Removing… %d/%d", .removedFreed: "Removed · %@ freed",
+        .removingProgress: "Removing… %d/%d", .removedFreed: "Removed · %@ freed", .freedItems: "%d item(s) · %@ freed", .couldntRemove: "%d item(s) couldn’t be removed",
         .removedPartial: "%@ freed · %d item(s) couldn’t be removed",
         .someProtected: "Some items are in a protected location. Granting Full Disk Access may complete removal.",
         .itemsInUse: "These items may be in use by another app.",
@@ -172,7 +173,7 @@ public enum Localization {
         .cleaningProgressBytes: "Temizleniyor… %d/%d · %@ boşaltıldı",
         .removingProgressBytes: "Kaldırılıyor… %d/%d · %@ boşaltıldı",
         .backTargets: "Hedefler", .selectedSuffix: "%@ seçili",
-        .removingProgress: "Kaldırılıyor… %d/%d", .removedFreed: "Kaldırıldı · %@ boşaltıldı",
+        .removingProgress: "Kaldırılıyor… %d/%d", .removedFreed: "Kaldırıldı · %@ boşaltıldı", .freedItems: "%d öğe · %@ boşaltıldı", .couldntRemove: "%d öğe silinemedi",
         .removedPartial: "%@ boşaltıldı · %d öğe silinemedi",
         .someProtected: "Bazı öğeler korunan konumda. Tam Disk Erişimi vermek silmeyi tamamlayabilir.",
         .itemsInUse: "Bu öğeler başka bir uygulama tarafından kullanılıyor olabilir.",
@@ -241,7 +242,7 @@ public enum Localization {
         .cleaningProgressBytes: "Limpiando… %d/%d · %@ liberados",
         .removingProgressBytes: "Eliminando… %d/%d · %@ liberados",
         .backTargets: "Objetivos", .selectedSuffix: "%@ seleccionados",
-        .removingProgress: "Eliminando… %d/%d", .removedFreed: "Eliminado · %@ liberados",
+        .removingProgress: "Eliminando… %d/%d", .removedFreed: "Eliminado · %@ liberados", .freedItems: "%d elemento(s) · %@ liberados", .couldntRemove: "%d elemento(s) no se pudieron eliminar",
         .removedPartial: "%@ liberados · no se pudieron eliminar %d elemento(s)",
         .someProtected: "Algunos elementos están en una ubicación protegida. Conceder Acceso a Todo el Disco puede completar la eliminación.",
         .itemsInUse: "Es posible que otra app esté usando estos elementos.",
@@ -310,7 +311,7 @@ public enum Localization {
         .cleaningProgressBytes: "Nettoyage… %d/%d · %@ libérés",
         .removingProgressBytes: "Suppression… %d/%d · %@ libérés",
         .backTargets: "Cibles", .selectedSuffix: "%@ sélectionnés",
-        .removingProgress: "Suppression… %d/%d", .removedFreed: "Supprimé · %@ libérés",
+        .removingProgress: "Suppression… %d/%d", .removedFreed: "Supprimé · %@ libérés", .freedItems: "%d élément(s) · %@ libérés", .couldntRemove: "%d élément(s) non supprimés",
         .removedPartial: "%@ libérés · %d élément(s) n’ont pas pu être supprimés",
         .someProtected: "Certains éléments sont dans un emplacement protégé. Accorder l’Accès complet au disque peut terminer la suppression.",
         .itemsInUse: "Ces éléments sont peut-être utilisés par une autre app.",
