@@ -74,22 +74,7 @@ struct AnalysisSelectionView: View {
         )
     }
 
-    /// System target labels arrive from the engine in Turkish; localize the
-    /// known ones. AI targets keep their (language-neutral) brand labels.
-    private func label(for t: AnalysisTarget) -> String {
-        switch t.id {
-        case "system:app-caches": return loc.t(.targetAppCaches)
-        case "system:editors":    return loc.t(.targetEditors)
-        case "system:gui-apps":   return loc.t(.targetGuiApps)
-        case "system:dev-misc":   return loc.t(.targetDevMisc)
-        case "system:xcode":       return loc.t(.targetXcode)
-        case "system:pkg-caches":  return loc.t(.targetPkgCaches)
-        case "system:browser":     return loc.t(.targetBrowser)
-        case "system:maintenance": return loc.t(.targetMaintenance)
-        case "system:trash":       return loc.t(.targetTrash)
-        default:                   return t.label
-        }
-    }
+    private func label(for t: AnalysisTarget) -> String { t.displayLabel(loc) }
 
     @ViewBuilder
     private func icon(for t: AnalysisTarget) -> some View {
@@ -97,6 +82,25 @@ struct AnalysisSelectionView: View {
             AIToolIconView(tool: AITool(rawValue: String(t.id.dropFirst(3))) ?? .other, size: 18)
         } else {
             Image(systemName: "internaldrive").frame(width: 18).foregroundStyle(Theme.accent)
+        }
+    }
+}
+
+extension AnalysisTarget {
+    /// Localized display label: system targets map to keys; AI keep brand names.
+    /// Shared by the analyze screen and the Settings exclusions list.
+    @MainActor func displayLabel(_ loc: LocalizationManager) -> String {
+        switch id {
+        case "system:app-caches":  return loc.t(.targetAppCaches)
+        case "system:editors":     return loc.t(.targetEditors)
+        case "system:gui-apps":    return loc.t(.targetGuiApps)
+        case "system:dev-misc":    return loc.t(.targetDevMisc)
+        case "system:xcode":       return loc.t(.targetXcode)
+        case "system:pkg-caches":  return loc.t(.targetPkgCaches)
+        case "system:browser":     return loc.t(.targetBrowser)
+        case "system:maintenance": return loc.t(.targetMaintenance)
+        case "system:trash":       return loc.t(.targetTrash)
+        default:                   return label
         }
     }
 }

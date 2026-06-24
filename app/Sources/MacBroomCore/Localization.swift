@@ -51,6 +51,7 @@ public enum L10n: String, CaseIterable {
     case analyzeQuestion, analyzeSubtitle, noTargetsInCategory, clearSelection, analyzeButton
     case settingsTitle, done, deletionMethod, about, aboutVersion, engineAttribution, totalReclaimed
     case historyTitle, historyEmpty, historyCache, historyApps, historyDisk, historyAuto
+    case exclusionsTitle, exclusionsDesc
     case language, languageSystem, disk, memory, diskFree, memoryTotal
     case categoryAI, categorySystem, categoryDeveloper
     case targetAppCaches, targetEditors, targetGuiApps, targetDevMisc
@@ -128,6 +129,7 @@ public enum Localization {
         .engineAttribution: "Cleaning engine provided by tw93/mole (GPL-3.0).",
         .totalReclaimed: "Total reclaimed: %@",
         .historyTitle: "Cleaning history", .historyEmpty: "No cleanups yet.", .historyCache: "Cache", .historyApps: "App", .historyDisk: "Large files", .historyAuto: "Scheduled",
+        .exclusionsTitle: "Exclusions", .exclusionsDesc: "Excluded tools are never scanned or auto-cleaned.",
         .language: "Language", .languageSystem: "System (automatic)",
         .disk: "Disk", .memory: "Memory", .diskFree: "%@ free", .memoryTotal: "%@ total",
         .categoryAI: "AI Tools", .categorySystem: "System", .categoryDeveloper: "Developer",
@@ -198,6 +200,7 @@ public enum Localization {
         .engineAttribution: "Temizleme motoru tw93/mole (GPL-3.0) tarafından sağlanır.",
         .totalReclaimed: "Toplam kazanılan: %@",
         .historyTitle: "Temizlik geçmişi", .historyEmpty: "Henüz temizlik yok.", .historyCache: "Önbellek", .historyApps: "Uygulama", .historyDisk: "Büyük dosya", .historyAuto: "Zamanlanmış",
+        .exclusionsTitle: "İstisnalar", .exclusionsDesc: "Muaf tutulan araçlar hiç taranmaz veya otomatik temizlenmez.",
         .language: "Dil", .languageSystem: "Sistem (otomatik)",
         .disk: "Disk", .memory: "Bellek", .diskFree: "%@ boş", .memoryTotal: "%@ toplam",
         .categoryAI: "AI Araçları", .categorySystem: "Sistem", .categoryDeveloper: "Geliştirici",
@@ -268,6 +271,7 @@ public enum Localization {
         .engineAttribution: "Motor de limpieza proporcionado por tw93/mole (GPL-3.0).",
         .totalReclaimed: "Total recuperado: %@",
         .historyTitle: "Historial de limpieza", .historyEmpty: "Aún no hay limpiezas.", .historyCache: "Caché", .historyApps: "App", .historyDisk: "Archivos grandes", .historyAuto: "Programado",
+        .exclusionsTitle: "Exclusiones", .exclusionsDesc: "Las herramientas excluidas nunca se analizan ni se limpian.",
         .language: "Idioma", .languageSystem: "Sistema (automático)",
         .disk: "Disco", .memory: "Memoria", .diskFree: "%@ libres", .memoryTotal: "%@ en total",
         .categoryAI: "Herramientas de IA", .categorySystem: "Sistema", .categoryDeveloper: "Desarrollo",
@@ -338,6 +342,7 @@ public enum Localization {
         .engineAttribution: "Moteur de nettoyage fourni par tw93/mole (GPL-3.0).",
         .totalReclaimed: "Total récupéré : %@",
         .historyTitle: "Historique de nettoyage", .historyEmpty: "Aucun nettoyage pour l’instant.", .historyCache: "Cache", .historyApps: "App", .historyDisk: "Gros fichiers", .historyAuto: "Planifié",
+        .exclusionsTitle: "Exclusions", .exclusionsDesc: "Les outils exclus ne sont jamais analysés ni nettoyés.",
         .language: "Langue", .languageSystem: "Système (automatique)",
         .disk: "Disque", .memory: "Mémoire", .diskFree: "%@ libres", .memoryTotal: "%@ au total",
         .categoryAI: "Outils d’IA", .categorySystem: "Système", .categoryDeveloper: "Développeur",

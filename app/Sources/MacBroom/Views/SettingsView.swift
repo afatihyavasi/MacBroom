@@ -48,6 +48,9 @@ struct SettingsView: View {
                 }
             }
 
+            // Exclusions (tools the user permanently excludes from cleaning)
+            exclusionsSection
+
             // Full Disk Access
             VStack(alignment: .leading, spacing: Theme.Space.sm) {
                 SHSectionHeader(title: loc.t(.fdaTitle), systemImage: "lock.shield")
@@ -81,6 +84,30 @@ struct SettingsView: View {
         .frame(width: 400, height: 560)
         .background(Theme.background)
         .foregroundStyle(Theme.foreground)
+    }
+
+    // MARK: exclusions
+
+    @ViewBuilder private var exclusionsSection: some View {
+        let tools = state.allInstalledTargets
+        if !tools.isEmpty {
+            VStack(alignment: .leading, spacing: Theme.Space.sm) {
+                SHSectionHeader(title: loc.t(.exclusionsTitle), systemImage: "nosign")
+                Text(loc.t(.exclusionsDesc)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
+                VStack(spacing: Theme.Space.xs) {
+                    ForEach(tools) { t in
+                        Toggle(isOn: Binding(
+                            get: { state.isExcluded(t.id) },
+                            set: { _ in state.toggleExcluded(t.id) }
+                        )) {
+                            Text(t.displayLabel(loc)).font(.shCaption)
+                        }
+                        .toggleStyle(SHCheckboxStyle())
+                        .padding(.vertical, 3)
+                    }
+                }
+            }
+        }
     }
 
     // MARK: cleaning history

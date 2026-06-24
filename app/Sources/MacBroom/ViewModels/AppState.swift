@@ -46,6 +46,15 @@ final class AppState: ObservableObject {
     @Published var selectedTargets: Set<String> = []   // target ids chosen to analyze
     private var scannedTargets: [String] = []          // targets actually scanned (for clean scope)
 
+    /// Target ids the user permanently excludes from cleaning + auto-clean.
+    @Published private(set) var excludedTargets: Set<String> = []
+    private let excludedKey = "excludedTargets"
+    func isExcluded(_ id: String) -> Bool { excludedTargets.contains(id) }
+    func toggleExcluded(_ id: String) {
+        if excludedTargets.contains(id) { excludedTargets.remove(id) } else { excludedTargets.insert(id) }
+        UserDefaults.standard.set(Array(excludedTargets), forKey: excludedKey)
+    }
+
     private let engine: EngineBridge
 
     init(engine: EngineBridge = EngineBridge()) {
@@ -56,6 +65,7 @@ final class AppState: ObservableObject {
            let decoded = try? JSONDecoder().decode([CleanRecord].self, from: data) {
             history = decoded
         }
+        excludedTargets = Set(UserDefaults.standard.stringArray(forKey: excludedKey) ?? [])
         loadSchedules()
         foldReclaimedLedger()
         startScheduler()
@@ -167,7 +177,7 @@ final class AppState: ObservableObject {
         do {
             let found = try await engine.discover()
             targets = found
-            selectedTargets = Set(found.filter { $0.installed && $0.category == "ai" }.map(\.id))
+            selectedTargets = Set(found.filter { $0.installed && $0.category == "ai" && !excludedTargets.contains($0.id) }.map(\.id))
             candidates = []
             selected = []
             scannedCategories = []
@@ -202,7 +212,11 @@ final class AppState: ObservableObject {
         }
     }
 
-    var installedTargets: [AnalysisTarget] { targets.filter { $0.installed } }
+    /// Every installed target (incl. user-excluded ones) — for the exclusions UI.
+    var allInstalledTargets: [AnalysisTarget] { targets.filter { $0.installed } }
+
+    /// Installed targets the user hasn't excluded — drives analyze + auto-clean.
+    var installedTargets: [AnalysisTarget] { allInstalledTargets.filter { !excludedTargets.contains($0.id) } }
 
     /// Installed targets for one category (drives the per-tab selection screen).
     func installedTargets(in category: CleanCategory) -> [AnalysisTarget] {
@@ -595,7 +609,7 @@ final class AppState: ObservableObject {
         foldReclaimedLedger()           // pick up any launchd-run cleans
         guard !isBusy else { return }   // never fight a manual operation
         let now = Date()
-        for (id, rule) in rules where rule.isDue(lastRun: lastRun[id], now: now) {
+        for (id, rule) in rules where !excludedTargets.contains(id) && rule.isDue(lastRun: lastRun[id], now: now) {
             await autoCleanTarget(id)
             lastRun[id] = Date()
             persistLastRun()
