@@ -198,6 +198,13 @@ public struct EngineBridge {
     // MARK: - Process plumbing
 
     private func makeProcess(_ args: [String], extraEnv: [String: String] = [:]) throws -> Process {
+        try Self.buildProcess(enginePath: enginePath, moleDir: moleDir, args: args, extraEnv: extraEnv)
+    }
+
+    /// Build the engine subprocess. `static` + value-typed inputs so it can run
+    /// inside a GCD closure without capturing `self` (Sendable-clean).
+    private static func buildProcess(enginePath: String, moleDir: String,
+                                     args: [String], extraEnv: [String: String]) throws -> Process {
         guard FileManager.default.fileExists(atPath: enginePath) else { throw EngineError.engineNotFound }
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/bin/bash")
@@ -210,27 +217,48 @@ public struct EngineBridge {
     }
 
     /// Run the engine and collect full stdout (for non-streaming subcommands).
+    ///
+    /// The blocking process I/O (`readDataToEndOfFile` + `waitUntilExit`) runs on
+    /// a GCD global queue, NOT the Swift cooperative pool. Each such call parks a
+    /// thread for the child's lifetime; doing that on the fixed-width cooperative
+    /// pool means a burst of engine calls at launch (the scheduler's auto-clean +
+    /// status, plus the panel's status + discover) can exhaust the pool so no
+    /// thread is left to resume the continuations — the UI then hangs forever at
+    /// "Searching targets…". GCD's global queue grows on demand, so the
+    /// cooperative pool stays free to resume our awaits.
     private func runCollecting(_ args: [String], extraEnv: [String: String] = [:]) async throws -> (Data, Int32) {
-        let proc = try makeProcess(args, extraEnv: extraEnv)
-        let out = Pipe()
-        let err = Pipe()
-        proc.standardOutput = out
-        proc.standardError = err
-        try proc.run()
-        // Drain stdout (the large stream) fully, then stderr. Safe here because
-        // the engine's stderr is bounded — mole chatter is suppressed and only
-        // `die` writes a short line — so it can't fill its pipe and deadlock the
-        // child while we read stdout. stderr feeds the nonzero-exit diagnostic.
-        let data = out.fileHandleForReading.readDataToEndOfFile()
-        let errData = err.fileHandleForReading.readDataToEndOfFile()
-        proc.waitUntilExit()
-        if proc.terminationStatus != 0 {
-            let errText = String(data: errData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let outText = String(data: data, encoding: .utf8) ?? ""
-            let msg = errText.isEmpty ? outText : errText
-            throw EngineError.nonZeroExit(code: proc.terminationStatus, message: msg)
+        let enginePath = self.enginePath, moleDir = self.moleDir
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    let proc = try Self.buildProcess(enginePath: enginePath, moleDir: moleDir,
+                                                     args: args, extraEnv: extraEnv)
+                    let out = Pipe()
+                    let err = Pipe()
+                    proc.standardOutput = out
+                    proc.standardError = err
+                    try proc.run()
+                    // Drain stdout fully, then stderr. Safe: engine stderr is
+                    // bounded (mole chatter is suppressed at the cmd level; only
+                    // `die` writes a short line), so it can't fill its pipe and
+                    // deadlock the child while we read stdout.
+                    let data = out.fileHandleForReading.readDataToEndOfFile()
+                    let errData = err.fileHandleForReading.readDataToEndOfFile()
+                    proc.waitUntilExit()
+                    if proc.terminationStatus != 0 {
+                        let errText = String(data: errData, encoding: .utf8)?
+                            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                        let outText = String(data: data, encoding: .utf8) ?? ""
+                        continuation.resume(throwing: EngineError.nonZeroExit(
+                            code: proc.terminationStatus, message: errText.isEmpty ? outText : errText))
+                    } else {
+                        continuation.resume(returning: (data, proc.terminationStatus))
+                    }
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
         }
-        return (data, proc.terminationStatus)
     }
 
     /// Engine emits one JSON object per protocol line; results are on the last

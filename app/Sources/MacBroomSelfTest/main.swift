@@ -209,5 +209,22 @@ do {
     try? FileManager.default.removeItem(at: root)
 }
 
+// Concurrency: many runCollecting-backed calls at once must ALL complete.
+// Regression for the cooperative-pool starvation that hung the UI at "Searching
+// targets…" — blocking subprocess I/O on the fixed-width Swift pool deadlocked
+// when a launch burst (scheduler auto-clean + status + discover) exhausted it.
+// runCollecting now runs off-pool on GCD, so concurrent calls can't starve it.
+do {
+    let bridge = EngineBridge()
+    let n = 40
+    let completed = await withTaskGroup(of: Bool.self) { group -> Int in
+        for _ in 0..<n { group.addTask { (try? await bridge.status()) != nil } }
+        var ok = 0
+        for await r in group where r { ok += 1 }
+        return ok
+    }
+    check("concurrent status() x\(n) all completed (no pool starvation)", completed == n)
+}
+
 print(failures == 0 ? "\nAll self-tests passed." : "\n\(failures) self-test(s) FAILED.")
 exit(failures == 0 ? 0 : 1)

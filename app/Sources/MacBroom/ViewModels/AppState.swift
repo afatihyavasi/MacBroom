@@ -555,7 +555,10 @@ final class AppState: ObservableObject {
     private func syncLaunchAgents() {
         let snapshot = rules
         let enginePath = engine.enginePath, moleDir = engine.moleDir, mode = deleteMode.rawValue
-        Task.detached {
+        // launchctl is a blocking subprocess and can be slow; run it on a GCD
+        // queue, not the Swift cooperative pool, so it can't starve the pool that
+        // the UI's engine calls (status/discover) need at launch.
+        DispatchQueue.global(qos: .utility).async {
             LaunchAgentManager.sync(rules: snapshot, enginePath: enginePath, moleDir: moleDir, deleteMode: mode)
         }
     }
