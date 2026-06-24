@@ -463,8 +463,12 @@ _human_bytes() {
     }'
 }
 
-# Best-effort native banner (works even when launched from launchd, no app).
+# Best-effort banner. When the app drives the clean it sets
+# MACBROOM_NATIVE_NOTIFY and posts its own native (MacBroom-attributed)
+# notification, so we skip the osascript one here — otherwise the banner would be
+# attributed to "Script Editor". The launchd path (no app) still uses osascript.
 _mb_notify() {
+    [[ -n "${MACBROOM_NATIVE_NOTIFY:-}" ]] && return 0
     command -v osascript >/dev/null 2>&1 || return 0
     local msg="$1"
     osascript -e "display notification \"$msg\" with title \"MacBroom\"" >/dev/null 2>&1 || true
