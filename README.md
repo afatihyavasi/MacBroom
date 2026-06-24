@@ -37,6 +37,26 @@ Headline feature: it safely cleans the cache files of AI tools like **Codex, Cla
 
 MacBroom never deletes anything without a preview and confirmation. Every deletion passes through mole's `should_protect_path`, whitelist, and path-traversal protections. The auth / sessions / memory / history data of AI tools is **protected by default**. Details: [`docs/SAFETY.md`](docs/SAFETY.md).
 
+## Installation
+
+### Homebrew (recommended)
+
+```bash
+brew install --cask afatihyavasi/tap/macbroom
+```
+
+### Manual (.dmg)
+
+1. Download the latest `MacBroom-<version>.dmg` from the [Releases](https://github.com/afatihyavasi/MacBroom/releases) page.
+2. Open the DMG and **drag MacBroom into Applications**.
+3. Launch it — the 🧹 icon appears in your **menu bar** (top-right). MacBroom has no Dock icon.
+
+> **First launch (unsigned builds):** if macOS says *"MacBroom can't be opened because it is from an unidentified developer,"* **right-click the app → Open**, then click **Open** again. You only need to do this once.
+>
+> Alternatively, run: `xattr -dr com.apple.quarantine /Applications/MacBroom.app`
+>
+> Notarized releases (signed with an Apple Developer ID) open with no warning.
+
 ## Setup (development)
 
 ```bash

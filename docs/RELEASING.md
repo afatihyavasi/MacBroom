@@ -110,3 +110,43 @@ shasum -a 256 build/MacBroom-2.0.0.dmg
 
 Write the resulting hash into the `sha256` field of the cask. Replace the `<OWNER>` placeholder
 with your GitHub user/organization name.
+
+---
+
+## Publishing the Homebrew tap
+
+`brew install --cask afatihyavasi/tap/macbroom` resolves to a GitHub repo named
+**`afatihyavasi/homebrew-tap`** (Homebrew strips the `homebrew-` prefix). The cask
+file must live there, not in this repo. One-time setup:
+
+```bash
+# 1. Create the tap repo (GitHub CLI). Must be named exactly homebrew-tap.
+gh repo create afatihyavasi/homebrew-tap --public \
+  -d "Homebrew tap for MacBroom"
+
+# 2. Clone it and add the cask under Casks/.
+git clone https://github.com/afatihyavasi/homebrew-tap.git
+mkdir -p homebrew-tap/Casks
+cp Casks/macbroom.rb homebrew-tap/Casks/macbroom.rb
+
+# 3. Commit and push.
+cd homebrew-tap
+git add Casks/macbroom.rb
+git commit -m "macbroom 0.1.0-beta"
+git push
+```
+
+Now anyone can install with:
+
+```bash
+brew install --cask afatihyavasi/tap/macbroom
+```
+
+**On each release**, bump `version` + `sha256` in `homebrew-tap/Casks/macbroom.rb`
+and push. For **unsigned** beta builds, add `no_quarantine true` to the cask so
+Homebrew skips the Gatekeeper prompt:
+
+```ruby
+  app "MacBroom.app"
+  no_quarantine true   # remove once releases are notarized
+```
