@@ -66,7 +66,6 @@ final class AppState: ObservableObject {
             history = decoded
         }
         excludedTargets = Set(UserDefaults.standard.stringArray(forKey: excludedKey) ?? [])
-        AppNotifications.shared.start()   // native banners for auto-cleans
         loadSchedules()
         foldReclaimedLedger()
         startScheduler()
@@ -632,10 +631,10 @@ final class AppState: ObservableObject {
         if let result = try? await engine.autoClean(targetId: targetId, deleteMode: deleteMode) {
             addReclaimed(result.freed)
             recordClean(freed: result.freed, count: result.count, kind: "auto")
-            // Native, MacBroom-attributed banner (engine's osascript one is
-            // suppressed via MACBROOM_NATIVE_NOTIFY).
-            let tool = AITool(rawValue: String(targetId.dropFirst(3)))?.displayName ?? targetId
-            AppNotifications.shared.postCleaned(freed: result.freed, tool: tool)
+            // The result is shown in the app (reclaimed total + history). No
+            // banner on the app path: the engine's osascript one is suppressed
+            // (it reads as "Script Editor"), and UNUserNotificationCenter crashes
+            // an unsigned/ad-hoc app, so we keep it silent here.
         }
     }
 }

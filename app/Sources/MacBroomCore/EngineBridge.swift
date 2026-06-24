@@ -91,13 +91,13 @@ public struct EngineBridge {
     }
 
     /// Scheduled automation: scan a target and clean everything it surfaces in
-    /// one shot. Returns the final freed/failed totals. MACBROOM_NATIVE_NOTIFY
-    /// tells the engine to skip its osascript banner — the app posts a native,
-    /// MacBroom-attributed notification instead.
+    /// one shot. Returns the final freed/failed totals. MACBROOM_SUPPRESS_NOTIFY
+    /// tells the engine to skip its osascript ("Script Editor") banner — the app
+    /// surfaces the result itself (reclaimed total + history).
     public func autoClean(targetId: String, deleteMode: DeleteMode = .permanent) async throws -> (freed: Int64, count: Int, failed: Int) {
         let (data, _) = try await runCollecting(
             ["auto-clean", "--targets=\(targetId)"],
-            extraEnv: ["MACBROOM_DELETE_MODE": deleteMode.rawValue, "MACBROOM_NATIVE_NOTIFY": "1"]
+            extraEnv: ["MACBROOM_DELETE_MODE": deleteMode.rawValue, "MACBROOM_SUPPRESS_NOTIFY": "1"]
         )
         let text = String(data: data, encoding: .utf8) ?? ""
         for line in text.split(separator: "\n").reversed() {

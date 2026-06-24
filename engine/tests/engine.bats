@@ -299,18 +299,18 @@ EOS
     chmod +x "$HOME/bin/osascript"
 }
 
-@test "auto-clean skips the osascript banner when MACBROOM_NATIVE_NOTIFY is set" {
+@test "auto-clean skips the osascript banner when MACBROOM_SUPPRESS_NOTIFY is set" {
     mkdir -p "$HOME/.gemini/tmp"
     head -c 50000 /dev/zero > "$HOME/.gemini/tmp/cache.bin"
     _mock_osascript
 
     run env OSA_MARKER="$HOME/osa-called" PATH="$HOME/bin:$PATH" \
-        MACBROOM_NATIVE_NOTIFY=1 bash "$ENGINE" auto-clean --targets=ai:gemini
+        MACBROOM_SUPPRESS_NOTIFY=1 bash "$ENGINE" auto-clean --targets=ai:gemini
     [ "$status" -eq 0 ]
     [ ! -e "$HOME/osa-called" ]   # native-notify path: osascript NOT invoked
 }
 
-@test "auto-clean uses the osascript banner when MACBROOM_NATIVE_NOTIFY is unset (launchd path)" {
+@test "auto-clean uses the osascript banner when MACBROOM_SUPPRESS_NOTIFY is unset (launchd path)" {
     mkdir -p "$HOME/.gemini/tmp"
     head -c 50000 /dev/zero > "$HOME/.gemini/tmp/cache.bin"
     _mock_osascript
