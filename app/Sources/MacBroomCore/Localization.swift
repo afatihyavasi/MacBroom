@@ -34,6 +34,18 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
         }
         return .en
     }
+
+    /// Foundation locale matching the resolved language. Date/byte formatters
+    /// (e.g. `RelativeDateTimeFormatter`) follow the OS locale by default; feed
+    /// them this so they format in the app's *selected* language instead.
+    public var locale: Locale {
+        switch resolved {
+        case .tr: return Locale(identifier: "tr_TR")
+        case .es: return Locale(identifier: "es_ES")
+        case .fr: return Locale(identifier: "fr_FR")
+        default:  return Locale(identifier: "en_US")
+        }
+    }
 }
 
 /// Every user-facing string key. Values with `%@` / `%d` are `String(format:)`

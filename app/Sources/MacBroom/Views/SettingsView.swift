@@ -144,7 +144,7 @@ struct SettingsView: View {
                     .font(.shCaption).foregroundStyle(Theme.mutedForeground)
             }
             Spacer()
-            Text(Self.relative.localizedString(for: rec.date, relativeTo: Date()))
+            Text(loc.relativeTime(for: rec.date))
                 .font(.shCaption).foregroundStyle(Theme.mutedForeground)
         }
         .padding(.vertical, 5).padding(.horizontal, Theme.Space.sm)
@@ -153,9 +153,6 @@ struct SettingsView: View {
             .strokeBorder(Theme.border, lineWidth: 1))
     }
 
-    private static let relative: RelativeDateTimeFormatter = {
-        let f = RelativeDateTimeFormatter(); f.unitsStyle = .abbreviated; return f
-    }()
 
     /// A selectable deletion-mode card (radio behavior).
     private func deletionRow(_ mode: DeleteMode) -> some View {

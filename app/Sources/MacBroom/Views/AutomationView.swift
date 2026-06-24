@@ -71,7 +71,7 @@ struct AutomationView: View {
             conditionalControls(r)
 
             if enabled, let last = state.lastRun(for: t.id) {
-                Text(loc.t(.autoCleanLast, Self.relative.localizedString(for: last, relativeTo: Date())))
+                Text(loc.t(.autoCleanLast, loc.relativeTime(for: last)))
                     .font(.shCaption).foregroundStyle(Theme.mutedForeground)
             }
         }
@@ -147,8 +147,4 @@ struct AutomationView: View {
         let idx = (weekday - 1) % 7
         return symbols.indices.contains(idx) ? symbols[idx] : "\(weekday)"
     }
-
-    private static let relative: RelativeDateTimeFormatter = {
-        let f = RelativeDateTimeFormatter(); f.unitsStyle = .abbreviated; return f
-    }()
 }
