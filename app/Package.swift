@@ -13,9 +13,8 @@ let package = Package(
     platforms: [
         .macOS(.v13) // MenuBarExtra requires macOS 13+
     ],
-    dependencies: [
-        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.0")
-    ],
+    // Sparkle temporarily removed while diagnosing the menu-bar click regression
+    // (clicks broke when auto-update landed). Re-add once confirmed unrelated.
     targets: [
         .target(
             name: "MacBroomCore",
@@ -23,7 +22,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "MacBroom",
-            dependencies: ["MacBroomCore", .product(name: "Sparkle", package: "Sparkle")],
+            dependencies: ["MacBroomCore"],
             path: "Sources/MacBroom"
         ),
         .executableTarget(
