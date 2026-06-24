@@ -37,6 +37,17 @@ cp "$ROOT/vendor/mole/LICENSE" "$RES/vendor/mole/LICENSE" 2>/dev/null || true
 [[ -f "$ROOT/assets/AppIcon.icns" ]] || "$ROOT/scripts/make-icon.sh"
 cp "$ROOT/assets/AppIcon.icns" "$RES/AppIcon.icns"
 
+# Sparkle auto-update framework. SPM produces it as an xcframework; bundle the
+# macOS slice into Contents/Frameworks and add an rpath so the executable (which
+# links @rpath/Sparkle.framework) can find it. Skipped gracefully if absent.
+SPARKLE_FW="$(find "$ROOT/app/.build/artifacts" -type d -name "Sparkle.framework" -path "*macos-arm64*" 2>/dev/null | head -1)"
+if [[ -n "$SPARKLE_FW" ]]; then
+  echo "==> bundling Sparkle.framework"
+  mkdir -p "$CONTENTS/Frameworks"
+  cp -R "$SPARKLE_FW" "$CONTENTS/Frameworks/Sparkle.framework"
+  install_name_tool -add_rpath "@executable_path/../Frameworks" "$MACOS/MacBroom" 2>/dev/null || true
+fi
+
 cat > "$CONTENTS/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -53,6 +64,13 @@ cat > "$CONTENTS/Info.plist" <<PLIST
     <key>LSMinimumSystemVersion</key><string>13.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHumanReadableCopyright</key><string>GPL-3.0. Cleaning engine: tw93/mole (GPL-3.0).</string>
+    <!-- Sparkle auto-update. SUPublicEDKey is a PLACEHOLDER — replace with a real
+         key from Sparkle's generate_keys before publishing (see docs/RELEASING.md);
+         SUFeedURL must point at a hosted appcast.xml. -->
+    <key>SUFeedURL</key><string>https://github.com/afatihyavasi/MacBroom/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key><string>yapa6dguKp+RMjbE7VH3+i7qY5JUA4+8IkczUEyvH7Y=</string>
+    <key>SUEnableAutomaticChecks</key><true/>
+    <key>SUScheduledCheckInterval</key><integer>86400</integer>
 </dict>
 </plist>
 PLIST

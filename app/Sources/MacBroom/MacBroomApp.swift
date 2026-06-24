@@ -5,6 +5,7 @@ struct MacBroomApp: App {
     @StateObject private var state = AppState()
     @StateObject private var loc = LocalizationManager()
     @StateObject private var appearance = AppearanceManager()
+    @StateObject private var updater = UpdaterController()
 
     var body: some Scene {
         MenuBarExtra {
@@ -12,6 +13,7 @@ struct MacBroomApp: App {
                 .environmentObject(state)
                 .environmentObject(loc)
                 .environmentObject(appearance)
+                .environmentObject(updater)
                 // Fixed panel size: content scrolls internally so switching
                 // tabs/phases never resizes (and thus never "jumps") the window.
                 .frame(width: 380, height: 560)
