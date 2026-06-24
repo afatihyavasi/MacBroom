@@ -4,6 +4,14 @@
 
 **A safe, open-source system & AI cache cleaner for the macOS menu bar.**
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-black.svg?style=flat-square&logo=apple)](https://www.apple.com/macos/)
+[![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg?style=flat-square&logo=swift)](https://swift.org)
+[![SwiftUI](https://img.shields.io/badge/SwiftUI-1572B6.svg?style=flat-square&logo=swift&logoColor=white)](https://developer.apple.com/xcode/swiftui/)
+[![Release](https://img.shields.io/github/v/release/afatihyavasi/MacBroom?style=flat-square&color=success)](https://github.com/afatihyavasi/MacBroom/releases)
+[![Stars](https://img.shields.io/github/stars/afatihyavasi/MacBroom?style=flat-square&logo=github)](https://github.com/afatihyavasi/MacBroom/stargazers)
+[![Homebrew](https://img.shields.io/badge/brew-install-FBB040.svg?style=flat-square&logo=homebrew&logoColor=white)](https://github.com/afatihyavasi/homebrew-tap)
+
 Powered by [`tw93/mole`](https://github.com/tw93/mole) · SwiftUI · GPL-3.0
 
 [Website](https://github.com/afatihyavasi/MacBroom) · Install: `brew install --cask afatihyavasi/tap/macbroom`
