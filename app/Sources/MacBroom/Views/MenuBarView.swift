@@ -64,11 +64,6 @@ struct MenuBarView: View {
         .foregroundStyle(Theme.foreground)
         .background(tabShortcuts)
         .task {
-            // Make the menu-bar panel the key window so its controls receive
-            // clicks. An accessory app's panel can open non-key, which swallows
-            // taps (tabs won't switch, buttons don't fire). Deferred to the next
-            // runloop so the panel is fully presented first.
-            DispatchQueue.main.async { NSApp.activate(ignoringOtherApps: true) }
             await state.refreshStatus()
             if case .idle = state.phase { await state.discover() }
         }
