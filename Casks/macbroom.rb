@@ -1,11 +1,11 @@
 cask "macbroom" do
   version "2.0.0"
 
-  # Her sürümde güncelleyin:  shasum -a 256 MacBroom-<version>.dmg
-  # İmzasız/notarize edilmemiş yerel test DMG'leri için ":no_check" kullanın.
+  # Update on every release:  shasum -a 256 MacBroom-<version>.dmg
+  # Use ":no_check" for unsigned/un-notarized local test DMGs.
   sha256 "0000000000000000000000000000000000000000000000000000000000000000"
 
-  # afatihyavasi yerine GitHub kullanıcı/organizasyon adınızı yazın.
+  # Replace afatihyavasi with your GitHub user/organization name.
   url "https://github.com/afatihyavasi/MacBroom/releases/download/v#{version}/MacBroom-#{version}.dmg",
       verified: "github.com/afatihyavasi/MacBroom/"
   name "MacBroom"

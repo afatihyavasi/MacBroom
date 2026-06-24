@@ -18,7 +18,7 @@ public enum AITool: String, CaseIterable, Identifiable {
         case .gemini:  return "Gemini / Antigravity"
         case .cursor:  return "Cursor"
         case .copilot: return "GitHub Copilot"
-        case .other:   return "Diğer AI Araçları"
+        case .other:   return "Other AI Tools"
         }
     }
 

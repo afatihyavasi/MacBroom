@@ -267,7 +267,7 @@ public struct EngineBridge {
         let text = String(data: data, encoding: .utf8) ?? ""
         let lines = text.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
         guard let last = lines.last, let lineData = last.data(using: .utf8) else {
-            throw EngineError.decodeFailed("boş çıktı")
+            throw EngineError.decodeFailed("empty output")
         }
         do {
             return try JSONDecoder().decode(T.self, from: lineData)

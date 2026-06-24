@@ -322,15 +322,15 @@ ai:claude|Claude|ai|~/.local/share/claude:~/Library/Caches/com.anthropic.claudef
 ai:cursor|Cursor|ai|~/.local/share/cursor-agent|clean_dev_ai_agents
 ai:copilot|GitHub Copilot|ai|~/.copilot|clean_dev_ai_agents
 ai:devtools-mcp|Chrome DevTools MCP|ai|~/.cache/chrome-devtools-mcp:~/Library/Caches/chrome-devtools-mcp|clean_chrome_devtools_mcp_caches
-system:app-caches|Uygulama önbellekleri|system|*|clean_app_caches
-system:editors|Kod editörleri|system|~/Library/Application Support/Code:~/Library/Application Support/Cursor:~/Library/Application Support/JetBrains|clean_code_editors
-system:gui-apps|GUI uygulama önbellekleri|system|*|clean_user_gui_applications
-system:dev-misc|Geliştirici artıkları|system|*|clean_dev_misc
+system:app-caches|App caches|system|*|clean_app_caches
+system:editors|Code editors|system|~/Library/Application Support/Code:~/Library/Application Support/Cursor:~/Library/Application Support/JetBrains|clean_code_editors
+system:gui-apps|GUI app caches|system|*|clean_user_gui_applications
+system:dev-misc|Developer leftovers|system|*|clean_dev_misc
 system:xcode|Xcode DerivedData|system|~/Library/Developer/Xcode/DerivedData|clean_xcode_derived_data
-system:pkg-caches|Paket yöneticisi önbellekleri|system|~/.npm:~/.yarn/cache:~/Library/Caches/pip:~/.cache/poetry|clean_dev_npm clean_dev_python
-system:browser|Tarayıcı önbellekleri|system|~/Library/Caches/com.apple.Safari:~/Library/Caches/Google/Chrome:~/Library/Caches/com.microsoft.edgemac:~/Library/Caches/Chromium|clean_browsers clean_chromium_default_caches
-system:maintenance|Loglar ve .DS_Store|system|*|clean_application_support_logs clean_ds_store_tree
-system:trash|Çöp Kutusu (boşalt)|system|~/.Trash|clean_trash
+system:pkg-caches|Package manager caches|system|~/.npm:~/.yarn/cache:~/Library/Caches/pip:~/.cache/poetry|clean_dev_npm clean_dev_python
+system:browser|Browser caches|system|~/Library/Caches/com.apple.Safari:~/Library/Caches/Google/Chrome:~/Library/Caches/com.microsoft.edgemac:~/Library/Caches/Chromium|clean_browsers clean_chromium_default_caches
+system:maintenance|Logs & .DS_Store|system|*|clean_application_support_logs clean_ds_store_tree
+system:trash|Trash (empty)|system|~/.Trash|clean_trash
 EOF
 }
 
@@ -512,7 +512,7 @@ cmd_auto_clean() {
     rm -f "$tmp"
 
     if [[ "${MB_FREED_BYTES:-0}" -gt 0 ]]; then
-        _mb_notify "$(_human_bytes "$MB_FREED_BYTES") boşaltıldı"
+        _mb_notify "$(_human_bytes "$MB_FREED_BYTES") freed"
         _mb_record_reclaimed "$MB_FREED_BYTES"
     fi
     emit "{\"event\":\"done\",\"freed_bytes\":$MB_FREED_BYTES,\"count\":$MB_COUNT,\"failed\":${MB_FAILED:-0}}"

@@ -234,7 +234,7 @@ PLIST
 @test "discover lists browser/maintenance/trash targets under system" {
     run bash "$ENGINE" discover
     [ "$status" -eq 0 ]
-    [[ "$output" == *'"id":"system:browser","label":"Tarayıcı önbellekleri","category":"system"'* ]]
+    [[ "$output" == *'"id":"system:browser","label":"Browser caches","category":"system"'* ]]
     [[ "$output" == *'"id":"system:maintenance"'* ]]
     [[ "$output" == *'"id":"system:trash"'* ]]
 }
