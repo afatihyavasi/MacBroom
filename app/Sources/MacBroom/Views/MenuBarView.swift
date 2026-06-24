@@ -92,7 +92,7 @@ struct MenuBarView: View {
                 // Settings opens in its own AppKit window (deterministic for a
                 // menu-bar app; see SettingsWindowController) so its NSMenu
                 // pickers can't dismiss this panel.
-                SettingsWindowController.shared.show(state: state, loc: loc, appearance: appearance, updater: UpdaterController.shared)
+                SettingsWindowController.shared.show(state: state, loc: loc, appearance: appearance)
             }
             .keyboardShortcut(",", modifiers: .command)
         }

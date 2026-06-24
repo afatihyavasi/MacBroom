@@ -14,12 +14,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     static let shared = SettingsWindowController()
     private var window: NSWindow?
 
-    func show(state: AppState, loc: LocalizationManager, appearance: AppearanceManager, updater: UpdaterController) {
+    func show(state: AppState, loc: LocalizationManager, appearance: AppearanceManager) {
         if window == nil {
             let hosting = NSHostingController(
                 rootView: SettingsView()
                     .environmentObject(state).environmentObject(loc)
-                    .environmentObject(appearance).environmentObject(updater)
+                    .environmentObject(appearance)
             )
             let w = NSWindow(contentViewController: hosting)
             w.title = "MacBroom"

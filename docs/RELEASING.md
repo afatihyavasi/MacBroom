@@ -111,37 +111,3 @@ shasum -a 256 build/MacBroom-2.0.0.dmg
 
 Çıkan hash'i cask'taki `sha256` alanına yazın. `<OWNER>` placeholder'ını
 GitHub kullanıcı/organizasyon adınızla değiştirin.
-
-## Otomatik güncelleme (Sparkle)
-
-MacBroom, uygulama içi güncelleme için [Sparkle](https://sparkle-project.org)
-kullanır (`SwiftPM` bağımlılığı; `make-app.sh` `Sparkle.framework`'ü `.app`'e
-gömer). Ayarlar → **Güncellemeler** bölümünden elle denetlenir; arka planda
-günde bir otomatik denetler (`SUEnableAutomaticChecks`).
-
-### İlk kurulum (bir kez)
-1. **İmzalama anahtarını üret** (özel anahtar Keychain'de saklanır):
-   ```bash
-   app/.build/artifacts/sparkle/Sparkle/bin/generate_keys
-   ```
-   Çıktıdaki **public** anahtarı `scripts/make-app.sh` içindeki `SUPublicEDKey`
-   placeholder'ı yerine yazın (şu an üretimde olmayan bir placeholder var).
-2. `SUFeedURL` zaten `releases/latest/download/appcast.xml`'e işaret ediyor.
-
-### Her sürümde
-1. DMG'yi üretin (`make-dmg.sh`) ve imzalayın/notarize edin (yukarıdaki adımlar).
-2. **appcast.xml üretin + imzalayın** (DMG'lerin olduğu klasörü verin):
-   ```bash
-   scripts/make-appcast.sh build/
-   ```
-   Bu, Sparkle'ın `generate_appcast`'ini çağırır (her DMG'yi Keychain'deki özel
-   anahtarla EdDSA imzalar).
-3. **appcast.xml**'i DMG ile birlikte GitHub Release'e yükleyin (aynı klasörde),
-   böylece `SUFeedURL` ona ulaşır.
-
-> CI'da otomatikleştirmek için: özel anahtarı `SPARKLE_ED_PRIVATE_KEY` secret'ı
-> olarak ekleyin, `release.yml`'de DMG adımından sonra `make-appcast.sh build/`
-> çalıştırıp `appcast.xml`'i release varlıklarına ekleyin.
-
-> Not: Güncellemenin yüklenebilmesi için uygulamanın **imzalı** olması gerekir
-> (Developer ID); imzasız dev derlemelerde denetim çalışır ama yükleme yapılmaz.

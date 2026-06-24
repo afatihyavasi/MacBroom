@@ -7,7 +7,6 @@ struct SettingsView: View {
     @EnvironmentObject var loc: LocalizationManager
     @EnvironmentObject var state: AppState
     @EnvironmentObject var appearance: AppearanceManager
-    @EnvironmentObject var updater: UpdaterController
     @AppStorage("deletionMode") private var deletionMode: String = DeleteMode.permanent.rawValue
 
     var body: some View {
@@ -64,21 +63,6 @@ struct SettingsView: View {
 
             // Cleaning history
             historySection
-
-            SHSeparator()
-
-            // Updates (Sparkle)
-            VStack(alignment: .leading, spacing: Theme.Space.sm) {
-                SHSectionHeader(title: loc.t(.updatesTitle), systemImage: "arrow.down.circle")
-                HStack {
-                    Toggle(isOn: $updater.automaticallyChecks) {
-                        Text(loc.t(.autoUpdateCheck)).font(.shCaption)
-                    }.toggleStyle(.switch).controlSize(.small)
-                    Spacer()
-                    Button(loc.t(.checkForUpdates)) { updater.checkForUpdates() }
-                        .buttonStyle(.shOutline(.sm))
-                }
-            }
 
             SHSeparator()
 

@@ -5,10 +5,6 @@ struct MacBroomApp: App {
     @StateObject private var state = AppState()
     @StateObject private var loc = LocalizationManager()
     @StateObject private var appearance = AppearanceManager()
-    // Instantiate the updater singleton at launch (deferred Sparkle start) but do
-    // NOT inject it into the panel's environment — the panel must not observe or
-    // couple to Sparkle (see UpdaterController).
-    @StateObject private var updater = UpdaterController.shared
 
     var body: some Scene {
         MenuBarExtra {
