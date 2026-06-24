@@ -24,3 +24,6 @@ notarization.json
 
 # Engine scratch
 engine/tests/tmp-*
+
+# Generated app icon (rebuilt by scripts/make-icon.sh)
+assets/AppIcon.icns

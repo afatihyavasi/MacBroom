@@ -31,6 +31,12 @@ chmod +x "$RES/macbroom-engine.sh"
 cp -R "$ROOT/vendor/mole/lib" "$RES/vendor/mole/lib"
 cp "$ROOT/vendor/mole/LICENSE" "$RES/vendor/mole/LICENSE" 2>/dev/null || true
 
+# App icon. Build assets/AppIcon.icns on demand (from assets/AppIcon.png, or a
+# generated starter), then bundle it. To use your own logo, drop a 1024×1024
+# PNG at assets/AppIcon.png and re-run (or run scripts/make-icon.sh).
+[[ -f "$ROOT/assets/AppIcon.icns" ]] || "$ROOT/scripts/make-icon.sh"
+cp "$ROOT/assets/AppIcon.icns" "$RES/AppIcon.icns"
+
 cat > "$CONTENTS/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -40,6 +46,7 @@ cat > "$CONTENTS/Info.plist" <<PLIST
     <key>CFBundleDisplayName</key><string>MacBroom</string>
     <key>CFBundleIdentifier</key><string>com.macbroom.app</string>
     <key>CFBundleExecutable</key><string>MacBroom</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>${VERSION}</string>
     <key>CFBundleVersion</key><string>${VERSION}</string>
