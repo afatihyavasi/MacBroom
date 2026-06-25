@@ -71,9 +71,9 @@ MacBroom never deletes anything without a preview and confirmation. Every deleti
 brew install --cask afatihyavasi/tap/macbroom
 ```
 
-> Since 1.0.0 is **unsigned**, add `--no-quarantine` to skip the Gatekeeper
-> prompt (or right-click → Open the first time):
-> `brew install --cask --no-quarantine afatihyavasi/tap/macbroom`
+> Since 1.0.0 is **unsigned**, macOS quarantines it. On first launch,
+> right-click MacBroom → **Open**, or clear the flag once:
+> `xattr -dr com.apple.quarantine /Applications/MacBroom.app`
 
 ### Manual (.dmg)
 

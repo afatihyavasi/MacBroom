@@ -143,11 +143,13 @@ brew install --cask afatihyavasi/tap/macbroom
 ```
 
 **On each release**, bump `version` + `sha256` in `homebrew-tap/Casks/macbroom.rb`
-and push. For **unsigned** builds there is no cask stanza to bypass Gatekeeper
-(`no_quarantine` was removed from Homebrew), so users install with the flag:
+and push. For **unsigned** builds there is no way to bypass Gatekeeper at install
+time (both the `no_quarantine` cask stanza and the `--no-quarantine` install flag
+were removed from Homebrew). Homebrew installs the app quarantined; on first
+launch users right-click → Open, or clear it once:
 
 ```bash
-brew install --cask --no-quarantine afatihyavasi/tap/macbroom
+xattr -dr com.apple.quarantine /Applications/MacBroom.app
 ```
 
-or right-click → Open the first time. Drop the flag once releases are notarized.
+This goes away once releases are notarized.

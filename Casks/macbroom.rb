@@ -11,9 +11,10 @@ cask "macbroom" do
 
   app "MacBroom.app"
 
-  # 1.0.0 is unsigned (no Apple Developer ID yet). Install with
-  # `brew install --cask --no-quarantine afatihyavasi/tap/macbroom`, or
-  # right-click → Open the first time. Notarized releases will open with no prompt.
+  # 1.0.0 is unsigned (no Apple Developer ID yet), so it installs quarantined.
+  # On first launch: right-click MacBroom → Open, or clear it once with
+  # `xattr -dr com.apple.quarantine /Applications/MacBroom.app`.
+  # Notarized releases will open with no prompt.
 
   zap trash: [
     "~/Library/LaunchAgents/com.macbroom.autoclean.*",
