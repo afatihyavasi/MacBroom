@@ -57,14 +57,26 @@ cat > "$CONTENTS/Info.plist" <<PLIST
 </plist>
 PLIST
 
-# Optional local code signing. Only runs if MACBROOM_SIGN_IDENTITY is set;
-# otherwise the .app is left unsigned (default, unchanged behavior). CI handles
-# signing/notarization in .github/workflows/release.yml instead.
+# Code signing.
+#
+# `swift build` linker-signs ONLY the inner executable (ad-hoc). Once we add the
+# Info.plist + Resources, that lone signature no longer matches the bundle, so
+# the seal is inconsistent ("code has no resources but signature indicates they
+# must be present") and macOS reports the downloaded app as **"damaged"** on
+# Apple Silicon. We therefore ALWAYS sign the *assembled bundle*:
+#   - With a Developer ID (MACBROOM_SIGN_IDENTITY) → distribution signing
+#     (hardened runtime + timestamp), ready for notarization.
+#   - Otherwise → an ad-hoc signature that seals the bundle. The app is still
+#     unsigned-for-distribution, but it's valid, so Gatekeeper shows the normal
+#     "unidentified developer" prompt (right-click → Open) instead of "damaged".
 if [[ -n "${MACBROOM_SIGN_IDENTITY:-}" ]]; then
   echo "==> codesign (Developer ID, hardened runtime + timestamp)"
   codesign --force --deep --options runtime --timestamp \
     --sign "$MACBROOM_SIGN_IDENTITY" "$APP"
-  codesign --verify --strict --verbose=2 "$APP"
+else
+  echo "==> codesign (ad-hoc — seals the bundle so it isn't flagged as damaged)"
+  codesign --force --deep --sign - "$APP"
 fi
+codesign --verify --strict --verbose=2 "$APP"
 
 echo "==> done: $APP"
