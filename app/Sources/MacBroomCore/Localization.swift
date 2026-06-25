@@ -62,7 +62,7 @@ public enum L10n: String, CaseIterable {
     case aiEmpty, aiSafety, groupCountBytes, systemSafety, selectAll, deselectAll, systemEmpty
     case analyzeQuestion, analyzeSubtitle, noTargetsInCategory, clearSelection, analyzeButton
     case settingsTitle, done, deletionMethod, about, aboutVersion, engineAttribution, totalReclaimed
-    case historyTitle, historyEmpty, historyCache, historyApps, historyDisk, historyAuto
+    case historyTitle, historyEmpty, historyCache, historyApps, historyDisk, historyAuto, historyChartTitle
     case exclusionsTitle, exclusionsDesc
     case protectedPathsTitle, protectedPathsDesc, protectedPathsAdd, protectedPathsEmpty
     case reasonTrash, reasonOldVersion, reasonAICache, reasonRegenerable
@@ -143,7 +143,7 @@ public enum Localization {
         .about: "About", .aboutVersion: "MacBroom %@ · GPL-3.0",
         .engineAttribution: "Cleaning engine provided by tw93/mole (GPL-3.0).",
         .totalReclaimed: "Total reclaimed: %@",
-        .historyTitle: "Cleaning history", .historyEmpty: "No cleanups yet.", .historyCache: "Cache", .historyApps: "App", .historyDisk: "Large files", .historyAuto: "Scheduled",
+        .historyTitle: "Cleaning history", .historyEmpty: "No cleanups yet.", .historyCache: "Cache", .historyApps: "App", .historyDisk: "Large files", .historyAuto: "Scheduled", .historyChartTitle: "Reclaimed per cleanup",
         .exclusionsTitle: "Exclusions", .exclusionsDesc: "Excluded tools are never scanned or auto-cleaned.",
         .protectedPathsTitle: "Protected paths",
         .protectedPathsDesc: "Files and folders here — and everything inside them — are never scanned or deleted.",
@@ -223,7 +223,7 @@ public enum Localization {
         .about: "Hakkında", .aboutVersion: "MacBroom %@ · GPL-3.0",
         .engineAttribution: "Temizleme motoru tw93/mole (GPL-3.0) tarafından sağlanır.",
         .totalReclaimed: "Toplam kazanılan: %@",
-        .historyTitle: "Temizlik geçmişi", .historyEmpty: "Henüz temizlik yok.", .historyCache: "Önbellek", .historyApps: "Uygulama", .historyDisk: "Büyük dosya", .historyAuto: "Zamanlanmış",
+        .historyTitle: "Temizlik geçmişi", .historyEmpty: "Henüz temizlik yok.", .historyCache: "Önbellek", .historyApps: "Uygulama", .historyDisk: "Büyük dosya", .historyAuto: "Zamanlanmış", .historyChartTitle: "Temizlik başına kazanılan",
         .exclusionsTitle: "İstisnalar", .exclusionsDesc: "Muaf tutulan araçlar hiç taranmaz veya otomatik temizlenmez.",
         .protectedPathsTitle: "Korunan yollar",
         .protectedPathsDesc: "Buradaki dosya ve klasörler — ve içlerindeki her şey — asla taranmaz veya silinmez.",
@@ -303,7 +303,7 @@ public enum Localization {
         .about: "Acerca de", .aboutVersion: "MacBroom %@ · GPL-3.0",
         .engineAttribution: "Motor de limpieza proporcionado por tw93/mole (GPL-3.0).",
         .totalReclaimed: "Total recuperado: %@",
-        .historyTitle: "Historial de limpieza", .historyEmpty: "Aún no hay limpiezas.", .historyCache: "Caché", .historyApps: "App", .historyDisk: "Archivos grandes", .historyAuto: "Programado",
+        .historyTitle: "Historial de limpieza", .historyEmpty: "Aún no hay limpiezas.", .historyCache: "Caché", .historyApps: "App", .historyDisk: "Archivos grandes", .historyAuto: "Programado", .historyChartTitle: "Recuperado por limpieza",
         .exclusionsTitle: "Exclusiones", .exclusionsDesc: "Las herramientas excluidas nunca se analizan ni se limpian.",
         .protectedPathsTitle: "Rutas protegidas",
         .protectedPathsDesc: "Los archivos y carpetas de aquí — y todo su contenido — nunca se analizan ni se eliminan.",
@@ -383,7 +383,7 @@ public enum Localization {
         .about: "À propos", .aboutVersion: "MacBroom %@ · GPL-3.0",
         .engineAttribution: "Moteur de nettoyage fourni par tw93/mole (GPL-3.0).",
         .totalReclaimed: "Total récupéré : %@",
-        .historyTitle: "Historique de nettoyage", .historyEmpty: "Aucun nettoyage pour l’instant.", .historyCache: "Cache", .historyApps: "App", .historyDisk: "Gros fichiers", .historyAuto: "Planifié",
+        .historyTitle: "Historique de nettoyage", .historyEmpty: "Aucun nettoyage pour l’instant.", .historyCache: "Cache", .historyApps: "App", .historyDisk: "Gros fichiers", .historyAuto: "Planifié", .historyChartTitle: "Récupéré par nettoyage",
         .exclusionsTitle: "Exclusions", .exclusionsDesc: "Les outils exclus ne sont jamais analysés ni nettoyés.",
         .protectedPathsTitle: "Chemins protégés",
         .protectedPathsDesc: "Les fichiers et dossiers listés ici — et tout leur contenu — ne sont jamais analysés ni supprimés.",
