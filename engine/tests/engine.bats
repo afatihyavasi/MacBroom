@@ -354,6 +354,31 @@ EOS
     [ ! -e "$HOME/.cargo/registry/cache/repo/blob" ]   # scanned + cleaned in one shot
 }
 
+# --- trash mode: restore support ------------------------------------------
+
+@test "trash-mode clean reports trashed_to and moves the file to the Trash" {
+    mkdir -p "$HOME/.cache/mbrestore"
+    head -c 30000 /dev/zero > "$HOME/.cache/mbrestore/blob"
+    printf '%s\n' "$HOME/.cache/mbrestore" > "$HOME/approved.txt"
+
+    run env MACBROOM_DELETE_MODE=trash bash "$ENGINE" app-clean --paths-file="$HOME/approved.txt"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"trashed_to"'* ]]          # destination reported for restore
+    [ ! -e "$HOME/.cache/mbrestore" ]            # gone from its original location
+    ls "$HOME/.Trash" | grep -q mbrestore        # and now in the (isolated) Trash
+}
+
+@test "permanent-mode clean does NOT report trashed_to (nothing to restore)" {
+    mkdir -p "$HOME/.cache/mbperm"
+    head -c 30000 /dev/zero > "$HOME/.cache/mbperm/blob"
+    printf '%s\n' "$HOME/.cache/mbperm" > "$HOME/approved.txt"
+
+    run env MACBROOM_DELETE_MODE=permanent bash "$ENGINE" app-clean --paths-file="$HOME/approved.txt"
+    [ "$status" -eq 0 ]
+    [[ "$output" != *'"trashed_to"'* ]]
+    [ ! -e "$HOME/.cache/mbperm" ]
+}
+
 # --- analyze: read-only large-file finder ---------------------------------
 
 @test "analyze lists large files over the threshold with size_bytes (read-only)" {

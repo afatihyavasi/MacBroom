@@ -78,6 +78,40 @@ final class AppState: ObservableObject {
         EngineBridge.writeUserProtectedPaths(protectedPaths)
     }
 
+    /// One Trash-restorable item from the most recent cleanup.
+    struct RestoreEntry: Codable, Sendable { let original: String; let trash: String }
+
+    /// Items the last cleanup moved to the Trash (only set for Trash-mode cleans),
+    /// so the user can put them back. Replaced by each cleanup; a permanent-delete
+    /// cleanup clears it (nothing to restore).
+    @Published private(set) var lastRestorable: [RestoreEntry] = []
+    private let restorableKey = "lastRestorable"
+
+    private func setRestorable(_ entries: [RestoreEntry]) {
+        lastRestorable = entries
+        UserDefaults.standard.set((try? JSONEncoder().encode(entries)) ?? Data(), forKey: restorableKey)
+    }
+
+    /// Move each still-present Trash item back to its original path. Skips items
+    /// whose original location is occupied again; drops items already emptied from
+    /// the Trash. Returns how many were restored.
+    @discardableResult
+    func restoreLast() -> Int {
+        let fm = FileManager.default
+        var restored = 0
+        var remaining: [RestoreEntry] = []
+        for e in lastRestorable {
+            guard fm.fileExists(atPath: e.trash) else { continue }           // emptied → drop
+            if fm.fileExists(atPath: e.original) { remaining.append(e); continue } // occupied → keep
+            let dst = URL(fileURLWithPath: e.original)
+            try? fm.createDirectory(at: dst.deletingLastPathComponent(), withIntermediateDirectories: true)
+            do { try fm.moveItem(at: URL(fileURLWithPath: e.trash), to: dst); restored += 1 }
+            catch { remaining.append(e) }
+        }
+        setRestorable(remaining)
+        return restored
+    }
+
     /// Non-nil when the last schedule save could not install one or more launchd
     /// agents (e.g. ~/Library/LaunchAgents not writable). Shown in Automation so a
     /// schedule that will never fire isn't silently accepted. Cleared on a clean save.
@@ -96,6 +130,10 @@ final class AppState: ObservableObject {
         excludedTargets = Set(UserDefaults.standard.stringArray(forKey: excludedKey) ?? [])
         protectedPaths = UserDefaults.standard.stringArray(forKey: protectedPathsKey) ?? []
         EngineBridge.writeUserProtectedPaths(protectedPaths)   // keep the engine's file in sync at launch
+        if let data = UserDefaults.standard.data(forKey: restorableKey),
+           let decoded = try? JSONDecoder().decode([RestoreEntry].self, from: data) {
+            lastRestorable = decoded
+        }
         loadSchedules()
         foldReclaimedLedger()
         startScheduler()
@@ -325,13 +363,15 @@ final class AppState: ObservableObject {
         var done = 0, failed = 0
         var permissionBlocked = false
         var removed = Set<String>()
+        var restorables: [RestoreEntry] = []
         do {
             for try await event in engine.clean(approvedPaths: approved, targetIds: ids, deleteMode: deleteMode) {
                 switch event {
-                case let .progress(path, bytes):
+                case let .progress(path, bytes, trashedTo):
                     freed += bytes
                     done += 1
                     removed.insert(path)
+                    if let t = trashedTo { restorables.append(RestoreEntry(original: path, trash: t)) }
                     phase = .cleaning(done: done, total: total, freedBytes: freed)
                 case let .skipped(_, reason):
                     done += 1
@@ -348,6 +388,7 @@ final class AppState: ObservableObject {
             candidates.removeAll { removed.contains($0.path) }
             selected.subtract(removed)
             addReclaimed(freed)
+            setRestorable(restorables)   // Trash-mode → restorable; permanent → empty (clears)
             recordClean(freed: freed, count: removed.count, kind: "cache")
             phase = .finished(freedBytes: freed, count: removed.count, failed: failed, permissionBlocked: permissionBlocked)
             await refreshStatus()
@@ -418,11 +459,13 @@ final class AppState: ObservableObject {
         analyzeFlow = .deleting(done: 0, total: total, freedBytes: 0)
         var freed: Int64 = 0, done = 0, failed = 0, permissionBlocked = false
         var removed = Set<String>()
+        var restorables: [RestoreEntry] = []
         do {
             for try await event in engine.appClean(approvedPaths: paths, deleteMode: .trash) {
                 switch event {
-                case let .progress(path, bytes):
+                case let .progress(path, bytes, trashedTo):
                     freed += bytes; done += 1; removed.insert(path)
+                    if let t = trashedTo { restorables.append(RestoreEntry(original: path, trash: t)) }
                     analyzeFlow = .deleting(done: done, total: total, freedBytes: freed)
                 case let .skipped(_, reason):
                     failed += 1; done += 1
@@ -438,6 +481,7 @@ final class AppState: ObservableObject {
             largeFiles.removeAll { removed.contains($0.path) }
             largeSelected.subtract(removed)
             addReclaimed(freed)
+            setRestorable(restorables)   // large files go to the Trash → restorable
             recordClean(freed: freed, count: removed.count, kind: "disk")
             analyzeFlow = .finished(freedBytes: freed, count: removed.count, failed: failed, permissionBlocked: permissionBlocked)
             await refreshStatus()
@@ -519,7 +563,7 @@ final class AppState: ObservableObject {
         do {
             for try await event in engine.appClean(approvedPaths: approved, deleteMode: deleteMode) {
                 switch event {
-                case let .progress(_, bytes): freed += bytes; done += 1; removedCount += 1
+                case let .progress(_, bytes, _): freed += bytes; done += 1; removedCount += 1
                     appFlow = .uninstalling(done: done, total: total, freedBytes: freed)
                 case let .skipped(_, reason): failed += 1; done += 1
                     if reason == "permission" { permissionBlocked = true }

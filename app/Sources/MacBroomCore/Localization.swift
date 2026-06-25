@@ -63,6 +63,7 @@ public enum L10n: String, CaseIterable {
     case analyzeQuestion, analyzeSubtitle, noTargetsInCategory, clearSelection, analyzeButton
     case settingsTitle, done, deletionMethod, about, aboutVersion, engineAttribution, totalReclaimed
     case historyTitle, historyEmpty, historyCache, historyApps, historyDisk, historyAuto, historyChartTitle
+    case restoreLastTitle, restoreLastDesc, restoreLastButton
     case exclusionsTitle, exclusionsDesc
     case protectedPathsTitle, protectedPathsDesc, protectedPathsAdd, protectedPathsEmpty
     case reasonTrash, reasonOldVersion, reasonAICache, reasonRegenerable
@@ -144,6 +145,9 @@ public enum Localization {
         .engineAttribution: "Cleaning engine provided by tw93/mole (GPL-3.0).",
         .totalReclaimed: "Total reclaimed: %@",
         .historyTitle: "Cleaning history", .historyEmpty: "No cleanups yet.", .historyCache: "Cache", .historyApps: "App", .historyDisk: "Large files", .historyAuto: "Scheduled", .historyChartTitle: "Reclaimed per cleanup",
+        .restoreLastTitle: "Undo last cleanup",
+        .restoreLastDesc: "Your last cleanup moved items to the Trash — you can put them back.",
+        .restoreLastButton: "Restore %d item(s)",
         .exclusionsTitle: "Exclusions", .exclusionsDesc: "Excluded tools are never scanned or auto-cleaned.",
         .protectedPathsTitle: "Protected paths",
         .protectedPathsDesc: "Files and folders here — and everything inside them — are never scanned or deleted.",
@@ -224,6 +228,9 @@ public enum Localization {
         .engineAttribution: "Temizleme motoru tw93/mole (GPL-3.0) tarafından sağlanır.",
         .totalReclaimed: "Toplam kazanılan: %@",
         .historyTitle: "Temizlik geçmişi", .historyEmpty: "Henüz temizlik yok.", .historyCache: "Önbellek", .historyApps: "Uygulama", .historyDisk: "Büyük dosya", .historyAuto: "Zamanlanmış", .historyChartTitle: "Temizlik başına kazanılan",
+        .restoreLastTitle: "Son temizliği geri al",
+        .restoreLastDesc: "Son temizlik öğeleri Çöp Kutusu’na taşıdı — geri koyabilirsiniz.",
+        .restoreLastButton: "%d öğeyi geri yükle",
         .exclusionsTitle: "İstisnalar", .exclusionsDesc: "Muaf tutulan araçlar hiç taranmaz veya otomatik temizlenmez.",
         .protectedPathsTitle: "Korunan yollar",
         .protectedPathsDesc: "Buradaki dosya ve klasörler — ve içlerindeki her şey — asla taranmaz veya silinmez.",
@@ -304,6 +311,9 @@ public enum Localization {
         .engineAttribution: "Motor de limpieza proporcionado por tw93/mole (GPL-3.0).",
         .totalReclaimed: "Total recuperado: %@",
         .historyTitle: "Historial de limpieza", .historyEmpty: "Aún no hay limpiezas.", .historyCache: "Caché", .historyApps: "App", .historyDisk: "Archivos grandes", .historyAuto: "Programado", .historyChartTitle: "Recuperado por limpieza",
+        .restoreLastTitle: "Deshacer última limpieza",
+        .restoreLastDesc: "Tu última limpieza movió elementos a la Papelera — puedes restaurarlos.",
+        .restoreLastButton: "Restaurar %d elemento(s)",
         .exclusionsTitle: "Exclusiones", .exclusionsDesc: "Las herramientas excluidas nunca se analizan ni se limpian.",
         .protectedPathsTitle: "Rutas protegidas",
         .protectedPathsDesc: "Los archivos y carpetas de aquí — y todo su contenido — nunca se analizan ni se eliminan.",
@@ -384,6 +394,9 @@ public enum Localization {
         .engineAttribution: "Moteur de nettoyage fourni par tw93/mole (GPL-3.0).",
         .totalReclaimed: "Total récupéré : %@",
         .historyTitle: "Historique de nettoyage", .historyEmpty: "Aucun nettoyage pour l’instant.", .historyCache: "Cache", .historyApps: "App", .historyDisk: "Gros fichiers", .historyAuto: "Planifié", .historyChartTitle: "Récupéré par nettoyage",
+        .restoreLastTitle: "Annuler le dernier nettoyage",
+        .restoreLastDesc: "Votre dernier nettoyage a déplacé des éléments vers la Corbeille — vous pouvez les restaurer.",
+        .restoreLastButton: "Restaurer %d élément(s)",
         .exclusionsTitle: "Exclusions", .exclusionsDesc: "Les outils exclus ne sont jamais analysés ni nettoyés.",
         .protectedPathsTitle: "Chemins protégés",
         .protectedPathsDesc: "Les fichiers et dossiers listés ici — et tout leur contenu — ne sont jamais analysés ni supprimés.",

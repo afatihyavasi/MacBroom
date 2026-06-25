@@ -118,6 +118,8 @@ _sizes_kb() {
 # anything else permanently removes (matching `mo clean`). The path has already
 # passed mole's protection + whitelist checks. Returns 0 on success.
 # --------------------------------------------------------------------------
+# Remove a path. In trash mode, echoes the Trash destination on success so the
+# app can offer "restore last cleanup"; permanent mode echoes nothing.
 _mb_remove() {
     if [[ "${MACBROOM_DELETE_MODE:-permanent}" == "trash" ]]; then
         _mb_trash "$1"
@@ -126,7 +128,8 @@ _mb_remove() {
     fi
 }
 
-# Move a path into the user's Trash, disambiguating name collisions.
+# Move a path into the user's Trash, disambiguating name collisions. Echoes the
+# final destination path on success (consumed for restore).
 _mb_trash() {
     local src="$1"
     local trash="$HOME/.Trash"
@@ -137,7 +140,11 @@ _mb_trash() {
     if [[ -e "$dest" ]]; then
         dest="$trash/${base} $(date +%Y%m%d-%H%M%S)-$$"
     fi
-    mv -f -- "$src" "$dest" 2>/dev/null
+    if mv -f -- "$src" "$dest" 2>/dev/null; then
+        printf '%s' "$dest"
+        return 0
+    fi
+    return 1
 }
 
 # --------------------------------------------------------------------------
@@ -293,10 +300,16 @@ _mb_handle() {
     # clean mode: only delete paths the user explicitly approved.
     _mb_is_approved "$path" || return 0
     local size; size="$(path_size_bytes "$path")"
-    if _mb_remove "$path" && [[ ! -e "$path" && ! -L "$path" ]]; then
+    local dest rc
+    dest="$(_mb_remove "$path")"; rc=$?
+    if [[ $rc -eq 0 && ! -e "$path" && ! -L "$path" ]]; then
         MB_FREED_BYTES=$((MB_FREED_BYTES + size))
         MB_COUNT=$((MB_COUNT + 1))
-        emit "{\"event\":\"progress\",\"path\":$(json_string "$path"),\"freed_bytes\":$size}"
+        if [[ -n "$dest" ]]; then
+            emit "{\"event\":\"progress\",\"path\":$(json_string "$path"),\"freed_bytes\":$size,\"trashed_to\":$(json_string "$dest")}"
+        else
+            emit "{\"event\":\"progress\",\"path\":$(json_string "$path"),\"freed_bytes\":$size}"
+        fi
     else
         # Removal failed (path still present) — report it so the UI can tell the
         # user, instead of silently counting it as cleaned.
@@ -682,10 +695,16 @@ cmd_app_clean() {
         # so the guard must be repeated here.
         if _mb_user_protected "$p"; then continue; fi
         size="$(path_size_bytes "$p")"
-        if _mb_remove "$p" && [[ ! -e "$p" && ! -L "$p" ]]; then
+        local dest rc
+        dest="$(_mb_remove "$p")"; rc=$?
+        if [[ $rc -eq 0 && ! -e "$p" && ! -L "$p" ]]; then
             MB_FREED_BYTES=$((MB_FREED_BYTES + size))
             MB_COUNT=$((MB_COUNT + 1))
-            emit "{\"event\":\"progress\",\"path\":$(json_string "$p"),\"freed_bytes\":$size}"
+            if [[ -n "$dest" ]]; then
+                emit "{\"event\":\"progress\",\"path\":$(json_string "$p"),\"freed_bytes\":$size,\"trashed_to\":$(json_string "$dest")}"
+            else
+                emit "{\"event\":\"progress\",\"path\":$(json_string "$p"),\"freed_bytes\":$size}"
+            fi
         else
             # Removal failed (path still exists). Classify so the UI can tell the
             # user whether granting Full Disk Access / admin would help.

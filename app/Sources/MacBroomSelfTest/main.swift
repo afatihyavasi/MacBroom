@@ -45,7 +45,10 @@ if let s = try? EngineDecode.systemStatus(data(#"{"disk":{"total_bytes":1,"used_
 // EngineEvent: progress / done / rejects garbage
 check("EngineEvent progress",
       EngineEvent(jsonLine: #"{"event":"progress","path":"/x/y","freed_bytes":2048}"#)
-        == .progress(path: "/x/y", freedBytes: 2048))
+        == .progress(path: "/x/y", freedBytes: 2048, trashedTo: nil))
+check("EngineEvent progress carries trashed_to (restore)",
+      EngineEvent(jsonLine: #"{"event":"progress","path":"/x/y","freed_bytes":2048,"trashed_to":"/Users/x/.Trash/y"}"#)
+        == .progress(path: "/x/y", freedBytes: 2048, trashedTo: "/Users/x/.Trash/y"))
 check("EngineEvent done",
       EngineEvent(jsonLine: #"{"event":"done","freed_bytes":9000,"count":3,"failed":1}"#)
         == .done(freedBytes: 9000, count: 3, failed: 1))
@@ -204,7 +207,7 @@ do {
     do {
         for try await ev in EngineBridge().appClean(approvedPaths: [victim.path], deleteMode: .permanent) {
             switch ev {
-            case let .progress(_, bytes): freed += bytes
+            case let .progress(_, bytes, _): freed += bytes
             case let .done(bytes, _, _): sawDone = true; freed = max(freed, bytes)
             case .skipped: break
             }
@@ -239,7 +242,7 @@ do {
     var freed: Int64 = 0
     do {
         for try await ev in EngineBridge().appClean(approvedPaths: [victim.path], deleteMode: .permanent) {
-            if case let .progress(_, bytes) = ev { freed += bytes }
+            if case let .progress(_, bytes, _) = ev { freed += bytes }
         }
     } catch { /* surfaced by the assertions below */ }
     check("user-protected path survives clean", FileManager.default.fileExists(atPath: victim.path))
