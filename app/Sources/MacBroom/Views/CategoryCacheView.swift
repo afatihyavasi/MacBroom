@@ -71,6 +71,8 @@ struct CategoryCacheView: View {
                     Spacer()
                     Text(Format.bytes(c.sizeBytes)).font(.shMono).foregroundStyle(Theme.mutedForeground)
                 }
+                Text(loc.t(c.reasonKey)).font(.system(size: 10))
+                    .foregroundStyle(Theme.mutedForeground).lineLimit(1)
                 if maxBytes > 0 {
                     SHProgressBar(value: Double(c.sizeBytes) / Double(maxBytes),
                                   tint: Theme.mutedForeground.opacity(0.35))

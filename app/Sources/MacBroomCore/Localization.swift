@@ -65,6 +65,7 @@ public enum L10n: String, CaseIterable {
     case historyTitle, historyEmpty, historyCache, historyApps, historyDisk, historyAuto
     case exclusionsTitle, exclusionsDesc
     case protectedPathsTitle, protectedPathsDesc, protectedPathsAdd, protectedPathsEmpty
+    case reasonTrash, reasonOldVersion, reasonAICache, reasonRegenerable
     case language, languageSystem, disk, memory, diskFree, memoryTotal
     case categoryAI, categorySystem, categoryDeveloper
     case targetAppCaches, targetEditors, targetGuiApps, targetDevMisc
@@ -147,6 +148,10 @@ public enum Localization {
         .protectedPathsTitle: "Protected paths",
         .protectedPathsDesc: "Files and folders here — and everything inside them — are never scanned or deleted.",
         .protectedPathsAdd: "Add file or folder…", .protectedPathsEmpty: "No protected paths yet.",
+        .reasonTrash: "Already in the Trash.",
+        .reasonOldVersion: "Superseded version — re-downloaded when needed.",
+        .reasonAICache: "Regenerable cache — identity, sessions & memory preserved.",
+        .reasonRegenerable: "Regenerable cache — rebuilt automatically when needed.",
         .language: "Language", .languageSystem: "System (automatic)",
         .disk: "Disk", .memory: "Memory", .diskFree: "%@ free", .memoryTotal: "%@ total",
         .categoryAI: "AI Tools", .categorySystem: "System", .categoryDeveloper: "Developer",
@@ -223,6 +228,10 @@ public enum Localization {
         .protectedPathsTitle: "Korunan yollar",
         .protectedPathsDesc: "Buradaki dosya ve klasörler — ve içlerindeki her şey — asla taranmaz veya silinmez.",
         .protectedPathsAdd: "Dosya veya klasör ekle…", .protectedPathsEmpty: "Henüz korunan yol yok.",
+        .reasonTrash: "Zaten Çöp Kutusu’nda.",
+        .reasonOldVersion: "Eski sürüm — gerektiğinde yeniden indirilir.",
+        .reasonAICache: "Yeniden üretilebilir cache — kimlik, oturum ve hafıza korunur.",
+        .reasonRegenerable: "Yeniden üretilebilir cache — gerektiğinde otomatik oluşturulur.",
         .language: "Dil", .languageSystem: "Sistem (otomatik)",
         .disk: "Disk", .memory: "Bellek", .diskFree: "%@ boş", .memoryTotal: "%@ toplam",
         .categoryAI: "AI Araçları", .categorySystem: "Sistem", .categoryDeveloper: "Geliştirici",
@@ -299,6 +308,10 @@ public enum Localization {
         .protectedPathsTitle: "Rutas protegidas",
         .protectedPathsDesc: "Los archivos y carpetas de aquí — y todo su contenido — nunca se analizan ni se eliminan.",
         .protectedPathsAdd: "Añadir archivo o carpeta…", .protectedPathsEmpty: "Aún no hay rutas protegidas.",
+        .reasonTrash: "Ya está en la Papelera.",
+        .reasonOldVersion: "Versión obsoleta — se vuelve a descargar cuando se necesita.",
+        .reasonAICache: "Caché regenerable — se conservan identidad, sesiones y memoria.",
+        .reasonRegenerable: "Caché regenerable — se reconstruye automáticamente cuando hace falta.",
         .language: "Idioma", .languageSystem: "Sistema (automático)",
         .disk: "Disco", .memory: "Memoria", .diskFree: "%@ libres", .memoryTotal: "%@ en total",
         .categoryAI: "Herramientas de IA", .categorySystem: "Sistema", .categoryDeveloper: "Desarrollo",
@@ -375,6 +388,10 @@ public enum Localization {
         .protectedPathsTitle: "Chemins protégés",
         .protectedPathsDesc: "Les fichiers et dossiers listés ici — et tout leur contenu — ne sont jamais analysés ni supprimés.",
         .protectedPathsAdd: "Ajouter un fichier ou dossier…", .protectedPathsEmpty: "Aucun chemin protégé pour l’instant.",
+        .reasonTrash: "Déjà dans la Corbeille.",
+        .reasonOldVersion: "Version obsolète — re-téléchargée si nécessaire.",
+        .reasonAICache: "Cache régénérable — identité, sessions et mémoire préservées.",
+        .reasonRegenerable: "Cache régénérable — reconstruit automatiquement au besoin.",
         .language: "Langue", .languageSystem: "Système (automatique)",
         .disk: "Disque", .memory: "Mémoire", .diskFree: "%@ libres", .memoryTotal: "%@ au total",
         .categoryAI: "Outils d’IA", .categorySystem: "Système", .categoryDeveloper: "Développeur",

@@ -97,6 +97,13 @@ if let d = try? JSONDecoder().decode(DiscoverResult.self, from: data(#"{"targets
 // Formatting sanity
 check("Format.bytes non-empty", !Format.bytes(1_500_000).isEmpty)
 
+// CleanReason: accurate "why is this safe?" classification (conservative).
+check("reason: Trash path", CleanReason.key(category: "system", label: "Trash", path: "/Users/x/.Trash/old") == .reasonTrash)
+check("reason: old version label", CleanReason.key(category: "ai", label: "Claude Code old version", path: "/Users/x/.local/share/claude/versions/1") == .reasonOldVersion)
+check("reason: AI cache default", CleanReason.key(category: "ai", label: "Gemini CLI temp files", path: "/Users/x/.gemini/tmp") == .reasonAICache)
+check("reason: system cache default", CleanReason.key(category: "system", label: "Rust cargo cache", path: "/Users/x/.cargo/registry/cache") == .reasonRegenerable)
+check("reason: candidate accessor", CleanCandidate(category: "ai", label: "Gemini", path: "/g/tmp", sizeBytes: 1).reasonKey == .reasonAICache)
+
 // CleanFrequency scheduling math
 check("freq off never due", CleanFrequency.off.isDue(since: Date(timeIntervalSince1970: 0), now: Date(timeIntervalSince1970: 9_999_999)) == false)
 check("freq hourly interval", CleanFrequency.hourly.interval == 3600)
