@@ -73,7 +73,7 @@ public enum L10n: String, CaseIterable {
     case autoCleanTitle, autoCleanDesc, autoCleanNoTools, autoCleanLast
     case freqOff, freqHourly, freqDaily, freqWeekly, freqMonthly
     case appearance, appearanceSystem, appearanceLight, appearanceDark
-    case aiAutomationInfo, aiAutomationOpen, automationTitle, automationDesc, save
+    case aiAutomationInfo, aiAutomationOpen, automationTitle, automationDesc, save, scheduleFailed
     case everyNHours, weekdayLabel, timeLabel, monthDayLabel, intervalLabel
     case deletePermanentTitle, deleteTrashTitle, deletePermanentDetail, deleteTrashDetail
     case errEngineNotFound, errNonZero, errDecode
@@ -163,6 +163,7 @@ public enum Localization {
         .aiAutomationInfo: "Schedule MacBroom to clean your AI caches automatically.",
         .aiAutomationOpen: "Set up automation",
         .automationTitle: "AI Automation", .automationDesc: "Choose when each tool is cleaned. Applied when you press Save.",
+        .scheduleFailed: "Couldn’t schedule automatic cleaning for: %@. Check that ~/Library/LaunchAgents is writable.",
         .save: "Save", .everyNHours: "Every %d h", .weekdayLabel: "Day", .timeLabel: "Time",
         .monthDayLabel: "Day of month", .intervalLabel: "Interval",
         .deletePermanentTitle: "Delete permanently", .deleteTrashTitle: "Move to Trash",
@@ -238,6 +239,7 @@ public enum Localization {
         .aiAutomationInfo: "MacBroom'un AI önbelleklerini otomatik temizlemesini planlayın.",
         .aiAutomationOpen: "Otomasyonu ayarla",
         .automationTitle: "AI Otomasyonu", .automationDesc: "Her aracın ne zaman temizleneceğini seçin. Kaydet'e bastığınızda uygulanır.",
+        .scheduleFailed: "Şunlar için otomatik temizlik zamanlanamadı: %@. ~/Library/LaunchAgents yazılabilir mi kontrol edin.",
         .save: "Kaydet", .everyNHours: "Her %d saatte", .weekdayLabel: "Gün", .timeLabel: "Saat",
         .monthDayLabel: "Ayın günü", .intervalLabel: "Aralık",
         .deletePermanentTitle: "Kalıcı olarak sil", .deleteTrashTitle: "Çöp Kutusu’na taşı",
@@ -313,6 +315,7 @@ public enum Localization {
         .aiAutomationInfo: "Programa MacBroom para limpiar tus cachés de IA automáticamente.",
         .aiAutomationOpen: "Configurar automatización",
         .automationTitle: "Automatización de IA", .automationDesc: "Elige cuándo se limpia cada herramienta. Se aplica al pulsar Guardar.",
+        .scheduleFailed: "No se pudo programar la limpieza automática para: %@. Verifica que ~/Library/LaunchAgents tenga permiso de escritura.",
         .save: "Guardar", .everyNHours: "Cada %d h", .weekdayLabel: "Día", .timeLabel: "Hora",
         .monthDayLabel: "Día del mes", .intervalLabel: "Intervalo",
         .deletePermanentTitle: "Eliminar permanentemente", .deleteTrashTitle: "Mover a la Papelera",
@@ -388,6 +391,7 @@ public enum Localization {
         .aiAutomationInfo: "Planifiez le nettoyage automatique de vos caches d'IA par MacBroom.",
         .aiAutomationOpen: "Configurer l'automatisation",
         .automationTitle: "Automatisation IA", .automationDesc: "Choisissez quand chaque outil est nettoyé. Appliqué quand vous enregistrez.",
+        .scheduleFailed: "Impossible de planifier le nettoyage automatique pour : %@. Vérifiez que ~/Library/LaunchAgents est accessible en écriture.",
         .save: "Enregistrer", .everyNHours: "Toutes les %d h", .weekdayLabel: "Jour", .timeLabel: "Heure",
         .monthDayLabel: "Jour du mois", .intervalLabel: "Intervalle",
         .deletePermanentTitle: "Supprimer définitivement", .deleteTrashTitle: "Mettre à la corbeille",

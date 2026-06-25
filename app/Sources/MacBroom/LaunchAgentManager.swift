@@ -19,12 +19,21 @@ enum LaunchAgentManager {
     }
 
     /// Replace all MacBroom auto-clean agents with ones matching `rules`.
+    /// Returns the target ids whose agent could NOT be installed (plist write or
+    /// `launchctl load` failed) so the caller can tell the user instead of
+    /// silently leaving a schedule that will never fire.
+    @discardableResult
     static func sync(rules: [String: AutoCleanRule], enginePath: String,
-                     moleDir: String, deleteMode: String) {
+                     moleDir: String, deleteMode: String) -> [String] {
         removeAll()
         let enabled = rules.filter { $0.value.isEnabled }
-        guard !enabled.isEmpty else { return }
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        guard !enabled.isEmpty else { return [] }
+        do {
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        } catch {
+            return Array(enabled.keys)   // no LaunchAgents dir → nothing can install
+        }
+        var failed: [String] = []
         for (id, rule) in enabled {
             let label = LaunchAgent.label(for: id)
             let args = ["/bin/bash", enginePath, "auto-clean", "--targets=\(id)"]
@@ -36,9 +45,12 @@ enum LaunchAgentManager {
             let file = dir.appendingPathComponent("\(label).plist")
             do {
                 try data.write(to: file)
-                load(file)
-            } catch { continue }
+            } catch {
+                failed.append(id); continue
+            }
+            if !load(file) { failed.append(id) }
         }
+        return failed
     }
 
     /// Remove every MacBroom auto-clean agent (unload + delete the plist).
@@ -52,16 +64,20 @@ enum LaunchAgentManager {
         }
     }
 
-    private static func load(_ file: URL)   { launchctl(["load", "-w", file.path]) }
-    private static func unload(_ file: URL) { launchctl(["unload", file.path]) }
+    @discardableResult
+    private static func load(_ file: URL) -> Bool { launchctl(["load", "-w", file.path]) }
+    private static func unload(_ file: URL)        { launchctl(["unload", file.path]) }
 
-    private static func launchctl(_ args: [String]) {
+    /// Run launchctl; returns true only if it ran and exited cleanly.
+    @discardableResult
+    private static func launchctl(_ args: [String]) -> Bool {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/bin/launchctl")
         p.arguments = args
         p.standardOutput = FileHandle.nullDevice
         p.standardError = FileHandle.nullDevice
-        try? p.run()
+        do { try p.run() } catch { return false }
         p.waitUntilExit()
+        return p.terminationStatus == 0
     }
 }
