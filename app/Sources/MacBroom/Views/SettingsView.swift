@@ -8,6 +8,7 @@ struct SettingsView: View {
     @EnvironmentObject var state: AppState
     @EnvironmentObject var appearance: AppearanceManager
     @AppStorage("deletionMode") private var deletionMode: String = DeleteMode.permanent.rawValue
+    @State private var fdaGranted = FullDiskAccess.isGranted
 
     var body: some View {
         ScrollView {
@@ -51,15 +52,27 @@ struct SettingsView: View {
             // Exclusions (tools the user permanently excludes from cleaning)
             exclusionsSection
 
-            // Full Disk Access
+            // Protected paths (user-defined whitelist — never scanned or deleted)
+            protectedPathsSection
+
+            // Full Disk Access — reflect the live permission state.
             VStack(alignment: .leading, spacing: Theme.Space.sm) {
                 SHSectionHeader(title: loc.t(.fdaTitle), systemImage: "lock.shield")
-                Text(loc.t(.fdaSettingsDesc))
-                    .font(.shCaption).foregroundStyle(Theme.mutedForeground)
-                Button(loc.t(.openInSettings)) { openFullDiskAccess() }.buttonStyle(.shOutline(.sm))
+                if fdaGranted {
+                    Label(loc.t(.fdaGranted), systemImage: "checkmark.seal.fill")
+                        .font(.shCaption).foregroundStyle(Theme.success)
+                } else {
+                    Text(loc.t(.fdaSettingsDesc))
+                        .font(.shCaption).foregroundStyle(Theme.mutedForeground)
+                    Button(loc.t(.openInSettings)) { openFullDiskAccess() }.buttonStyle(.shOutline(.sm))
+                }
             }
+            .onAppear { fdaGranted = FullDiskAccess.isGranted }
 
             SHSeparator()
+
+            // Undo: put the last cleanup's items back from the Trash
+            restoreSection
 
             // Cleaning history
             historySection
@@ -110,6 +123,76 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: protected paths (whitelist)
+
+    @ViewBuilder private var protectedPathsSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.sm) {
+            SHSectionHeader(title: loc.t(.protectedPathsTitle), systemImage: "hand.raised")
+            Text(loc.t(.protectedPathsDesc)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
+            if state.protectedPaths.isEmpty {
+                Text(loc.t(.protectedPathsEmpty)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
+            } else {
+                VStack(spacing: Theme.Space.xs) {
+                    ForEach(state.protectedPaths, id: \.self) { path in
+                        protectedRow(path)
+                    }
+                }
+            }
+            Button(loc.t(.protectedPathsAdd)) { addProtectedPath() }
+                .buttonStyle(.shOutline(.sm))
+        }
+    }
+
+    private func protectedRow(_ path: String) -> some View {
+        HStack(spacing: Theme.Space.sm) {
+            Image(systemName: "lock.fill").font(.system(size: 11))
+                .foregroundStyle(Theme.accent).frame(width: 14)
+            Text(abbreviate(path)).font(.shCaption).lineLimit(1).truncationMode(.middle)
+                .help(path)
+            Spacer()
+            Button { state.removeProtectedPath(path) } label: {
+                Image(systemName: "xmark.circle.fill").font(.system(size: 13))
+                    .foregroundStyle(Theme.mutedForeground)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(loc.t(.remove))
+        }
+        .padding(.vertical, 5).padding(.horizontal, Theme.Space.sm)
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.card))
+        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+            .strokeBorder(Theme.border, lineWidth: 1))
+    }
+
+    /// Show `~` for the home folder so long absolute paths stay readable.
+    private func abbreviate(_ path: String) -> String { (path as NSString).abbreviatingWithTildeInPath }
+
+    /// Native picker — choosing a real file/folder avoids typos that would make
+    /// a whitelist rule silently match nothing.
+    private func addProtectedPath() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = true
+        panel.prompt = loc.t(.protectedPathsAdd)
+        if panel.runModal() == .OK {
+            for url in panel.urls { state.addProtectedPath(url.path) }
+        }
+    }
+
+    // MARK: undo / restore last cleanup
+
+    @ViewBuilder private var restoreSection: some View {
+        if !state.lastRestorable.isEmpty {
+            VStack(alignment: .leading, spacing: Theme.Space.sm) {
+                SHSectionHeader(title: loc.t(.restoreLastTitle), systemImage: "arrow.uturn.backward")
+                Text(loc.t(.restoreLastDesc)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
+                Button(loc.t(.restoreLastButton, state.lastRestorable.count)) { state.restoreLast() }
+                    .buttonStyle(.shOutline(.sm))
+            }
+            SHSeparator()
+        }
+    }
+
     // MARK: cleaning history
 
     @ViewBuilder private var historySection: some View {
@@ -118,6 +201,11 @@ struct SettingsView: View {
             if state.history.isEmpty {
                 Text(loc.t(.historyEmpty)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
             } else {
+                if state.history.count >= 2 {
+                    Text(loc.t(.historyChartTitle)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
+                    CleanHistoryChart(records: state.history)
+                        .padding(.bottom, Theme.Space.xs)
+                }
                 VStack(spacing: Theme.Space.xs) {
                     ForEach(Array(state.history.prefix(12).enumerated()), id: \.offset) { _, rec in
                         historyRow(rec)
@@ -137,7 +225,7 @@ struct SettingsView: View {
                     .font(.shCaption).foregroundStyle(Theme.mutedForeground)
             }
             Spacer()
-            Text(Self.relative.localizedString(for: rec.date, relativeTo: Date()))
+            Text(loc.relativeTime(for: rec.date))
                 .font(.shCaption).foregroundStyle(Theme.mutedForeground)
         }
         .padding(.vertical, 5).padding(.horizontal, Theme.Space.sm)
@@ -146,9 +234,6 @@ struct SettingsView: View {
             .strokeBorder(Theme.border, lineWidth: 1))
     }
 
-    private static let relative: RelativeDateTimeFormatter = {
-        let f = RelativeDateTimeFormatter(); f.unitsStyle = .abbreviated; return f
-    }()
 
     /// A selectable deletion-mode card (radio behavior).
     private func deletionRow(_ mode: DeleteMode) -> some View {

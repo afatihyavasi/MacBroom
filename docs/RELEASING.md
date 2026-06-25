@@ -14,8 +14,8 @@ channels:
 It runs automatically when a new `v*` tag is pushed:
 
 ```bash
-git tag v2.0.0
-git push origin v2.0.0
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 This triggers the `.github/workflows/release.yml` workflow. The workflow:
@@ -86,8 +86,8 @@ An Apple Developer Program membership is required (paid annually).
 ## Local testing (optional)
 
 ```bash
-make app VERSION=2.0.0     # build/MacBroom.app
-make dmg VERSION=2.0.0     # build/MacBroom-2.0.0.dmg
+make app VERSION=1.0.0     # build/MacBroom.app
+make dmg VERSION=1.0.0     # build/MacBroom-1.0.0.dmg
 ```
 
 Optional local signing kicks in if the `MACBROOM_SIGN_IDENTITY` environment
@@ -95,7 +95,7 @@ variable is set inside `make-app.sh` (if it is not set, the behavior does not ch
 
 ```bash
 MACBROOM_SIGN_IDENTITY="Developer ID Application: Full Name (TEAMID)" \
-  make app VERSION=2.0.0
+  make app VERSION=1.0.0
 ```
 
 ---
@@ -105,8 +105,48 @@ MACBROOM_SIGN_IDENTITY="Developer ID Application: Full Name (TEAMID)" \
 For each release, update the `version` and `sha256` in `Casks/macbroom.rb`:
 
 ```bash
-shasum -a 256 build/MacBroom-2.0.0.dmg
+shasum -a 256 build/MacBroom-1.0.0.dmg
 ```
 
 Write the resulting hash into the `sha256` field of the cask. Replace the `<OWNER>` placeholder
 with your GitHub user/organization name.
+
+---
+
+## Publishing the Homebrew tap
+
+`brew install --cask afatihyavasi/tap/macbroom` resolves to a GitHub repo named
+**`afatihyavasi/homebrew-tap`** (Homebrew strips the `homebrew-` prefix). The cask
+file must live there, not in this repo. One-time setup:
+
+```bash
+# 1. Create the tap repo (GitHub CLI). Must be named exactly homebrew-tap.
+gh repo create afatihyavasi/homebrew-tap --public \
+  -d "Homebrew tap for MacBroom"
+
+# 2. Clone it and add the cask under Casks/.
+git clone https://github.com/afatihyavasi/homebrew-tap.git
+mkdir -p homebrew-tap/Casks
+cp Casks/macbroom.rb homebrew-tap/Casks/macbroom.rb
+
+# 3. Commit and push.
+cd homebrew-tap
+git add Casks/macbroom.rb
+git commit -m "macbroom 1.0.0"
+git push
+```
+
+Now anyone can install with:
+
+```bash
+brew install --cask afatihyavasi/tap/macbroom
+```
+
+**On each release**, bump `version` + `sha256` in `homebrew-tap/Casks/macbroom.rb`
+and push. For **unsigned** beta builds, add `no_quarantine true` to the cask so
+Homebrew skips the Gatekeeper prompt:
+
+```ruby
+  app "MacBroom.app"
+  no_quarantine true   # remove once releases are notarized
+```

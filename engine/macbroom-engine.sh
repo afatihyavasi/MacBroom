@@ -86,6 +86,7 @@ MB_COUNT=0
 MB_PATHS_FILE=""          # clean mode: file of approved absolute paths (one per line)
 declare -a MB_CANDIDATES=()   # JSON object strings (scan mode)
 declare -a MB_SCAN_PATHS=()   # raw candidate paths (scan mode; used by auto-clean)
+declare -a MB_USER_PROTECTED=()   # user-defined absolute paths never listed or deleted
 # NOTE: macOS ships bash 3.2 (no associative arrays), so the approved-path set
 # is kept as a file and membership is tested with a fixed-string grep.
 
@@ -117,6 +118,8 @@ _sizes_kb() {
 # anything else permanently removes (matching `mo clean`). The path has already
 # passed mole's protection + whitelist checks. Returns 0 on success.
 # --------------------------------------------------------------------------
+# Remove a path. In trash mode, echoes the Trash destination on success so the
+# app can offer "restore last cleanup"; permanent mode echoes nothing.
 _mb_remove() {
     if [[ "${MACBROOM_DELETE_MODE:-permanent}" == "trash" ]]; then
         _mb_trash "$1"
@@ -125,7 +128,8 @@ _mb_remove() {
     fi
 }
 
-# Move a path into the user's Trash, disambiguating name collisions.
+# Move a path into the user's Trash, disambiguating name collisions. Echoes the
+# final destination path on success (consumed for restore).
 _mb_trash() {
     local src="$1"
     local trash="$HOME/.Trash"
@@ -136,7 +140,11 @@ _mb_trash() {
     if [[ -e "$dest" ]]; then
         dest="$trash/${base} $(date +%Y%m%d-%H%M%S)-$$"
     fi
-    mv -f -- "$src" "$dest" 2>/dev/null
+    if mv -f -- "$src" "$dest" 2>/dev/null; then
+        printf '%s' "$dest"
+        return 0
+    fi
+    return 1
 }
 
 # --------------------------------------------------------------------------
@@ -214,6 +222,23 @@ _mb_install_safe_remove_override() {
 }
 _mb_install_safe_remove_override
 
+# Trim old Xcode DeviceSupport versions (debug symbols for previously-connected
+# devices — often many GB, fully regenerable on next attach).
+#
+# mole's clean_xcode_device_support is ARG-based (it takes a dir + label), and
+# its only no-arg caller is clean_dev_mobile — which ALSO runs the simulator
+# runtime/coresimulator cleaners that bypass our safe_remove sink and call
+# safe_sudo_remove (a sudo prompt + a real delete during *scan*). So we call the
+# safe, user-owned DeviceSupport dirs directly and skip the rest. Deletions here
+# route through our safe_remove/safe_clean override, so scan lists and clean only
+# removes approved paths — exactly like every other target.
+_mb_clean_xcode_device_support() {
+    declare -F clean_xcode_device_support >/dev/null 2>&1 || return 0
+    clean_xcode_device_support ~/Library/Developer/Xcode/iOS\ DeviceSupport "iOS DeviceSupport"
+    clean_xcode_device_support ~/Library/Developer/Xcode/watchOS\ DeviceSupport "watchOS DeviceSupport"
+    clean_xcode_device_support ~/Library/Developer/Xcode/tvOS\ DeviceSupport "tvOS DeviceSupport"
+}
+
 # Membership test for the approved-path allowlist (bash 3.2 friendly).
 _mb_is_approved() {
     [[ -n "$MB_PATHS_FILE" ]] || return 1
@@ -231,9 +256,38 @@ _protected() {
     fi
 }
 
+# Load the user's own protected paths (the rules/whitelist set from Settings)
+# from MACBROOM_USER_PROTECTED_FILE — one absolute path per line. Blank lines are
+# skipped. Absent/empty file => no extra protection (the array stays empty).
+_mb_load_user_protected() {
+    local file="${MACBROOM_USER_PROTECTED_FILE:-}" line
+    [[ -n "$file" && -f "$file" ]] || return 0
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ -n "$line" ]] && MB_USER_PROTECTED+=("$line")
+    done < "$file"
+}
+
+# True (0) when `path` is one of the user's protected paths OR lives underneath
+# one (subtree match): protecting ~/Projects shields ~/Projects and everything
+# below it. This is enforced for BOTH scan (never listed) and clean (never
+# deleted) — a defense-in-depth layer on top of mole's own protections.
+_mb_user_protected() {
+    local path="$1" guard
+    [[ ${#MB_USER_PROTECTED[@]} -gt 0 ]] || return 1   # bash 3.2: don't expand an empty array under set -u
+    for guard in "${MB_USER_PROTECTED[@]}"; do
+        [[ "$path" == "$guard" || "$path" == "$guard"/* ]] && return 0
+    done
+    return 1
+}
+
 # Handle one protection-cleared path according to the current mode.
 _mb_handle() {
     local path="$1" label="$2"
+
+    # User-defined whitelist: never list (scan) or delete (clean) a protected
+    # path. Checked here — the single sink both modes funnel through — so the
+    # guarantee holds even if a stale candidate somehow reaches the approved set.
+    _mb_user_protected "$path" && return 0
 
     if [[ "$MB_MODE" == "scan" ]]; then
         local size; size="$(path_size_bytes "$path")"
@@ -246,10 +300,16 @@ _mb_handle() {
     # clean mode: only delete paths the user explicitly approved.
     _mb_is_approved "$path" || return 0
     local size; size="$(path_size_bytes "$path")"
-    if _mb_remove "$path" && [[ ! -e "$path" && ! -L "$path" ]]; then
+    local dest rc
+    dest="$(_mb_remove "$path")"; rc=$?
+    if [[ $rc -eq 0 && ! -e "$path" && ! -L "$path" ]]; then
         MB_FREED_BYTES=$((MB_FREED_BYTES + size))
         MB_COUNT=$((MB_COUNT + 1))
-        emit "{\"event\":\"progress\",\"path\":$(json_string "$path"),\"freed_bytes\":$size}"
+        if [[ -n "$dest" ]]; then
+            emit "{\"event\":\"progress\",\"path\":$(json_string "$path"),\"freed_bytes\":$size,\"trashed_to\":$(json_string "$dest")}"
+        else
+            emit "{\"event\":\"progress\",\"path\":$(json_string "$path"),\"freed_bytes\":$size}"
+        fi
     else
         # Removal failed (path still present) — report it so the UI can tell the
         # user, instead of silently counting it as cleaned.
@@ -327,7 +387,10 @@ system:editors|Code editors|system|~/Library/Application Support/Code:~/Library/
 system:gui-apps|GUI app caches|system|*|clean_user_gui_applications
 system:dev-misc|Developer leftovers|system|*|clean_dev_misc
 system:xcode|Xcode DerivedData|system|~/Library/Developer/Xcode/DerivedData|clean_xcode_derived_data
+system:xcode-device-support|Xcode device support|system|~/Library/Developer/Xcode/iOS DeviceSupport:~/Library/Developer/Xcode/watchOS DeviceSupport:~/Library/Developer/Xcode/tvOS DeviceSupport|_mb_clean_xcode_device_support
 system:pkg-caches|Package manager caches|system|~/.npm:~/.yarn/cache:~/Library/Caches/pip:~/.cache/poetry|clean_dev_npm clean_dev_python
+system:lang-caches|Language toolchain caches|system|~/.cargo:~/.rustup:~/.gem:~/.rbenv:~/.bundle|clean_dev_rust clean_dev_ruby
+system:docker|Docker BuildX cache|system|~/.docker/buildx|clean_dev_docker
 system:browser|Browser caches|system|~/Library/Caches/com.apple.Safari:~/Library/Caches/Google/Chrome:~/Library/Caches/com.microsoft.edgemac:~/Library/Caches/Chromium|clean_browsers clean_chromium_default_caches
 system:maintenance|Logs & .DS_Store|system|*|clean_application_support_logs clean_ds_store_tree
 system:trash|Trash (empty)|system|~/.Trash|clean_trash
@@ -463,8 +526,12 @@ _human_bytes() {
     }'
 }
 
-# Best-effort native banner (works even when launched from launchd, no app).
+# Best-effort banner. When the app drives the clean it sets
+# MACBROOM_SUPPRESS_NOTIFY so we skip the osascript banner — otherwise it'd be
+# attributed to "Script Editor" (and the app already surfaces the result). The
+# launchd path (no app running) still uses osascript.
 _mb_notify() {
+    [[ -n "${MACBROOM_SUPPRESS_NOTIFY:-}" ]] && return 0
     command -v osascript >/dev/null 2>&1 || return 0
     local msg="$1"
     osascript -e "display notification \"$msg\" with title \"MacBroom\"" >/dev/null 2>&1 || true
@@ -624,11 +691,20 @@ cmd_app_clean() {
     while IFS= read -r p || [[ -n "$p" ]]; do
         [[ -n "$p" && ( -e "$p" || -L "$p" ) ]] || continue
         if _protected "$p"; then continue; fi
+        # User whitelist: app-clean deletes in its own loop (not via _mb_handle),
+        # so the guard must be repeated here.
+        if _mb_user_protected "$p"; then continue; fi
         size="$(path_size_bytes "$p")"
-        if _mb_remove "$p" && [[ ! -e "$p" && ! -L "$p" ]]; then
+        local dest rc
+        dest="$(_mb_remove "$p")"; rc=$?
+        if [[ $rc -eq 0 && ! -e "$p" && ! -L "$p" ]]; then
             MB_FREED_BYTES=$((MB_FREED_BYTES + size))
             MB_COUNT=$((MB_COUNT + 1))
-            emit "{\"event\":\"progress\",\"path\":$(json_string "$p"),\"freed_bytes\":$size}"
+            if [[ -n "$dest" ]]; then
+                emit "{\"event\":\"progress\",\"path\":$(json_string "$p"),\"freed_bytes\":$size,\"trashed_to\":$(json_string "$dest")}"
+            else
+                emit "{\"event\":\"progress\",\"path\":$(json_string "$p"),\"freed_bytes\":$size}"
+            fi
         else
             # Removal failed (path still exists). Classify so the UI can tell the
             # user whether granting Full Disk Access / admin would help.
@@ -734,6 +810,7 @@ cmd_analyze() {
 main() {
     local sub="${1:-}"
     [[ $# -gt 0 ]] && shift
+    _mb_load_user_protected
     case "$sub" in
         discover)  cmd_discover "$@" ;;
         scan)      cmd_scan "$@" ;;

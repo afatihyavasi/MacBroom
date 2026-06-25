@@ -384,6 +384,6 @@ struct SHProgressBar: View {
             }
         }
         .frame(height: 6)
-        .accessibilityValue(Text("\(Int(min(max(value, 0), 1) * 100)) percent"))
+        .accessibilityValue(Text(min(max(value, 0), 1), format: .percent.precision(.fractionLength(0))))
     }
 }

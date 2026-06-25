@@ -45,7 +45,10 @@ if let s = try? EngineDecode.systemStatus(data(#"{"disk":{"total_bytes":1,"used_
 // EngineEvent: progress / done / rejects garbage
 check("EngineEvent progress",
       EngineEvent(jsonLine: #"{"event":"progress","path":"/x/y","freed_bytes":2048}"#)
-        == .progress(path: "/x/y", freedBytes: 2048))
+        == .progress(path: "/x/y", freedBytes: 2048, trashedTo: nil))
+check("EngineEvent progress carries trashed_to (restore)",
+      EngineEvent(jsonLine: #"{"event":"progress","path":"/x/y","freed_bytes":2048,"trashed_to":"/Users/x/.Trash/y"}"#)
+        == .progress(path: "/x/y", freedBytes: 2048, trashedTo: "/Users/x/.Trash/y"))
 check("EngineEvent done",
       EngineEvent(jsonLine: #"{"event":"done","freed_bytes":9000,"count":3,"failed":1}"#)
         == .done(freedBytes: 9000, count: 3, failed: 1))
@@ -96,6 +99,13 @@ if let d = try? JSONDecoder().decode(DiscoverResult.self, from: data(#"{"targets
 
 // Formatting sanity
 check("Format.bytes non-empty", !Format.bytes(1_500_000).isEmpty)
+
+// CleanReason: accurate "why is this safe?" classification (conservative).
+check("reason: Trash path", CleanReason.key(category: "system", label: "Trash", path: "/Users/x/.Trash/old") == .reasonTrash)
+check("reason: old version label", CleanReason.key(category: "ai", label: "Claude Code old version", path: "/Users/x/.local/share/claude/versions/1") == .reasonOldVersion)
+check("reason: AI cache default", CleanReason.key(category: "ai", label: "Gemini CLI temp files", path: "/Users/x/.gemini/tmp") == .reasonAICache)
+check("reason: system cache default", CleanReason.key(category: "system", label: "Rust cargo cache", path: "/Users/x/.cargo/registry/cache") == .reasonRegenerable)
+check("reason: candidate accessor", CleanCandidate(category: "ai", label: "Gemini", path: "/g/tmp", sizeBytes: 1).reasonKey == .reasonAICache)
 
 // CleanFrequency scheduling math
 check("freq off never due", CleanFrequency.off.isDue(since: Date(timeIntervalSince1970: 0), now: Date(timeIntervalSince1970: 9_999_999)) == false)
@@ -197,7 +207,7 @@ do {
     do {
         for try await ev in EngineBridge().appClean(approvedPaths: [victim.path], deleteMode: .permanent) {
             switch ev {
-            case let .progress(_, bytes): freed += bytes
+            case let .progress(_, bytes, _): freed += bytes
             case let .done(bytes, _, _): sawDone = true; freed = max(freed, bytes)
             case .skipped: break
             }
@@ -206,6 +216,37 @@ do {
     check("streaming clean reports freed > 0 (not 0 KB)", freed > 0)
     check("streaming clean emits a done event", sawDone)
     check("streaming clean removed the path", !FileManager.default.fileExists(atPath: victim.path))
+    try? FileManager.default.removeItem(at: root)
+}
+
+// User whitelist: a protected path must NEVER be deleted, even when it is in the
+// approved set. The engine enforces this in its single _mb_handle sink, so this
+// is the defense-in-depth guarantee behind the Settings "Protected paths" UI.
+// Saves and restores the real list file so running the test is non-destructive.
+do {
+    let realURL = EngineBridge.userProtectedFileURL
+    let saved = try? Data(contentsOf: realURL)
+    defer {
+        if let saved { try? saved.write(to: realURL) }
+        else { try? FileManager.default.removeItem(at: realURL) }
+    }
+
+    let root = FileManager.default.temporaryDirectory
+        .appendingPathComponent("mbselftest-protect-\(UUID().uuidString)")
+    let victim = root.appendingPathComponent("keep-me")
+    try? FileManager.default.createDirectory(at: victim, withIntermediateDirectories: true)
+    FileManager.default.createFile(atPath: victim.appendingPathComponent("blob").path,
+                                   contents: Data(count: 64 * 1024))
+    EngineBridge.writeUserProtectedPaths([victim.path])
+
+    var freed: Int64 = 0
+    do {
+        for try await ev in EngineBridge().appClean(approvedPaths: [victim.path], deleteMode: .permanent) {
+            if case let .progress(_, bytes, _) = ev { freed += bytes }
+        }
+    } catch { /* surfaced by the assertions below */ }
+    check("user-protected path survives clean", FileManager.default.fileExists(atPath: victim.path))
+    check("user-protected path frees 0 bytes", freed == 0)
     try? FileManager.default.removeItem(at: root)
 }
 

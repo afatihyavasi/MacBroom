@@ -71,14 +71,19 @@
     .btn-ghost:hover { border-color: var(--accent); }
 
     /* Screenshot placeholder */
-    .shot {
-      margin: 60px auto 0; max-width: 860px;
-      border: 1px solid var(--border); border-radius: var(--radius);
-      background: var(--bg-elev);
-      aspect-ratio: 16 / 9;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--muted); font-size: 14px;
+    .hero-shot {
+      display: block; margin: 56px auto 0;
+      width: 300px; max-width: 78vw; height: auto;
+      filter: drop-shadow(0 24px 60px rgba(0, 0, 0, 0.55));
     }
+    /* Screenshot gallery */
+    .shots { display: flex; flex-wrap: wrap; justify-content: center; gap: 40px 28px; }
+    .shots figure { margin: 0; width: 240px; max-width: 70vw; }
+    .shots img {
+      width: 100%; height: auto; display: block;
+      filter: drop-shadow(0 16px 40px rgba(0, 0, 0, 0.5));
+    }
+    .shots figcaption { color: var(--muted); font-size: 14px; text-align: center; margin-top: 18px; }
 
     /* Sections */
     section { padding: 80px 0; }
@@ -127,6 +132,7 @@
       <div class="brand"><span class="logo">🧹</span> MacBroom</div>
       <nav>
         <a href="#features">Features</a>
+        <a href="#screenshots">Screenshots</a>
         <a href="#safety">Safety</a>
         <a href="#download">Download</a>
         <!-- Set OWNER below -->
@@ -146,8 +152,8 @@
         <a class="btn btn-primary" href="https://github.com/afatihyavasi/MacBroom/releases/latest">Download for macOS</a>
         <a class="btn btn-ghost" href="#features">See features</a>
       </div>
-      <!-- SCREENSHOT: replace with a real menu-bar screenshot (e.g. docs/site/img/hero.png) -->
-      <div class="shot">[ Screenshot: MacBroom menu-bar panel ]</div>
+      <img class="hero-shot" src="img/ai-cleanup.png" width="300"
+           alt="MacBroom menu-bar panel showing AI cache cleanup" />
     </div>
   </section>
 
@@ -187,6 +193,32 @@
           <h3>4 languages</h3>
           <p>Fully localized so it feels native wherever you are.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SCREENSHOTS ===================== -->
+  <section id="screenshots">
+    <div class="wrap">
+      <h2 class="section-title">See it in action</h2>
+      <p class="section-sub">Native menu-bar UI, light or dark, in four languages.</p>
+      <div class="shots">
+        <figure>
+          <img src="img/ai-cleanup.png" alt="AI cache cleanup tab" />
+          <figcaption>AI cache cleanup — state preserved</figcaption>
+        </figure>
+        <figure>
+          <img src="img/system-cleanup.png" alt="System and developer caches tab" />
+          <figcaption>System &amp; developer caches</figcaption>
+        </figure>
+        <figure>
+          <img src="img/automation.png" alt="Scheduled automation tab" />
+          <figcaption>Scheduled automation, per tool</figcaption>
+        </figure>
+        <figure>
+          <img src="img/settings.png" alt="Settings window" />
+          <figcaption>Settings — appearance, language, protected paths</figcaption>
+        </figure>
       </div>
     </div>
   </section>

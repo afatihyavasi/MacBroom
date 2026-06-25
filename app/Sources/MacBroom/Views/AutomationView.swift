@@ -10,27 +10,35 @@ struct AutomationView: View {
     @EnvironmentObject var loc: LocalizationManager
     @State private var draft: [String: AutoCleanRule] = [:]
 
-    private var tools: [AnalysisTarget] { state.installedTargets(in: .ai) }
-    private var dirty: Bool { tools.contains { draft[$0.id] != state.rule(for: $0.id) } }
+    private var aiTools: [AnalysisTarget] { state.installedTargets(in: .ai) }
+    private var systemTools: [AnalysisTarget] { state.installedTargets(in: .system) }
+    private var allTools: [AnalysisTarget] { aiTools + systemTools }
+    private var dirty: Bool { allTools.contains { draft[$0.id] != state.rule(for: $0.id) } }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.sm) {
             Text(loc.t(.automationDesc)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
 
-            if tools.isEmpty {
+            if allTools.isEmpty {
                 Spacer()
                 Text(loc.t(.autoCleanNoTools)).font(.shBody).foregroundStyle(Theme.mutedForeground)
                     .frame(maxWidth: .infinity)
                 Spacer()
             } else {
                 ScrollView {
-                    VStack(spacing: Theme.Space.sm) {
-                        ForEach(tools) { toolCard($0) }
+                    VStack(alignment: .leading, spacing: Theme.Space.sm) {
+                        section(title: loc.t(.categoryAI), systemImage: "sparkles", targets: aiTools)
+                        section(title: loc.t(.categorySystem), systemImage: "internaldrive", targets: systemTools)
                     }
                 }
                 .frame(maxHeight: .infinity)
 
                 SHSeparator()
+                if let msg = state.scheduleFailureMessage {
+                    Label(msg, systemImage: "exclamationmark.triangle.fill")
+                        .font(.shCaption).foregroundStyle(Theme.warning)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 HStack {
                     Spacer()
                     Button(loc.t(.save)) { state.applyRules(draft) }
@@ -45,8 +53,17 @@ struct AutomationView: View {
 
     private func seedDraft() {
         var d: [String: AutoCleanRule] = [:]
-        for t in tools { d[t.id] = state.rule(for: t.id) }
+        for t in allTools { d[t.id] = state.rule(for: t.id) }
         draft = d
+    }
+
+    /// A category header + its tool cards. Hidden entirely when the category has
+    /// no installed targets, so an empty section never shows a lone header.
+    @ViewBuilder private func section(title: String, systemImage: String, targets: [AnalysisTarget]) -> some View {
+        if !targets.isEmpty {
+            SHSectionHeader(title: title, systemImage: systemImage)
+            ForEach(targets) { toolCard($0) }
+        }
     }
 
     private func rule(_ id: String) -> Binding<AutoCleanRule> {
@@ -58,8 +75,13 @@ struct AutomationView: View {
         let enabled = r.wrappedValue.isEnabled
         return VStack(alignment: .leading, spacing: Theme.Space.sm) {
             HStack(spacing: Theme.Space.sm) {
-                AIToolIconView(tool: AITool(rawValue: String(t.id.dropFirst(3))) ?? .other, size: 18)
-                Text(t.label).font(.shLabel)
+                if t.id.hasPrefix("ai:") {
+                    AIToolIconView(tool: AITool(rawValue: String(t.id.dropFirst(3))) ?? .other, size: 18)
+                } else {
+                    Image(systemName: "internaldrive").font(.system(size: 15))
+                        .foregroundStyle(Theme.accent).frame(width: 18)
+                }
+                Text(t.displayLabel(loc)).font(.shLabel)
                 Spacer()
             }
             // Frequency as a full-width segmented control (no NSMenu).
@@ -71,7 +93,7 @@ struct AutomationView: View {
             conditionalControls(r)
 
             if enabled, let last = state.lastRun(for: t.id) {
-                Text(loc.t(.autoCleanLast, Self.relative.localizedString(for: last, relativeTo: Date())))
+                Text(loc.t(.autoCleanLast, loc.relativeTime(for: last)))
                     .font(.shCaption).foregroundStyle(Theme.mutedForeground)
             }
         }
@@ -147,8 +169,4 @@ struct AutomationView: View {
         let idx = (weekday - 1) % 7
         return symbols.indices.contains(idx) ? symbols[idx] : "\(weekday)"
     }
-
-    private static let relative: RelativeDateTimeFormatter = {
-        let f = RelativeDateTimeFormatter(); f.unitsStyle = .abbreviated; return f
-    }()
 }

@@ -4,6 +4,57 @@ This project follows [Semantic Versioning](https://semver.org/) and [Keep a Chan
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-06-25
+
+First public release. Highlights below; the `(beta)` / `(v2)` tags mark the
+development phase each item landed in on the way to 1.0.0.
+
+### Added (beta)
+- **Undo last cleanup:** Move-to-Trash cleanups now record where each item
+  landed (the engine reports a `trashed_to` path), so Settings shows an "Undo
+  last cleanup" action that puts the items back. Permanent deletes report
+  nothing (nothing to restore).
+- **Scheduled cleaning for System targets:** automation is no longer AI-only —
+  any installed System target (caches, Xcode, language toolchains, Trash, …) can
+  run on the same hourly/daily/weekly/monthly schedule.
+- **"Why is this safe?" reason** under every cache row: a conservative, accurate
+  hint (already in Trash / superseded version / regenerable AI cache /
+  regenerable system cache), in all four languages.
+- **Cleaning-history chart:** a compact, dependency-free bar chart of reclaimed
+  space per recent cleanup, above the Settings history list.
+- **New cleaning targets** (under System): Xcode device support (old iOS/watchOS/
+  tvOS debug symbols), language toolchain caches (Rust, Ruby), and the Docker
+  BuildX cache. Each routes through mole's `safe_clean`/`safe_remove` sink, so
+  scan only lists and clean only removes approved paths — verified by a bats test
+  that a scan never deletes. (Homebrew, the Xcode simulator runtime/system
+  caches, and Go were deliberately *not* wired up: those mole functions delete
+  via `brew cleanup` / `go clean` / `safe_sudo_remove`, which bypass the preview
+  gate and would delete — or prompt for sudo — during a scan.)
+- **Protected paths (rules / whitelist):** add files or folders in Settings that
+  are never scanned or deleted. Subtree match — protecting a folder shields
+  everything inside it. Enforced in the engine's single deletion sink (and the
+  app-uninstaller loop) as a defense-in-depth layer on top of mole's own
+  protections; covered by a self-test.
+- **Full Disk Access detection:** the app now reflects the live FDA permission
+  state in the UI instead of always prompting.
+- **Native notifications:** scheduled cleanups post real MacBroom banners; the
+  engine no longer raises osascript "Script Editor" notices.
+
+### Fixed (beta)
+- Relative time and the progress-bar accessibility percent now follow the app
+  language (the picker), not the OS locale — an English UI no longer showed
+  Turkish strings like "2 dk. önce".
+- Removed `UNUserNotificationCenter`, which crashed the unsigned app.
+- Scheduled-cleaning failures are no longer swallowed: if a launchd agent can't
+  be installed, Automation now shows which tools failed instead of silently
+  accepting a schedule that will never fire.
+
+### Engineering (beta)
+- CI now builds with `-Xswiftc -warnings-as-errors` and runs on the `beta`
+  branch as well as `main`. (swift-format was evaluated and deliberately not
+  adopted — it conflicts with the codebase's hand-tuned style.)
+- Documentation: English app screenshots added to the README and landing page.
+
 ### Added
 - Project skeleton: PRD, README, GPL-3.0 license, contribution guide.
 - `vendor/mole` submodule (pinned V1.43.1).

@@ -12,10 +12,6 @@ struct DiskAnalysisView: View {
     @EnvironmentObject var loc: LocalizationManager
     @State private var confirming = false
 
-    private static let relative: RelativeDateTimeFormatter = {
-        let f = RelativeDateTimeFormatter(); f.unitsStyle = .abbreviated; return f
-    }()
-
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.md) {
             header
@@ -136,8 +132,7 @@ struct DiskAnalysisView: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text((file.path as NSString).lastPathComponent)
                         .font(.shBody).lineLimit(1)
-                    Text(Self.relative.localizedString(
-                        for: Date(timeIntervalSince1970: file.mtime), relativeTo: Date()))
+                    Text(loc.relativeTime(for: Date(timeIntervalSince1970: file.mtime)))
                         .font(.shCaption).foregroundStyle(Theme.mutedForeground)
                     if maxBytes > 0 {
                         SHProgressBar(value: Double(file.sizeBytes) / Double(maxBytes),

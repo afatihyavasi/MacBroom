@@ -289,6 +289,96 @@ PLIST
     [ ! -e "$HOME/ledger" ]
 }
 
+# Mock osascript on PATH; it records that it was invoked.
+_mock_osascript() {
+    mkdir -p "$HOME/bin"
+    cat > "$HOME/bin/osascript" <<'EOS'
+#!/usr/bin/env bash
+touch "$OSA_MARKER"
+EOS
+    chmod +x "$HOME/bin/osascript"
+}
+
+@test "auto-clean skips the osascript banner when MACBROOM_SUPPRESS_NOTIFY is set" {
+    mkdir -p "$HOME/.gemini/tmp"
+    head -c 50000 /dev/zero > "$HOME/.gemini/tmp/cache.bin"
+    _mock_osascript
+
+    run env OSA_MARKER="$HOME/osa-called" PATH="$HOME/bin:$PATH" \
+        MACBROOM_SUPPRESS_NOTIFY=1 bash "$ENGINE" auto-clean --targets=ai:gemini
+    [ "$status" -eq 0 ]
+    [ ! -e "$HOME/osa-called" ]   # native-notify path: osascript NOT invoked
+}
+
+@test "auto-clean uses the osascript banner when MACBROOM_SUPPRESS_NOTIFY is unset (launchd path)" {
+    mkdir -p "$HOME/.gemini/tmp"
+    head -c 50000 /dev/zero > "$HOME/.gemini/tmp/cache.bin"
+    _mock_osascript
+
+    run env OSA_MARKER="$HOME/osa-called" PATH="$HOME/bin:$PATH" \
+        bash "$ENGINE" auto-clean --targets=ai:gemini
+    [ "$status" -eq 0 ]
+    [ -e "$HOME/osa-called" ]      # launchd path: osascript invoked
+}
+
+# --- new dev targets (lang caches / docker / xcode device support) ---------
+
+@test "discover registers the new developer targets when their dirs exist" {
+    mkdir -p "$HOME/.cargo" "$HOME/.docker/buildx" \
+             "$HOME/Library/Developer/Xcode/iOS DeviceSupport"
+
+    run bash "$ENGINE" discover
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"system:lang-caches"'* ]]
+    [[ "$output" == *'"system:docker"'* ]]
+    [[ "$output" == *'"system:xcode-device-support"'* ]]
+}
+
+@test "scanning lang-caches LISTS the cache but never deletes it (scan is read-only)" {
+    mkdir -p "$HOME/.cargo/registry/cache/repo"
+    head -c 40000 /dev/zero > "$HOME/.cargo/registry/cache/repo/blob"
+
+    run bash "$ENGINE" scan --targets=system:lang-caches
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"$HOME/.cargo/registry/cache/repo"* ]]   # surfaced as a candidate
+    [ -e "$HOME/.cargo/registry/cache/repo/blob" ]            # and NOT deleted by the scan
+}
+
+@test "auto-clean works on a SYSTEM target (powers scheduled system maintenance)" {
+    mkdir -p "$HOME/.cargo/registry/cache/repo"
+    head -c 80000 /dev/zero > "$HOME/.cargo/registry/cache/repo/blob"
+
+    run bash "$ENGINE" auto-clean --targets=system:lang-caches
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"event":"done"'* ]]
+    [ ! -e "$HOME/.cargo/registry/cache/repo/blob" ]   # scanned + cleaned in one shot
+}
+
+# --- trash mode: restore support ------------------------------------------
+
+@test "trash-mode clean reports trashed_to and moves the file to the Trash" {
+    mkdir -p "$HOME/.cache/mbrestore"
+    head -c 30000 /dev/zero > "$HOME/.cache/mbrestore/blob"
+    printf '%s\n' "$HOME/.cache/mbrestore" > "$HOME/approved.txt"
+
+    run env MACBROOM_DELETE_MODE=trash bash "$ENGINE" app-clean --paths-file="$HOME/approved.txt"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"trashed_to"'* ]]          # destination reported for restore
+    [ ! -e "$HOME/.cache/mbrestore" ]            # gone from its original location
+    ls "$HOME/.Trash" | grep -q mbrestore        # and now in the (isolated) Trash
+}
+
+@test "permanent-mode clean does NOT report trashed_to (nothing to restore)" {
+    mkdir -p "$HOME/.cache/mbperm"
+    head -c 30000 /dev/zero > "$HOME/.cache/mbperm/blob"
+    printf '%s\n' "$HOME/.cache/mbperm" > "$HOME/approved.txt"
+
+    run env MACBROOM_DELETE_MODE=permanent bash "$ENGINE" app-clean --paths-file="$HOME/approved.txt"
+    [ "$status" -eq 0 ]
+    [[ "$output" != *'"trashed_to"'* ]]
+    [ ! -e "$HOME/.cache/mbperm" ]
+}
+
 # --- analyze: read-only large-file finder ---------------------------------
 
 @test "analyze lists large files over the threshold with size_bytes (read-only)" {

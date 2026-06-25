@@ -34,6 +34,18 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
         }
         return .en
     }
+
+    /// Foundation locale matching the resolved language. Date/byte formatters
+    /// (e.g. `RelativeDateTimeFormatter`) follow the OS locale by default; feed
+    /// them this so they format in the app's *selected* language instead.
+    public var locale: Locale {
+        switch resolved {
+        case .tr: return Locale(identifier: "tr_TR")
+        case .es: return Locale(identifier: "es_ES")
+        case .fr: return Locale(identifier: "fr_FR")
+        default:  return Locale(identifier: "en_US")
+        }
+    }
 }
 
 /// Every user-facing string key. Values with `%@` / `%d` are `String(format:)`
@@ -41,7 +53,7 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
 public enum L10n: String, CaseIterable {
     case tabAI, tabSystem, tabDeveloper, tabApps, tabAutomation
     case refreshHelp, settingsHelp, open, quit, clean, loading, back, backToList
-    case fdaTitle, fdaBannerDesc, fdaSettingsDesc, openFDA, openInSettings
+    case fdaTitle, fdaBannerDesc, fdaSettingsDesc, openFDA, openInSettings, fdaGranted
     case searchingTargets, scanningTargets, cleaningProgress, freed, backTargets, selectedSuffix
     case cleaningProgressBytes, removingProgressBytes
     case removingProgress, removedFreed, removedPartial, someProtected, itemsInUse
@@ -50,16 +62,20 @@ public enum L10n: String, CaseIterable {
     case aiEmpty, aiSafety, groupCountBytes, systemSafety, selectAll, deselectAll, systemEmpty
     case analyzeQuestion, analyzeSubtitle, noTargetsInCategory, clearSelection, analyzeButton
     case settingsTitle, done, deletionMethod, about, aboutVersion, engineAttribution, totalReclaimed
-    case historyTitle, historyEmpty, historyCache, historyApps, historyDisk, historyAuto
+    case historyTitle, historyEmpty, historyCache, historyApps, historyDisk, historyAuto, historyChartTitle
+    case restoreLastTitle, restoreLastDesc, restoreLastButton
     case exclusionsTitle, exclusionsDesc
+    case protectedPathsTitle, protectedPathsDesc, protectedPathsAdd, protectedPathsEmpty
+    case reasonTrash, reasonOldVersion, reasonAICache, reasonRegenerable
     case language, languageSystem, disk, memory, diskFree, memoryTotal
     case categoryAI, categorySystem, categoryDeveloper
     case targetAppCaches, targetEditors, targetGuiApps, targetDevMisc
     case targetXcode, targetPkgCaches, targetBrowser, targetMaintenance, targetTrash
+    case targetXcodeDeviceSupport, targetLangCaches, targetDocker
     case autoCleanTitle, autoCleanDesc, autoCleanNoTools, autoCleanLast
     case freqOff, freqHourly, freqDaily, freqWeekly, freqMonthly
     case appearance, appearanceSystem, appearanceLight, appearanceDark
-    case aiAutomationInfo, aiAutomationOpen, automationTitle, automationDesc, save
+    case aiAutomationInfo, aiAutomationOpen, automationTitle, automationDesc, save, scheduleFailed
     case everyNHours, weekdayLabel, timeLabel, monthDayLabel, intervalLabel
     case deletePermanentTitle, deleteTrashTitle, deletePermanentDetail, deleteTrashDetail
     case errEngineNotFound, errNonZero, errDecode
@@ -100,7 +116,7 @@ public enum Localization {
         .fdaTitle: "Full Disk Access",
         .fdaBannerDesc: "Grant access to clean all caches.",
         .fdaSettingsDesc: "MacBroom needs Full Disk Access to clean some system caches.",
-        .openFDA: "Open Full Disk Access", .openInSettings: "Open in System Settings",
+        .openFDA: "Open Full Disk Access", .openInSettings: "Open in System Settings", .fdaGranted: "Full Disk Access granted",
         .searchingTargets: "Searching targets…", .scanningTargets: "Scanning selected targets…",
         .cleaningProgress: "Cleaning… %d/%d", .freed: "%@ freed",
         .cleaningProgressBytes: "Cleaning… %d/%d · %@ freed",
@@ -128,14 +144,25 @@ public enum Localization {
         .about: "About", .aboutVersion: "MacBroom %@ · GPL-3.0",
         .engineAttribution: "Cleaning engine provided by tw93/mole (GPL-3.0).",
         .totalReclaimed: "Total reclaimed: %@",
-        .historyTitle: "Cleaning history", .historyEmpty: "No cleanups yet.", .historyCache: "Cache", .historyApps: "App", .historyDisk: "Large files", .historyAuto: "Scheduled",
+        .historyTitle: "Cleaning history", .historyEmpty: "No cleanups yet.", .historyCache: "Cache", .historyApps: "App", .historyDisk: "Large files", .historyAuto: "Scheduled", .historyChartTitle: "Reclaimed per cleanup",
+        .restoreLastTitle: "Undo last cleanup",
+        .restoreLastDesc: "Your last cleanup moved items to the Trash — you can put them back.",
+        .restoreLastButton: "Restore %d item(s)",
         .exclusionsTitle: "Exclusions", .exclusionsDesc: "Excluded tools are never scanned or auto-cleaned.",
+        .protectedPathsTitle: "Protected paths",
+        .protectedPathsDesc: "Files and folders here — and everything inside them — are never scanned or deleted.",
+        .protectedPathsAdd: "Add file or folder…", .protectedPathsEmpty: "No protected paths yet.",
+        .reasonTrash: "Already in the Trash.",
+        .reasonOldVersion: "Superseded version — re-downloaded when needed.",
+        .reasonAICache: "Regenerable cache — identity, sessions & memory preserved.",
+        .reasonRegenerable: "Regenerable cache — rebuilt automatically when needed.",
         .language: "Language", .languageSystem: "System (automatic)",
         .disk: "Disk", .memory: "Memory", .diskFree: "%@ free", .memoryTotal: "%@ total",
         .categoryAI: "AI Tools", .categorySystem: "System", .categoryDeveloper: "Developer",
         .targetAppCaches: "App caches", .targetEditors: "Code editors",
         .targetGuiApps: "GUI app caches", .targetDevMisc: "Developer leftovers",
         .targetXcode: "Xcode DerivedData", .targetPkgCaches: "Package manager caches", .targetBrowser: "Browser caches", .targetMaintenance: "Logs & .DS_Store", .targetTrash: "Trash (empty)",
+        .targetXcodeDeviceSupport: "Xcode device support", .targetLangCaches: "Language toolchain caches", .targetDocker: "Docker BuildX cache",
         .autoCleanTitle: "Automatic AI cleaning",
         .autoCleanDesc: "Clean a tool's caches automatically on a schedule.",
         .autoCleanNoTools: "No AI tools detected yet.", .autoCleanLast: "Last cleaned: %@",
@@ -145,6 +172,7 @@ public enum Localization {
         .aiAutomationInfo: "Schedule MacBroom to clean your AI caches automatically.",
         .aiAutomationOpen: "Set up automation",
         .automationTitle: "AI Automation", .automationDesc: "Choose when each tool is cleaned. Applied when you press Save.",
+        .scheduleFailed: "Couldn’t schedule automatic cleaning for: %@. Check that ~/Library/LaunchAgents is writable.",
         .save: "Save", .everyNHours: "Every %d h", .weekdayLabel: "Day", .timeLabel: "Time",
         .monthDayLabel: "Day of month", .intervalLabel: "Interval",
         .deletePermanentTitle: "Delete permanently", .deleteTrashTitle: "Move to Trash",
@@ -171,7 +199,7 @@ public enum Localization {
         .fdaTitle: "Tam Disk Erişimi",
         .fdaBannerDesc: "Tüm önbellekleri temizlemek için izin verin.",
         .fdaSettingsDesc: "Bazı sistem önbelleklerini temizlemek için MacBroom’a Tam Disk Erişimi vermeniz gerekir.",
-        .openFDA: "Tam Disk Erişimi’ni Aç", .openInSettings: "Sistem Ayarları’nda Aç",
+        .openFDA: "Tam Disk Erişimi’ni Aç", .openInSettings: "Sistem Ayarları’nda Aç", .fdaGranted: "Tam Disk Erişimi verildi",
         .searchingTargets: "Hedefler aranıyor…", .scanningTargets: "Seçili hedefler taranıyor…",
         .cleaningProgress: "Temizleniyor… %d/%d", .freed: "%@ boşaltıldı",
         .cleaningProgressBytes: "Temizleniyor… %d/%d · %@ boşaltıldı",
@@ -199,14 +227,25 @@ public enum Localization {
         .about: "Hakkında", .aboutVersion: "MacBroom %@ · GPL-3.0",
         .engineAttribution: "Temizleme motoru tw93/mole (GPL-3.0) tarafından sağlanır.",
         .totalReclaimed: "Toplam kazanılan: %@",
-        .historyTitle: "Temizlik geçmişi", .historyEmpty: "Henüz temizlik yok.", .historyCache: "Önbellek", .historyApps: "Uygulama", .historyDisk: "Büyük dosya", .historyAuto: "Zamanlanmış",
+        .historyTitle: "Temizlik geçmişi", .historyEmpty: "Henüz temizlik yok.", .historyCache: "Önbellek", .historyApps: "Uygulama", .historyDisk: "Büyük dosya", .historyAuto: "Zamanlanmış", .historyChartTitle: "Temizlik başına kazanılan",
+        .restoreLastTitle: "Son temizliği geri al",
+        .restoreLastDesc: "Son temizlik öğeleri Çöp Kutusu’na taşıdı — geri koyabilirsiniz.",
+        .restoreLastButton: "%d öğeyi geri yükle",
         .exclusionsTitle: "İstisnalar", .exclusionsDesc: "Muaf tutulan araçlar hiç taranmaz veya otomatik temizlenmez.",
+        .protectedPathsTitle: "Korunan yollar",
+        .protectedPathsDesc: "Buradaki dosya ve klasörler — ve içlerindeki her şey — asla taranmaz veya silinmez.",
+        .protectedPathsAdd: "Dosya veya klasör ekle…", .protectedPathsEmpty: "Henüz korunan yol yok.",
+        .reasonTrash: "Zaten Çöp Kutusu’nda.",
+        .reasonOldVersion: "Eski sürüm — gerektiğinde yeniden indirilir.",
+        .reasonAICache: "Yeniden üretilebilir cache — kimlik, oturum ve hafıza korunur.",
+        .reasonRegenerable: "Yeniden üretilebilir cache — gerektiğinde otomatik oluşturulur.",
         .language: "Dil", .languageSystem: "Sistem (otomatik)",
         .disk: "Disk", .memory: "Bellek", .diskFree: "%@ boş", .memoryTotal: "%@ toplam",
         .categoryAI: "AI Araçları", .categorySystem: "Sistem", .categoryDeveloper: "Geliştirici",
         .targetAppCaches: "Uygulama önbellekleri", .targetEditors: "Kod editörleri",
         .targetGuiApps: "GUI uygulama önbellekleri", .targetDevMisc: "Geliştirici artıkları",
         .targetXcode: "Xcode DerivedData", .targetPkgCaches: "Paket yöneticisi önbellekleri", .targetBrowser: "Tarayıcı önbellekleri", .targetMaintenance: "Loglar ve .DS_Store", .targetTrash: "Çöp Kutusu (boşalt)",
+        .targetXcodeDeviceSupport: "Xcode aygıt desteği", .targetLangCaches: "Dil araç zinciri önbellekleri", .targetDocker: "Docker BuildX önbelleği",
         .autoCleanTitle: "Otomatik AI temizliği",
         .autoCleanDesc: "Bir aracın önbelleklerini belirlenen sıklıkta otomatik temizler.",
         .autoCleanNoTools: "Henüz AI aracı bulunamadı.", .autoCleanLast: "Son temizlik: %@",
@@ -216,6 +255,7 @@ public enum Localization {
         .aiAutomationInfo: "MacBroom'un AI önbelleklerini otomatik temizlemesini planlayın.",
         .aiAutomationOpen: "Otomasyonu ayarla",
         .automationTitle: "AI Otomasyonu", .automationDesc: "Her aracın ne zaman temizleneceğini seçin. Kaydet'e bastığınızda uygulanır.",
+        .scheduleFailed: "Şunlar için otomatik temizlik zamanlanamadı: %@. ~/Library/LaunchAgents yazılabilir mi kontrol edin.",
         .save: "Kaydet", .everyNHours: "Her %d saatte", .weekdayLabel: "Gün", .timeLabel: "Saat",
         .monthDayLabel: "Ayın günü", .intervalLabel: "Aralık",
         .deletePermanentTitle: "Kalıcı olarak sil", .deleteTrashTitle: "Çöp Kutusu’na taşı",
@@ -242,7 +282,7 @@ public enum Localization {
         .fdaTitle: "Acceso a Todo el Disco",
         .fdaBannerDesc: "Concede acceso para limpiar todas las cachés.",
         .fdaSettingsDesc: "MacBroom necesita Acceso a Todo el Disco para limpiar algunas cachés del sistema.",
-        .openFDA: "Abrir Acceso a Todo el Disco", .openInSettings: "Abrir en Ajustes del Sistema",
+        .openFDA: "Abrir Acceso a Todo el Disco", .openInSettings: "Abrir en Ajustes del Sistema", .fdaGranted: "Acceso a Todo el Disco concedido",
         .searchingTargets: "Buscando objetivos…", .scanningTargets: "Analizando los objetivos seleccionados…",
         .cleaningProgress: "Limpiando… %d/%d", .freed: "%@ liberados",
         .cleaningProgressBytes: "Limpiando… %d/%d · %@ liberados",
@@ -270,14 +310,25 @@ public enum Localization {
         .about: "Acerca de", .aboutVersion: "MacBroom %@ · GPL-3.0",
         .engineAttribution: "Motor de limpieza proporcionado por tw93/mole (GPL-3.0).",
         .totalReclaimed: "Total recuperado: %@",
-        .historyTitle: "Historial de limpieza", .historyEmpty: "Aún no hay limpiezas.", .historyCache: "Caché", .historyApps: "App", .historyDisk: "Archivos grandes", .historyAuto: "Programado",
+        .historyTitle: "Historial de limpieza", .historyEmpty: "Aún no hay limpiezas.", .historyCache: "Caché", .historyApps: "App", .historyDisk: "Archivos grandes", .historyAuto: "Programado", .historyChartTitle: "Recuperado por limpieza",
+        .restoreLastTitle: "Deshacer última limpieza",
+        .restoreLastDesc: "Tu última limpieza movió elementos a la Papelera — puedes restaurarlos.",
+        .restoreLastButton: "Restaurar %d elemento(s)",
         .exclusionsTitle: "Exclusiones", .exclusionsDesc: "Las herramientas excluidas nunca se analizan ni se limpian.",
+        .protectedPathsTitle: "Rutas protegidas",
+        .protectedPathsDesc: "Los archivos y carpetas de aquí — y todo su contenido — nunca se analizan ni se eliminan.",
+        .protectedPathsAdd: "Añadir archivo o carpeta…", .protectedPathsEmpty: "Aún no hay rutas protegidas.",
+        .reasonTrash: "Ya está en la Papelera.",
+        .reasonOldVersion: "Versión obsoleta — se vuelve a descargar cuando se necesita.",
+        .reasonAICache: "Caché regenerable — se conservan identidad, sesiones y memoria.",
+        .reasonRegenerable: "Caché regenerable — se reconstruye automáticamente cuando hace falta.",
         .language: "Idioma", .languageSystem: "Sistema (automático)",
         .disk: "Disco", .memory: "Memoria", .diskFree: "%@ libres", .memoryTotal: "%@ en total",
         .categoryAI: "Herramientas de IA", .categorySystem: "Sistema", .categoryDeveloper: "Desarrollo",
         .targetAppCaches: "Cachés de apps", .targetEditors: "Editores de código",
         .targetGuiApps: "Cachés de apps con interfaz", .targetDevMisc: "Restos de desarrollo",
         .targetXcode: "Xcode DerivedData", .targetPkgCaches: "Cachés de gestores de paquetes", .targetBrowser: "Cachés del navegador", .targetMaintenance: "Registros y .DS_Store", .targetTrash: "Papelera (vaciar)",
+        .targetXcodeDeviceSupport: "Soporte de dispositivos de Xcode", .targetLangCaches: "Cachés de toolchains de lenguajes", .targetDocker: "Caché de Docker BuildX",
         .autoCleanTitle: "Limpieza automática de IA",
         .autoCleanDesc: "Limpia las cachés de una herramienta según una frecuencia.",
         .autoCleanNoTools: "Aún no se detectan herramientas de IA.", .autoCleanLast: "Última limpieza: %@",
@@ -287,6 +338,7 @@ public enum Localization {
         .aiAutomationInfo: "Programa MacBroom para limpiar tus cachés de IA automáticamente.",
         .aiAutomationOpen: "Configurar automatización",
         .automationTitle: "Automatización de IA", .automationDesc: "Elige cuándo se limpia cada herramienta. Se aplica al pulsar Guardar.",
+        .scheduleFailed: "No se pudo programar la limpieza automática para: %@. Verifica que ~/Library/LaunchAgents tenga permiso de escritura.",
         .save: "Guardar", .everyNHours: "Cada %d h", .weekdayLabel: "Día", .timeLabel: "Hora",
         .monthDayLabel: "Día del mes", .intervalLabel: "Intervalo",
         .deletePermanentTitle: "Eliminar permanentemente", .deleteTrashTitle: "Mover a la Papelera",
@@ -313,7 +365,7 @@ public enum Localization {
         .fdaTitle: "Accès complet au disque",
         .fdaBannerDesc: "Autorisez l’accès pour nettoyer tous les caches.",
         .fdaSettingsDesc: "MacBroom a besoin de l’Accès complet au disque pour nettoyer certains caches système.",
-        .openFDA: "Ouvrir l’Accès complet au disque", .openInSettings: "Ouvrir dans Réglages Système",
+        .openFDA: "Ouvrir l’Accès complet au disque", .openInSettings: "Ouvrir dans Réglages Système", .fdaGranted: "Accès complet au disque accordé",
         .searchingTargets: "Recherche des cibles…", .scanningTargets: "Analyse des cibles sélectionnées…",
         .cleaningProgress: "Nettoyage… %d/%d", .freed: "%@ libérés",
         .cleaningProgressBytes: "Nettoyage… %d/%d · %@ libérés",
@@ -341,14 +393,25 @@ public enum Localization {
         .about: "À propos", .aboutVersion: "MacBroom %@ · GPL-3.0",
         .engineAttribution: "Moteur de nettoyage fourni par tw93/mole (GPL-3.0).",
         .totalReclaimed: "Total récupéré : %@",
-        .historyTitle: "Historique de nettoyage", .historyEmpty: "Aucun nettoyage pour l’instant.", .historyCache: "Cache", .historyApps: "App", .historyDisk: "Gros fichiers", .historyAuto: "Planifié",
+        .historyTitle: "Historique de nettoyage", .historyEmpty: "Aucun nettoyage pour l’instant.", .historyCache: "Cache", .historyApps: "App", .historyDisk: "Gros fichiers", .historyAuto: "Planifié", .historyChartTitle: "Récupéré par nettoyage",
+        .restoreLastTitle: "Annuler le dernier nettoyage",
+        .restoreLastDesc: "Votre dernier nettoyage a déplacé des éléments vers la Corbeille — vous pouvez les restaurer.",
+        .restoreLastButton: "Restaurer %d élément(s)",
         .exclusionsTitle: "Exclusions", .exclusionsDesc: "Les outils exclus ne sont jamais analysés ni nettoyés.",
+        .protectedPathsTitle: "Chemins protégés",
+        .protectedPathsDesc: "Les fichiers et dossiers listés ici — et tout leur contenu — ne sont jamais analysés ni supprimés.",
+        .protectedPathsAdd: "Ajouter un fichier ou dossier…", .protectedPathsEmpty: "Aucun chemin protégé pour l’instant.",
+        .reasonTrash: "Déjà dans la Corbeille.",
+        .reasonOldVersion: "Version obsolète — re-téléchargée si nécessaire.",
+        .reasonAICache: "Cache régénérable — identité, sessions et mémoire préservées.",
+        .reasonRegenerable: "Cache régénérable — reconstruit automatiquement au besoin.",
         .language: "Langue", .languageSystem: "Système (automatique)",
         .disk: "Disque", .memory: "Mémoire", .diskFree: "%@ libres", .memoryTotal: "%@ au total",
         .categoryAI: "Outils d’IA", .categorySystem: "Système", .categoryDeveloper: "Développeur",
         .targetAppCaches: "Caches d’apps", .targetEditors: "Éditeurs de code",
         .targetGuiApps: "Caches d’apps graphiques", .targetDevMisc: "Restes de développement",
         .targetXcode: "Xcode DerivedData", .targetPkgCaches: "Caches des gestionnaires de paquets", .targetBrowser: "Caches du navigateur", .targetMaintenance: "Journaux et .DS_Store", .targetTrash: "Corbeille (vider)",
+        .targetXcodeDeviceSupport: "Support d’appareils Xcode", .targetLangCaches: "Caches des chaînes d’outils de langages", .targetDocker: "Cache Docker BuildX",
         .autoCleanTitle: "Nettoyage IA automatique",
         .autoCleanDesc: "Nettoie les caches d’un outil selon une fréquence définie.",
         .autoCleanNoTools: "Aucun outil d’IA détecté pour l’instant.", .autoCleanLast: "Dernier nettoyage : %@",
@@ -358,6 +421,7 @@ public enum Localization {
         .aiAutomationInfo: "Planifiez le nettoyage automatique de vos caches d'IA par MacBroom.",
         .aiAutomationOpen: "Configurer l'automatisation",
         .automationTitle: "Automatisation IA", .automationDesc: "Choisissez quand chaque outil est nettoyé. Appliqué quand vous enregistrez.",
+        .scheduleFailed: "Impossible de planifier le nettoyage automatique pour : %@. Vérifiez que ~/Library/LaunchAgents est accessible en écriture.",
         .save: "Enregistrer", .everyNHours: "Toutes les %d h", .weekdayLabel: "Jour", .timeLabel: "Heure",
         .monthDayLabel: "Jour du mois", .intervalLabel: "Intervalle",
         .deletePermanentTitle: "Supprimer définitivement", .deleteTrashTitle: "Mettre à la corbeille",

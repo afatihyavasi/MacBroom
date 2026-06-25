@@ -21,4 +21,17 @@ final class LocalizationManager: ObservableObject {
         let format = Localization.string(key, language: language)
         return args.isEmpty ? format : String(format: format, arguments: args)
     }
+
+    /// Relative time ("2 min ago") in the app's *selected* language.
+    /// `RelativeDateTimeFormatter` follows the OS locale by default, so it would
+    /// render Turkish ("2 dk. önce") even with the English UI — set its locale
+    /// from our language picker on every call instead.
+    func relativeTime(for date: Date, relativeTo reference: Date = Date()) -> String {
+        Self.relativeFormatter.locale = language.locale
+        return Self.relativeFormatter.localizedString(for: date, relativeTo: reference)
+    }
+
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter(); f.unitsStyle = .abbreviated; return f
+    }()
 }

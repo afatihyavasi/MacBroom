@@ -91,12 +91,13 @@ public struct EngineBridge {
     }
 
     /// Scheduled automation: scan a target and clean everything it surfaces in
-    /// one shot (the engine posts a native notification on success). Returns the
-    /// final freed/failed totals.
+    /// one shot. Returns the final freed/failed totals. MACBROOM_SUPPRESS_NOTIFY
+    /// tells the engine to skip its osascript ("Script Editor") banner — the app
+    /// surfaces the result itself (reclaimed total + history).
     public func autoClean(targetId: String, deleteMode: DeleteMode = .permanent) async throws -> (freed: Int64, count: Int, failed: Int) {
         let (data, _) = try await runCollecting(
             ["auto-clean", "--targets=\(targetId)"],
-            extraEnv: ["MACBROOM_DELETE_MODE": deleteMode.rawValue]
+            extraEnv: ["MACBROOM_DELETE_MODE": deleteMode.rawValue, "MACBROOM_SUPPRESS_NOTIFY": "1"]
         )
         let text = String(data: data, encoding: .utf8) ?? ""
         for line in text.split(separator: "\n").reversed() {
@@ -211,9 +212,39 @@ public struct EngineBridge {
         proc.arguments = [enginePath] + args
         var env = ProcessInfo.processInfo.environment
         env["MACBROOM_MOLE_DIR"] = moleDir
+        // The user's whitelist (rules set in Settings). Point the engine at the
+        // file only when it exists, so an empty list adds no restriction.
+        let protectedFile = userProtectedFileURL.path
+        if FileManager.default.fileExists(atPath: protectedFile) {
+            env["MACBROOM_USER_PROTECTED_FILE"] = protectedFile
+        }
         for (k, v) in extraEnv { env[k] = v }
         proc.environment = env
         return proc
+    }
+
+    // MARK: - User protected paths (whitelist)
+
+    /// Stable location for the user's protected-path list, shared between the
+    /// app (writer) and every engine subprocess (reader, via
+    /// `MACBROOM_USER_PROTECTED_FILE`). One absolute path per line.
+    public static let userProtectedFileURL: URL = {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        return base.appendingPathComponent("MacBroom/user-protected-paths.txt")
+    }()
+
+    /// Persist the protected-path list to `userProtectedFileURL`. An empty list
+    /// removes the file entirely so the engine sees no restriction.
+    public static func writeUserProtectedPaths(_ paths: [String]) {
+        let url = userProtectedFileURL
+        let fm = FileManager.default
+        if paths.isEmpty {
+            try? fm.removeItem(at: url)
+            return
+        }
+        try? fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? paths.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
     }
 
     /// Run the engine and collect full stdout (for non-streaming subcommands).
