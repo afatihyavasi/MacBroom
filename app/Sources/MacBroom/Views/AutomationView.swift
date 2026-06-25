@@ -31,6 +31,11 @@ struct AutomationView: View {
                 .frame(maxHeight: .infinity)
 
                 SHSeparator()
+                if let msg = state.scheduleFailureMessage {
+                    Label(msg, systemImage: "exclamationmark.triangle.fill")
+                        .font(.shCaption).foregroundStyle(Theme.warning)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 HStack {
                     Spacer()
                     Button(loc.t(.save)) { state.applyRules(draft) }

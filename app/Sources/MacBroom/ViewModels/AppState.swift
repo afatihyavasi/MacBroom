@@ -78,6 +78,11 @@ final class AppState: ObservableObject {
         EngineBridge.writeUserProtectedPaths(protectedPaths)
     }
 
+    /// Non-nil when the last schedule save could not install one or more launchd
+    /// agents (e.g. ~/Library/LaunchAgents not writable). Shown in Automation so a
+    /// schedule that will never fire isn't silently accepted. Cleared on a clean save.
+    @Published var scheduleFailureMessage: String?
+
     private let engine: EngineBridge
 
     init(engine: EngineBridge = EngineBridge()) {
@@ -580,11 +585,21 @@ final class AppState: ObservableObject {
     private func syncLaunchAgents() {
         let snapshot = rules
         let enginePath = engine.enginePath, moleDir = engine.moleDir, mode = deleteMode.rawValue
-        // launchctl is a blocking subprocess and can be slow; run it on a GCD
-        // queue, not the Swift cooperative pool, so it can't starve the pool that
-        // the UI's engine calls (status/discover) need at launch.
-        DispatchQueue.global(qos: .utility).async {
-            LaunchAgentManager.sync(rules: snapshot, enginePath: enginePath, moleDir: moleDir, deleteMode: mode)
+        let labelById = Dictionary(targets.map { ($0.id, $0.label) }, uniquingKeysWith: { a, _ in a })
+        Task { @MainActor in
+            // launchctl is a blocking subprocess and can be slow; run it on a GCD
+            // queue, not the Swift cooperative pool, so it can't starve the pool
+            // the UI's engine calls (status/discover) need at launch. The GCD
+            // closure captures only Sendable values — never self.
+            let failed: [String] = await withCheckedContinuation { cont in
+                DispatchQueue.global(qos: .utility).async {
+                    cont.resume(returning: LaunchAgentManager.sync(
+                        rules: snapshot, enginePath: enginePath, moleDir: moleDir, deleteMode: mode))
+                }
+            }
+            let names = failed.map { labelById[$0] ?? $0 }
+            scheduleFailureMessage = names.isEmpty ? nil
+                : String(format: Localization.string(.scheduleFailed), names.joined(separator: ", "))
         }
     }
 
