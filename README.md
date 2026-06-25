@@ -33,6 +33,31 @@ Headline feature: it safely cleans the cache files of AI tools like **Codex, Cla
 - 📊 **Disk & system status** — live in the menu bar.
 - 🗑️ **App uninstaller** — the app plus its leftovers.
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/site/img/ai-cleanup.png" width="260" alt="AI cache cleanup tab"><br>
+      <sub><b>AI cache cleanup</b> — Codex, Claude, Gemini, Cursor, Copilot…</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/site/img/system-cleanup.png" width="260" alt="System &amp; developer caches tab"><br>
+      <sub><b>System &amp; developer caches</b> — Xcode, package &amp; language toolchain caches</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/site/img/automation.png" width="260" alt="Scheduled automation tab"><br>
+      <sub><b>Scheduled automation</b> — hourly / daily / weekly / monthly, per tool</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/site/img/settings.png" width="260" alt="Settings window"><br>
+      <sub><b>Settings</b> — appearance, language, deletion policy, protected paths</sub>
+    </td>
+  </tr>
+</table>
+
 ## Safety
 
 MacBroom never deletes anything without a preview and confirmation. Every deletion passes through mole's `should_protect_path`, whitelist, and path-traversal protections. The auth / sessions / memory / history data of AI tools is **protected by default**. Details: [`docs/SAFETY.md`](docs/SAFETY.md).
