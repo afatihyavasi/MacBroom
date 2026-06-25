@@ -344,6 +344,16 @@ EOS
     [ -e "$HOME/.cargo/registry/cache/repo/blob" ]            # and NOT deleted by the scan
 }
 
+@test "auto-clean works on a SYSTEM target (powers scheduled system maintenance)" {
+    mkdir -p "$HOME/.cargo/registry/cache/repo"
+    head -c 80000 /dev/zero > "$HOME/.cargo/registry/cache/repo/blob"
+
+    run bash "$ENGINE" auto-clean --targets=system:lang-caches
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"event":"done"'* ]]
+    [ ! -e "$HOME/.cargo/registry/cache/repo/blob" ]   # scanned + cleaned in one shot
+}
+
 # --- analyze: read-only large-file finder ---------------------------------
 
 @test "analyze lists large files over the threshold with size_bytes (read-only)" {
