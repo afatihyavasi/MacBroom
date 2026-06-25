@@ -64,6 +64,7 @@ public enum L10n: String, CaseIterable {
     case settingsTitle, done, deletionMethod, about, aboutVersion, engineAttribution, totalReclaimed
     case historyTitle, historyEmpty, historyCache, historyApps, historyDisk, historyAuto
     case exclusionsTitle, exclusionsDesc
+    case protectedPathsTitle, protectedPathsDesc, protectedPathsAdd, protectedPathsEmpty
     case language, languageSystem, disk, memory, diskFree, memoryTotal
     case categoryAI, categorySystem, categoryDeveloper
     case targetAppCaches, targetEditors, targetGuiApps, targetDevMisc
@@ -142,6 +143,9 @@ public enum Localization {
         .totalReclaimed: "Total reclaimed: %@",
         .historyTitle: "Cleaning history", .historyEmpty: "No cleanups yet.", .historyCache: "Cache", .historyApps: "App", .historyDisk: "Large files", .historyAuto: "Scheduled",
         .exclusionsTitle: "Exclusions", .exclusionsDesc: "Excluded tools are never scanned or auto-cleaned.",
+        .protectedPathsTitle: "Protected paths",
+        .protectedPathsDesc: "Files and folders here — and everything inside them — are never scanned or deleted.",
+        .protectedPathsAdd: "Add file or folder…", .protectedPathsEmpty: "No protected paths yet.",
         .language: "Language", .languageSystem: "System (automatic)",
         .disk: "Disk", .memory: "Memory", .diskFree: "%@ free", .memoryTotal: "%@ total",
         .categoryAI: "AI Tools", .categorySystem: "System", .categoryDeveloper: "Developer",
@@ -213,6 +217,9 @@ public enum Localization {
         .totalReclaimed: "Toplam kazanılan: %@",
         .historyTitle: "Temizlik geçmişi", .historyEmpty: "Henüz temizlik yok.", .historyCache: "Önbellek", .historyApps: "Uygulama", .historyDisk: "Büyük dosya", .historyAuto: "Zamanlanmış",
         .exclusionsTitle: "İstisnalar", .exclusionsDesc: "Muaf tutulan araçlar hiç taranmaz veya otomatik temizlenmez.",
+        .protectedPathsTitle: "Korunan yollar",
+        .protectedPathsDesc: "Buradaki dosya ve klasörler — ve içlerindeki her şey — asla taranmaz veya silinmez.",
+        .protectedPathsAdd: "Dosya veya klasör ekle…", .protectedPathsEmpty: "Henüz korunan yol yok.",
         .language: "Dil", .languageSystem: "Sistem (otomatik)",
         .disk: "Disk", .memory: "Bellek", .diskFree: "%@ boş", .memoryTotal: "%@ toplam",
         .categoryAI: "AI Araçları", .categorySystem: "Sistem", .categoryDeveloper: "Geliştirici",
@@ -284,6 +291,9 @@ public enum Localization {
         .totalReclaimed: "Total recuperado: %@",
         .historyTitle: "Historial de limpieza", .historyEmpty: "Aún no hay limpiezas.", .historyCache: "Caché", .historyApps: "App", .historyDisk: "Archivos grandes", .historyAuto: "Programado",
         .exclusionsTitle: "Exclusiones", .exclusionsDesc: "Las herramientas excluidas nunca se analizan ni se limpian.",
+        .protectedPathsTitle: "Rutas protegidas",
+        .protectedPathsDesc: "Los archivos y carpetas de aquí — y todo su contenido — nunca se analizan ni se eliminan.",
+        .protectedPathsAdd: "Añadir archivo o carpeta…", .protectedPathsEmpty: "Aún no hay rutas protegidas.",
         .language: "Idioma", .languageSystem: "Sistema (automático)",
         .disk: "Disco", .memory: "Memoria", .diskFree: "%@ libres", .memoryTotal: "%@ en total",
         .categoryAI: "Herramientas de IA", .categorySystem: "Sistema", .categoryDeveloper: "Desarrollo",
@@ -355,6 +365,9 @@ public enum Localization {
         .totalReclaimed: "Total récupéré : %@",
         .historyTitle: "Historique de nettoyage", .historyEmpty: "Aucun nettoyage pour l’instant.", .historyCache: "Cache", .historyApps: "App", .historyDisk: "Gros fichiers", .historyAuto: "Planifié",
         .exclusionsTitle: "Exclusions", .exclusionsDesc: "Les outils exclus ne sont jamais analysés ni nettoyés.",
+        .protectedPathsTitle: "Chemins protégés",
+        .protectedPathsDesc: "Les fichiers et dossiers listés ici — et tout leur contenu — ne sont jamais analysés ni supprimés.",
+        .protectedPathsAdd: "Ajouter un fichier ou dossier…", .protectedPathsEmpty: "Aucun chemin protégé pour l’instant.",
         .language: "Langue", .languageSystem: "Système (automatique)",
         .disk: "Disque", .memory: "Mémoire", .diskFree: "%@ libres", .memoryTotal: "%@ au total",
         .categoryAI: "Outils d’IA", .categorySystem: "Système", .categoryDeveloper: "Développeur",

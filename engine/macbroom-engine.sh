@@ -86,6 +86,7 @@ MB_COUNT=0
 MB_PATHS_FILE=""          # clean mode: file of approved absolute paths (one per line)
 declare -a MB_CANDIDATES=()   # JSON object strings (scan mode)
 declare -a MB_SCAN_PATHS=()   # raw candidate paths (scan mode; used by auto-clean)
+declare -a MB_USER_PROTECTED=()   # user-defined absolute paths never listed or deleted
 # NOTE: macOS ships bash 3.2 (no associative arrays), so the approved-path set
 # is kept as a file and membership is tested with a fixed-string grep.
 
@@ -231,9 +232,38 @@ _protected() {
     fi
 }
 
+# Load the user's own protected paths (the rules/whitelist set from Settings)
+# from MACBROOM_USER_PROTECTED_FILE — one absolute path per line. Blank lines are
+# skipped. Absent/empty file => no extra protection (the array stays empty).
+_mb_load_user_protected() {
+    local file="${MACBROOM_USER_PROTECTED_FILE:-}" line
+    [[ -n "$file" && -f "$file" ]] || return 0
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ -n "$line" ]] && MB_USER_PROTECTED+=("$line")
+    done < "$file"
+}
+
+# True (0) when `path` is one of the user's protected paths OR lives underneath
+# one (subtree match): protecting ~/Projects shields ~/Projects and everything
+# below it. This is enforced for BOTH scan (never listed) and clean (never
+# deleted) — a defense-in-depth layer on top of mole's own protections.
+_mb_user_protected() {
+    local path="$1" guard
+    [[ ${#MB_USER_PROTECTED[@]} -gt 0 ]] || return 1   # bash 3.2: don't expand an empty array under set -u
+    for guard in "${MB_USER_PROTECTED[@]}"; do
+        [[ "$path" == "$guard" || "$path" == "$guard"/* ]] && return 0
+    done
+    return 1
+}
+
 # Handle one protection-cleared path according to the current mode.
 _mb_handle() {
     local path="$1" label="$2"
+
+    # User-defined whitelist: never list (scan) or delete (clean) a protected
+    # path. Checked here — the single sink both modes funnel through — so the
+    # guarantee holds even if a stale candidate somehow reaches the approved set.
+    _mb_user_protected "$path" && return 0
 
     if [[ "$MB_MODE" == "scan" ]]; then
         local size; size="$(path_size_bytes "$path")"
@@ -628,6 +658,9 @@ cmd_app_clean() {
     while IFS= read -r p || [[ -n "$p" ]]; do
         [[ -n "$p" && ( -e "$p" || -L "$p" ) ]] || continue
         if _protected "$p"; then continue; fi
+        # User whitelist: app-clean deletes in its own loop (not via _mb_handle),
+        # so the guard must be repeated here.
+        if _mb_user_protected "$p"; then continue; fi
         size="$(path_size_bytes "$p")"
         if _mb_remove "$p" && [[ ! -e "$p" && ! -L "$p" ]]; then
             MB_FREED_BYTES=$((MB_FREED_BYTES + size))
@@ -738,6 +771,7 @@ cmd_analyze() {
 main() {
     local sub="${1:-}"
     [[ $# -gt 0 ]] && shift
+    _mb_load_user_protected
     case "$sub" in
         discover)  cmd_discover "$@" ;;
         scan)      cmd_scan "$@" ;;

@@ -94,8 +94,9 @@ Rather than mole's interactive `clean` command, the bridge calls the functions i
   scheduled automatic cleanup (hourly/daily/weekly/monthly) + running while the
   app is closed via launchd + notifications; accessibility; total reclaimed space;
   Homebrew cask + signed/notarized release + landing page.
-- **Next:** rules/whitelist UI; browser & maintenance cleanup categories;
-  Sparkle automatic updates; cleanup history chart.
+- **Next:** Sparkle automatic updates; cleanup history chart.
+  (Shipped since v2: rules/whitelist UI — user-protected paths;
+  browser & maintenance cleanup categories.)
 
 ## 10. Attribution & License
 MacBroom packages `tw93/mole`'s cleaning engine and depends on its `lib/` modules. For this reason it is distributed under **GPL-3.0-or-later**. Full attribution to mole appears in the README and in the app's "About" screen.

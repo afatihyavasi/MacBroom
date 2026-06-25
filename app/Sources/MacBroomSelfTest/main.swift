@@ -209,6 +209,37 @@ do {
     try? FileManager.default.removeItem(at: root)
 }
 
+// User whitelist: a protected path must NEVER be deleted, even when it is in the
+// approved set. The engine enforces this in its single _mb_handle sink, so this
+// is the defense-in-depth guarantee behind the Settings "Protected paths" UI.
+// Saves and restores the real list file so running the test is non-destructive.
+do {
+    let realURL = EngineBridge.userProtectedFileURL
+    let saved = try? Data(contentsOf: realURL)
+    defer {
+        if let saved { try? saved.write(to: realURL) }
+        else { try? FileManager.default.removeItem(at: realURL) }
+    }
+
+    let root = FileManager.default.temporaryDirectory
+        .appendingPathComponent("mbselftest-protect-\(UUID().uuidString)")
+    let victim = root.appendingPathComponent("keep-me")
+    try? FileManager.default.createDirectory(at: victim, withIntermediateDirectories: true)
+    FileManager.default.createFile(atPath: victim.appendingPathComponent("blob").path,
+                                   contents: Data(count: 64 * 1024))
+    EngineBridge.writeUserProtectedPaths([victim.path])
+
+    var freed: Int64 = 0
+    do {
+        for try await ev in EngineBridge().appClean(approvedPaths: [victim.path], deleteMode: .permanent) {
+            if case let .progress(_, bytes) = ev { freed += bytes }
+        }
+    } catch { /* surfaced by the assertions below */ }
+    check("user-protected path survives clean", FileManager.default.fileExists(atPath: victim.path))
+    check("user-protected path frees 0 bytes", freed == 0)
+    try? FileManager.default.removeItem(at: root)
+}
+
 // Concurrency: many runCollecting-backed calls at once must ALL complete.
 // Regression for the cooperative-pool starvation that hung the UI at "Searching
 // targets…" — blocking subprocess I/O on the fixed-width Swift pool deadlocked

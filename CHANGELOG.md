@@ -4,6 +4,23 @@ This project follows [Semantic Versioning](https://semver.org/) and [Keep a Chan
 
 ## [Unreleased]
 
+### Added (beta)
+- **Protected paths (rules / whitelist):** add files or folders in Settings that
+  are never scanned or deleted. Subtree match — protecting a folder shields
+  everything inside it. Enforced in the engine's single deletion sink (and the
+  app-uninstaller loop) as a defense-in-depth layer on top of mole's own
+  protections; covered by a self-test.
+- **Full Disk Access detection:** the app now reflects the live FDA permission
+  state in the UI instead of always prompting.
+- **Native notifications:** scheduled cleanups post real MacBroom banners; the
+  engine no longer raises osascript "Script Editor" notices.
+
+### Fixed (beta)
+- Relative time and the progress-bar accessibility percent now follow the app
+  language (the picker), not the OS locale — an English UI no longer showed
+  Turkish strings like "2 dk. önce".
+- Removed `UNUserNotificationCenter`, which crashed the unsigned app.
+
 ### Added
 - Project skeleton: PRD, README, GPL-3.0 license, contribution guide.
 - `vendor/mole` submodule (pinned V1.43.1).

@@ -55,6 +55,29 @@ final class AppState: ObservableObject {
         UserDefaults.standard.set(Array(excludedTargets), forKey: excludedKey)
     }
 
+    /// User-defined absolute paths the engine must never scan or delete
+    /// (the rules / whitelist edited in Settings). Ordered for stable display;
+    /// mirrored to a file the engine reads via MACBROOM_USER_PROTECTED_FILE.
+    @Published private(set) var protectedPaths: [String] = []
+    private let protectedPathsKey = "userProtectedPaths"
+
+    func addProtectedPath(_ path: String) {
+        let p = (path as NSString).expandingTildeInPath
+        guard !p.isEmpty, !protectedPaths.contains(p) else { return }
+        protectedPaths.append(p)
+        persistProtectedPaths()
+    }
+
+    func removeProtectedPath(_ path: String) {
+        protectedPaths.removeAll { $0 == path }
+        persistProtectedPaths()
+    }
+
+    private func persistProtectedPaths() {
+        UserDefaults.standard.set(protectedPaths, forKey: protectedPathsKey)
+        EngineBridge.writeUserProtectedPaths(protectedPaths)
+    }
+
     private let engine: EngineBridge
 
     init(engine: EngineBridge = EngineBridge()) {
@@ -66,6 +89,8 @@ final class AppState: ObservableObject {
             history = decoded
         }
         excludedTargets = Set(UserDefaults.standard.stringArray(forKey: excludedKey) ?? [])
+        protectedPaths = UserDefaults.standard.stringArray(forKey: protectedPathsKey) ?? []
+        EngineBridge.writeUserProtectedPaths(protectedPaths)   // keep the engine's file in sync at launch
         loadSchedules()
         foldReclaimedLedger()
         startScheduler()

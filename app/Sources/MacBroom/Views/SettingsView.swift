@@ -52,6 +52,9 @@ struct SettingsView: View {
             // Exclusions (tools the user permanently excludes from cleaning)
             exclusionsSection
 
+            // Protected paths (user-defined whitelist — never scanned or deleted)
+            protectedPathsSection
+
             // Full Disk Access — reflect the live permission state.
             VStack(alignment: .leading, spacing: Theme.Space.sm) {
                 SHSectionHeader(title: loc.t(.fdaTitle), systemImage: "lock.shield")
@@ -114,6 +117,62 @@ struct SettingsView: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: protected paths (whitelist)
+
+    @ViewBuilder private var protectedPathsSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.sm) {
+            SHSectionHeader(title: loc.t(.protectedPathsTitle), systemImage: "hand.raised")
+            Text(loc.t(.protectedPathsDesc)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
+            if state.protectedPaths.isEmpty {
+                Text(loc.t(.protectedPathsEmpty)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
+            } else {
+                VStack(spacing: Theme.Space.xs) {
+                    ForEach(state.protectedPaths, id: \.self) { path in
+                        protectedRow(path)
+                    }
+                }
+            }
+            Button(loc.t(.protectedPathsAdd)) { addProtectedPath() }
+                .buttonStyle(.shOutline(.sm))
+        }
+    }
+
+    private func protectedRow(_ path: String) -> some View {
+        HStack(spacing: Theme.Space.sm) {
+            Image(systemName: "lock.fill").font(.system(size: 11))
+                .foregroundStyle(Theme.accent).frame(width: 14)
+            Text(abbreviate(path)).font(.shCaption).lineLimit(1).truncationMode(.middle)
+                .help(path)
+            Spacer()
+            Button { state.removeProtectedPath(path) } label: {
+                Image(systemName: "xmark.circle.fill").font(.system(size: 13))
+                    .foregroundStyle(Theme.mutedForeground)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(loc.t(.remove))
+        }
+        .padding(.vertical, 5).padding(.horizontal, Theme.Space.sm)
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.card))
+        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+            .strokeBorder(Theme.border, lineWidth: 1))
+    }
+
+    /// Show `~` for the home folder so long absolute paths stay readable.
+    private func abbreviate(_ path: String) -> String { (path as NSString).abbreviatingWithTildeInPath }
+
+    /// Native picker — choosing a real file/folder avoids typos that would make
+    /// a whitelist rule silently match nothing.
+    private func addProtectedPath() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = true
+        panel.prompt = loc.t(.protectedPathsAdd)
+        if panel.runModal() == .OK {
+            for url in panel.urls { state.addProtectedPath(url.path) }
         }
     }
 
