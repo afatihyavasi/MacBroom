@@ -8,13 +8,14 @@
 [![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-black.svg?style=flat-square&logo=apple)](https://www.apple.com/macos/)
 [![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg?style=flat-square&logo=swift)](https://swift.org)
 [![SwiftUI](https://img.shields.io/badge/SwiftUI-1572B6.svg?style=flat-square&logo=swift&logoColor=white)](https://developer.apple.com/xcode/swiftui/)
-[![Release](https://img.shields.io/github/v/release/afatihyavasi/MacBroom?style=flat-square&color=success)](https://github.com/afatihyavasi/MacBroom/releases)
-[![Stars](https://img.shields.io/github/stars/afatihyavasi/MacBroom?style=flat-square&logo=github)](https://github.com/afatihyavasi/MacBroom/stargazers)
-[![Homebrew](https://img.shields.io/badge/brew-install-FBB040.svg?style=flat-square&logo=homebrew&logoColor=white)](https://github.com/afatihyavasi/homebrew-tap)
+[![Release](https://img.shields.io/github/v/release/afatihyavasi/MacBroom?style=flat-square&color=success)](https://github.com/afatihyavasi/MacBroom/releases/latest)
+[![Stars](https://img.shields.io/github/stars/afatihyavasi/MacBroom?style=flat-square&logo=github&label=Stars)](https://github.com/afatihyavasi/MacBroom/stargazers)
+[![Homebrew](https://img.shields.io/badge/brew-cask-FBB040.svg?style=flat-square&logo=homebrew&logoColor=white)](https://github.com/afatihyavasi/homebrew-tap)
+[![Website](https://img.shields.io/badge/website-live-1f6feb.svg?style=flat-square&logo=githubpages&logoColor=white)](https://afatihyavasi.github.io/MacBroom/)
 
 Powered by [`tw93/mole`](https://github.com/tw93/mole) · SwiftUI · GPL-3.0
 
-[Website](https://github.com/afatihyavasi/MacBroom) · Install: `brew install --cask afatihyavasi/tap/macbroom`
+**[🌐 Website](https://afatihyavasi.github.io/MacBroom/)** · **[⬇ Download](https://github.com/afatihyavasi/MacBroom/releases/latest)** · Install: `brew install --cask afatihyavasi/tap/macbroom`
 
 </div>
 
@@ -70,6 +71,10 @@ MacBroom never deletes anything without a preview and confirmation. Every deleti
 brew install --cask afatihyavasi/tap/macbroom
 ```
 
+> Since 1.0.0 is **unsigned**, add `--no-quarantine` to skip the Gatekeeper
+> prompt (or right-click → Open the first time):
+> `brew install --cask --no-quarantine afatihyavasi/tap/macbroom`
+
 ### Manual (.dmg)
 
 1. Download the latest `MacBroom-<version>.dmg` from the [Releases](https://github.com/afatihyavasi/MacBroom/releases) page.
@@ -85,7 +90,7 @@ brew install --cask afatihyavasi/tap/macbroom
 ## Setup (development)
 
 ```bash
-git clone --recurse-submodules https://github.com/<you>/macbroom.git
+git clone --recurse-submodules https://github.com/afatihyavasi/MacBroom.git
 cd macbroom
 swift build           # the app
 bats engine/tests/    # bridge tests

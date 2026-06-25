@@ -143,10 +143,11 @@ brew install --cask afatihyavasi/tap/macbroom
 ```
 
 **On each release**, bump `version` + `sha256` in `homebrew-tap/Casks/macbroom.rb`
-and push. For **unsigned** beta builds, add `no_quarantine true` to the cask so
-Homebrew skips the Gatekeeper prompt:
+and push. For **unsigned** builds there is no cask stanza to bypass Gatekeeper
+(`no_quarantine` was removed from Homebrew), so users install with the flag:
 
-```ruby
-  app "MacBroom.app"
-  no_quarantine true   # remove once releases are notarized
+```bash
+brew install --cask --no-quarantine afatihyavasi/tap/macbroom
 ```
+
+or right-click → Open the first time. Drop the flag once releases are notarized.
