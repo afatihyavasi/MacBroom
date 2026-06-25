@@ -215,6 +215,23 @@ _mb_install_safe_remove_override() {
 }
 _mb_install_safe_remove_override
 
+# Trim old Xcode DeviceSupport versions (debug symbols for previously-connected
+# devices — often many GB, fully regenerable on next attach).
+#
+# mole's clean_xcode_device_support is ARG-based (it takes a dir + label), and
+# its only no-arg caller is clean_dev_mobile — which ALSO runs the simulator
+# runtime/coresimulator cleaners that bypass our safe_remove sink and call
+# safe_sudo_remove (a sudo prompt + a real delete during *scan*). So we call the
+# safe, user-owned DeviceSupport dirs directly and skip the rest. Deletions here
+# route through our safe_remove/safe_clean override, so scan lists and clean only
+# removes approved paths — exactly like every other target.
+_mb_clean_xcode_device_support() {
+    declare -F clean_xcode_device_support >/dev/null 2>&1 || return 0
+    clean_xcode_device_support ~/Library/Developer/Xcode/iOS\ DeviceSupport "iOS DeviceSupport"
+    clean_xcode_device_support ~/Library/Developer/Xcode/watchOS\ DeviceSupport "watchOS DeviceSupport"
+    clean_xcode_device_support ~/Library/Developer/Xcode/tvOS\ DeviceSupport "tvOS DeviceSupport"
+}
+
 # Membership test for the approved-path allowlist (bash 3.2 friendly).
 _mb_is_approved() {
     [[ -n "$MB_PATHS_FILE" ]] || return 1
@@ -357,7 +374,10 @@ system:editors|Code editors|system|~/Library/Application Support/Code:~/Library/
 system:gui-apps|GUI app caches|system|*|clean_user_gui_applications
 system:dev-misc|Developer leftovers|system|*|clean_dev_misc
 system:xcode|Xcode DerivedData|system|~/Library/Developer/Xcode/DerivedData|clean_xcode_derived_data
+system:xcode-device-support|Xcode device support|system|~/Library/Developer/Xcode/iOS DeviceSupport:~/Library/Developer/Xcode/watchOS DeviceSupport:~/Library/Developer/Xcode/tvOS DeviceSupport|_mb_clean_xcode_device_support
 system:pkg-caches|Package manager caches|system|~/.npm:~/.yarn/cache:~/Library/Caches/pip:~/.cache/poetry|clean_dev_npm clean_dev_python
+system:lang-caches|Language toolchain caches|system|~/.cargo:~/.rustup:~/.gem:~/.rbenv:~/.bundle|clean_dev_rust clean_dev_ruby
+system:docker|Docker BuildX cache|system|~/.docker/buildx|clean_dev_docker
 system:browser|Browser caches|system|~/Library/Caches/com.apple.Safari:~/Library/Caches/Google/Chrome:~/Library/Caches/com.microsoft.edgemac:~/Library/Caches/Chromium|clean_browsers clean_chromium_default_caches
 system:maintenance|Logs & .DS_Store|system|*|clean_application_support_logs clean_ds_store_tree
 system:trash|Trash (empty)|system|~/.Trash|clean_trash

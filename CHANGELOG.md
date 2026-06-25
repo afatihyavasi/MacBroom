@@ -5,6 +5,14 @@ This project follows [Semantic Versioning](https://semver.org/) and [Keep a Chan
 ## [Unreleased]
 
 ### Added (beta)
+- **New cleaning targets** (under System): Xcode device support (old iOS/watchOS/
+  tvOS debug symbols), language toolchain caches (Rust, Ruby), and the Docker
+  BuildX cache. Each routes through mole's `safe_clean`/`safe_remove` sink, so
+  scan only lists and clean only removes approved paths — verified by a bats test
+  that a scan never deletes. (Homebrew, the Xcode simulator runtime/system
+  caches, and Go were deliberately *not* wired up: those mole functions delete
+  via `brew cleanup` / `go clean` / `safe_sudo_remove`, which bypass the preview
+  gate and would delete — or prompt for sudo — during a scan.)
 - **Protected paths (rules / whitelist):** add files or folders in Settings that
   are never scanned or deleted. Subtree match — protecting a folder shields
   everything inside it. Enforced in the engine's single deletion sink (and the

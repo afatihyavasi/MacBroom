@@ -69,6 +69,7 @@ public enum L10n: String, CaseIterable {
     case categoryAI, categorySystem, categoryDeveloper
     case targetAppCaches, targetEditors, targetGuiApps, targetDevMisc
     case targetXcode, targetPkgCaches, targetBrowser, targetMaintenance, targetTrash
+    case targetXcodeDeviceSupport, targetLangCaches, targetDocker
     case autoCleanTitle, autoCleanDesc, autoCleanNoTools, autoCleanLast
     case freqOff, freqHourly, freqDaily, freqWeekly, freqMonthly
     case appearance, appearanceSystem, appearanceLight, appearanceDark
@@ -152,6 +153,7 @@ public enum Localization {
         .targetAppCaches: "App caches", .targetEditors: "Code editors",
         .targetGuiApps: "GUI app caches", .targetDevMisc: "Developer leftovers",
         .targetXcode: "Xcode DerivedData", .targetPkgCaches: "Package manager caches", .targetBrowser: "Browser caches", .targetMaintenance: "Logs & .DS_Store", .targetTrash: "Trash (empty)",
+        .targetXcodeDeviceSupport: "Xcode device support", .targetLangCaches: "Language toolchain caches", .targetDocker: "Docker BuildX cache",
         .autoCleanTitle: "Automatic AI cleaning",
         .autoCleanDesc: "Clean a tool's caches automatically on a schedule.",
         .autoCleanNoTools: "No AI tools detected yet.", .autoCleanLast: "Last cleaned: %@",
@@ -226,6 +228,7 @@ public enum Localization {
         .targetAppCaches: "Uygulama önbellekleri", .targetEditors: "Kod editörleri",
         .targetGuiApps: "GUI uygulama önbellekleri", .targetDevMisc: "Geliştirici artıkları",
         .targetXcode: "Xcode DerivedData", .targetPkgCaches: "Paket yöneticisi önbellekleri", .targetBrowser: "Tarayıcı önbellekleri", .targetMaintenance: "Loglar ve .DS_Store", .targetTrash: "Çöp Kutusu (boşalt)",
+        .targetXcodeDeviceSupport: "Xcode aygıt desteği", .targetLangCaches: "Dil araç zinciri önbellekleri", .targetDocker: "Docker BuildX önbelleği",
         .autoCleanTitle: "Otomatik AI temizliği",
         .autoCleanDesc: "Bir aracın önbelleklerini belirlenen sıklıkta otomatik temizler.",
         .autoCleanNoTools: "Henüz AI aracı bulunamadı.", .autoCleanLast: "Son temizlik: %@",
@@ -300,6 +303,7 @@ public enum Localization {
         .targetAppCaches: "Cachés de apps", .targetEditors: "Editores de código",
         .targetGuiApps: "Cachés de apps con interfaz", .targetDevMisc: "Restos de desarrollo",
         .targetXcode: "Xcode DerivedData", .targetPkgCaches: "Cachés de gestores de paquetes", .targetBrowser: "Cachés del navegador", .targetMaintenance: "Registros y .DS_Store", .targetTrash: "Papelera (vaciar)",
+        .targetXcodeDeviceSupport: "Soporte de dispositivos de Xcode", .targetLangCaches: "Cachés de toolchains de lenguajes", .targetDocker: "Caché de Docker BuildX",
         .autoCleanTitle: "Limpieza automática de IA",
         .autoCleanDesc: "Limpia las cachés de una herramienta según una frecuencia.",
         .autoCleanNoTools: "Aún no se detectan herramientas de IA.", .autoCleanLast: "Última limpieza: %@",
@@ -374,6 +378,7 @@ public enum Localization {
         .targetAppCaches: "Caches d’apps", .targetEditors: "Éditeurs de code",
         .targetGuiApps: "Caches d’apps graphiques", .targetDevMisc: "Restes de développement",
         .targetXcode: "Xcode DerivedData", .targetPkgCaches: "Caches des gestionnaires de paquets", .targetBrowser: "Caches du navigateur", .targetMaintenance: "Journaux et .DS_Store", .targetTrash: "Corbeille (vider)",
+        .targetXcodeDeviceSupport: "Support d’appareils Xcode", .targetLangCaches: "Caches des chaînes d’outils de langages", .targetDocker: "Cache Docker BuildX",
         .autoCleanTitle: "Nettoyage IA automatique",
         .autoCleanDesc: "Nettoie les caches d’un outil selon une fréquence définie.",
         .autoCleanNoTools: "Aucun outil d’IA détecté pour l’instant.", .autoCleanLast: "Dernier nettoyage : %@",

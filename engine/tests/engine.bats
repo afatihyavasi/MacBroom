@@ -321,6 +321,29 @@ EOS
     [ -e "$HOME/osa-called" ]      # launchd path: osascript invoked
 }
 
+# --- new dev targets (lang caches / docker / xcode device support) ---------
+
+@test "discover registers the new developer targets when their dirs exist" {
+    mkdir -p "$HOME/.cargo" "$HOME/.docker/buildx" \
+             "$HOME/Library/Developer/Xcode/iOS DeviceSupport"
+
+    run bash "$ENGINE" discover
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"system:lang-caches"'* ]]
+    [[ "$output" == *'"system:docker"'* ]]
+    [[ "$output" == *'"system:xcode-device-support"'* ]]
+}
+
+@test "scanning lang-caches LISTS the cache but never deletes it (scan is read-only)" {
+    mkdir -p "$HOME/.cargo/registry/cache/repo"
+    head -c 40000 /dev/zero > "$HOME/.cargo/registry/cache/repo/blob"
+
+    run bash "$ENGINE" scan --targets=system:lang-caches
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"$HOME/.cargo/registry/cache/repo"* ]]   # surfaced as a candidate
+    [ -e "$HOME/.cargo/registry/cache/repo/blob" ]            # and NOT deleted by the scan
+}
+
 # --- analyze: read-only large-file finder ---------------------------------
 
 @test "analyze lists large files over the threshold with size_bytes (read-only)" {
