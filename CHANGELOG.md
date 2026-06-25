@@ -4,6 +4,18 @@ This project follows [Semantic Versioning](https://semver.org/) and [Keep a Chan
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-06-25
+
+### Fixed
+- **"MacBroom is damaged and can't be opened" on download.** `make-app.sh`
+  assembled the bundle but only code-signed it when a Developer ID was present,
+  so unsigned release builds shipped with just the linker's ad-hoc signature on
+  the inner binary — an inconsistent bundle seal that macOS flags as damaged on
+  Apple Silicon once the app is quarantined. The bundle is now **always signed**
+  (Developer ID when available, otherwise an ad-hoc signature that seals the
+  bundle), so an unsigned download shows the normal "unidentified developer"
+  prompt (right-click → Open) instead of "damaged".
+
 ## [1.0.0] - 2026-06-25
 
 First public release. Highlights below; the `(beta)` / `(v2)` tags mark the
