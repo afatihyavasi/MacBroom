@@ -128,7 +128,9 @@ public struct SystemStatus: Codable {
 
 /// Streaming events emitted by `clean` (NDJSON, one per line).
 public enum EngineEvent: Equatable {
-    case progress(path: String, freedBytes: Int64)
+    /// `trashedTo` is the Trash destination when the delete was a move-to-Trash
+    /// (so the app can restore it); nil for permanent deletes.
+    case progress(path: String, freedBytes: Int64, trashedTo: String?)
     /// A path that could not be removed. `reason == "permission"` means the
     /// parent directory wasn't writable (Full Disk Access / admin may help).
     case skipped(path: String, reason: String)
@@ -142,9 +144,11 @@ public enum EngineEvent: Equatable {
         var freedBytes: Int64?
         var count: Int?
         var failed: Int?
+        var trashedTo: String?
         enum CodingKeys: String, CodingKey {
             case event, path, reason, count, failed
             case freedBytes = "freed_bytes"
+            case trashedTo = "trashed_to"
         }
     }
 
@@ -152,7 +156,7 @@ public enum EngineEvent: Equatable {
         guard let data = line.data(using: .utf8),
               let w = try? JSONDecoder().decode(Wire.self, from: data) else { return nil }
         switch w.event {
-        case "progress": self = .progress(path: w.path ?? "", freedBytes: w.freedBytes ?? 0)
+        case "progress": self = .progress(path: w.path ?? "", freedBytes: w.freedBytes ?? 0, trashedTo: w.trashedTo)
         case "skipped":  self = .skipped(path: w.path ?? "", reason: w.reason ?? "failed")
         case "done":     self = .done(freedBytes: w.freedBytes ?? 0, count: w.count ?? 0, failed: w.failed ?? 0)
         default:         return nil

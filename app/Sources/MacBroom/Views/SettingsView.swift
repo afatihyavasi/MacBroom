@@ -71,6 +71,9 @@ struct SettingsView: View {
 
             SHSeparator()
 
+            // Undo: put the last cleanup's items back from the Trash
+            restoreSection
+
             // Cleaning history
             historySection
 
@@ -173,6 +176,20 @@ struct SettingsView: View {
         panel.prompt = loc.t(.protectedPathsAdd)
         if panel.runModal() == .OK {
             for url in panel.urls { state.addProtectedPath(url.path) }
+        }
+    }
+
+    // MARK: undo / restore last cleanup
+
+    @ViewBuilder private var restoreSection: some View {
+        if !state.lastRestorable.isEmpty {
+            VStack(alignment: .leading, spacing: Theme.Space.sm) {
+                SHSectionHeader(title: loc.t(.restoreLastTitle), systemImage: "arrow.uturn.backward")
+                Text(loc.t(.restoreLastDesc)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
+                Button(loc.t(.restoreLastButton, state.lastRestorable.count)) { state.restoreLast() }
+                    .buttonStyle(.shOutline(.sm))
+            }
+            SHSeparator()
         }
     }
 
