@@ -1,6 +1,5 @@
 cask "macbroom" do
   version "1.0.0"
-
   # Update on every release:  shasum -a 256 MacBroom-<version>.dmg
   # (The real value is set in the homebrew-tap copy after the release DMG is
   # built; this in-repo file is the template.)
@@ -10,12 +9,13 @@ cask "macbroom" do
   url "https://github.com/afatihyavasi/MacBroom/releases/download/v#{version}/MacBroom-#{version}.dmg",
       verified: "github.com/afatihyavasi/MacBroom/"
   name "MacBroom"
-  desc "Safe, open-source AI & system cache cleaner for the macOS menu bar"
+  desc "Safe, open-source AI and system cache cleaner for the menu bar"
   homepage "https://github.com/afatihyavasi/MacBroom"
 
-  depends_on macos: ">= :ventura"
+  depends_on macos: :ventura
 
   app "MacBroom.app"
+
   # 1.0.0 is unsigned (no Apple Developer ID yet), so skip the Gatekeeper
   # quarantine prompt on install. Remove once releases are notarized.
   no_quarantine true
