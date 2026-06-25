@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, beta]
   pull_request:
-    branches: [main]
+    branches: [main, beta]
 
 jobs:
   test:
@@ -23,9 +23,13 @@ jobs:
       - name: Engine tests (bats)
         run: bats engine/tests/
 
-      - name: Build app
+      # Treat compiler warnings as errors so unused vars, deprecations, and
+      # unreachable code can't land. (swift-format is intentionally not used:
+      # this codebase has a deliberate hand-tuned style — aligned string tables,
+      # intentional semicolons — that the formatter's defaults would mangle.)
+      - name: Build app (warnings as errors)
         working-directory: app
-        run: swift build
+        run: swift build -Xswiftc -warnings-as-errors
 
       - name: Swift self-tests
         working-directory: app
