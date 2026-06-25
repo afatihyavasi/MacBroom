@@ -1,8 +1,9 @@
 cask "macbroom" do
-  version "2.0.0"
+  version "1.0.0"
 
   # Update on every release:  shasum -a 256 MacBroom-<version>.dmg
-  # Use ":no_check" for unsigned/un-notarized local test DMGs.
+  # (The real value is set in the homebrew-tap copy after the release DMG is
+  # built; this in-repo file is the template.)
   sha256 "0000000000000000000000000000000000000000000000000000000000000000"
 
   # Replace afatihyavasi with your GitHub user/organization name.
@@ -15,6 +16,9 @@ cask "macbroom" do
   depends_on macos: ">= :ventura"
 
   app "MacBroom.app"
+  # 1.0.0 is unsigned (no Apple Developer ID yet), so skip the Gatekeeper
+  # quarantine prompt on install. Remove once releases are notarized.
+  no_quarantine true
 
   zap trash: [
     "~/Library/LaunchAgents/com.macbroom.autoclean.*",

@@ -4,6 +4,11 @@ This project follows [Semantic Versioning](https://semver.org/) and [Keep a Chan
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-06-25
+
+First public release. Highlights below; the `(beta)` / `(v2)` tags mark the
+development phase each item landed in on the way to 1.0.0.
+
 ### Added (beta)
 - **Undo last cleanup:** Move-to-Trash cleanups now record where each item
   landed (the engine reports a `trashed_to` path), so Settings shows an "Undo

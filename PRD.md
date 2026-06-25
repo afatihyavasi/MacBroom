@@ -3,7 +3,7 @@
 > A safe, open-source system & AI cache cleaner for the macOS menu bar.
 > Uses [`tw93/mole`](https://github.com/tw93/mole) (GPL-3.0) as its engine.
 
-- **Status:** Draft v0.1 · 2026-06-20
+- **Status:** Released v1.0.0 · 2026-06-25
 - **License:** GPL-3.0-or-later (mole derivative)
 - **Platform:** macOS 13+ (Apple Silicon & Intel)
 - **Distribution:** Notarized DMG (non-sandboxed, Full Disk Access)

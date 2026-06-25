@@ -6,7 +6,7 @@
 # Usage: scripts/make-dmg.sh [version]
 set -euo pipefail
 
-VERSION="${1:-0.1.0}"
+VERSION="${1:-1.0.0}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD="$ROOT/build"
 APP="$BUILD/MacBroom.app"
