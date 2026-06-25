@@ -184,6 +184,11 @@ struct SettingsView: View {
             if state.history.isEmpty {
                 Text(loc.t(.historyEmpty)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
             } else {
+                if state.history.count >= 2 {
+                    Text(loc.t(.historyChartTitle)).font(.shCaption).foregroundStyle(Theme.mutedForeground)
+                    CleanHistoryChart(records: state.history)
+                        .padding(.bottom, Theme.Space.xs)
+                }
                 VStack(spacing: Theme.Space.xs) {
                     ForEach(Array(state.history.prefix(12).enumerated()), id: \.offset) { _, rec in
                         historyRow(rec)
