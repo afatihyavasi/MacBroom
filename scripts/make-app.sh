@@ -14,9 +14,17 @@ CONTENTS="$APP/Contents"
 RES="$CONTENTS/Resources"
 MACOS="$CONTENTS/MacOS"
 
-echo "==> swift build (release)"
-( cd "$ROOT/app" && swift build -c release --product MacBroom )
-BIN="$ROOT/app/.build/release/MacBroom"
+echo "==> swift build (release, universal arm64 + x86_64)"
+# Universal binary: CI runs on Apple Silicon runners, and a single-arch build
+# would leave Intel Macs with "this application is not supported on this type
+# of Mac". MACBROOM_ARCHS=native skips the fat build (faster local iteration).
+if [[ "${MACBROOM_ARCHS:-universal}" == "native" ]]; then
+  ( cd "$ROOT/app" && swift build -c release --product MacBroom )
+  BIN="$ROOT/app/.build/release/MacBroom"
+else
+  ( cd "$ROOT/app" && swift build -c release --arch arm64 --arch x86_64 --product MacBroom )
+  BIN="$ROOT/app/.build/apple/Products/Release/MacBroom"
+fi
 [[ -x "$BIN" ]] || { echo "build failed: $BIN missing"; exit 1; }
 
 echo "==> assembling $APP"
@@ -66,9 +74,11 @@ PLIST
 # Apple Silicon. We therefore ALWAYS sign the *assembled bundle*:
 #   - With a Developer ID (MACBROOM_SIGN_IDENTITY) → distribution signing
 #     (hardened runtime + timestamp), ready for notarization.
-#   - Otherwise → an ad-hoc signature that seals the bundle. The app is still
-#     unsigned-for-distribution, but it's valid, so Gatekeeper shows the normal
-#     "unidentified developer" prompt (right-click → Open) instead of "damaged".
+#   - Otherwise → an ad-hoc signature that seals the bundle. NOTE: a quarantined
+#     ad-hoc-signed app is STILL reported as "damaged" by Gatekeeper on Apple
+#     Silicon (right-click → Open does not bypass it); the sealed bundle only
+#     guarantees the app is valid once the user clears the quarantine flag
+#     (xattr -d com.apple.quarantine). Real fix: Developer ID + notarization.
 if [[ -n "${MACBROOM_SIGN_IDENTITY:-}" ]]; then
   echo "==> codesign (Developer ID, hardened runtime + timestamp)"
   codesign --force --deep --options runtime --timestamp \

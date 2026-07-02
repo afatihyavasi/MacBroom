@@ -11,10 +11,17 @@ cask "macbroom" do
 
   app "MacBroom.app"
 
-  # 1.0.0 is unsigned (no Apple Developer ID yet), so it installs quarantined.
-  # On first launch: right-click MacBroom → Open, or clear it once with
-  # `xattr -dr com.apple.quarantine /Applications/MacBroom.app`.
-  # Notarized releases will open with no prompt.
+  # Releases are not notarized yet (no Apple Developer ID), and Gatekeeper
+  # reports quarantined ad-hoc-signed apps as "damaged" on Apple Silicon —
+  # right-click → Open does not bypass that dialog. Personal taps may strip
+  # the quarantine flag at install time so the app opens normally.
+  # Remove this block once releases are signed + notarized.
+  postflight do
+    system_command "/usr/bin/xattr",
+                   args: ["-r", "-d", "com.apple.quarantine", "#{appdir}/MacBroom.app"],
+                   sudo:         false,
+                   must_succeed: false
+  end
 
   zap trash: [
     "~/Library/LaunchAgents/com.macbroom.autoclean.*",

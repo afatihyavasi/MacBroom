@@ -243,12 +243,15 @@
   <section id="download" class="download">
     <div class="wrap">
       <h2 class="section-title">Get MacBroom</h2>
-      <p class="section-sub">Notarized DMG or one-line Homebrew install.</p>
+      <p class="section-sub">DMG download or one-line Homebrew install (recommended).</p>
       <div class="card">
         <!-- Set OWNER on both the button and the brew command -->
         <a class="btn btn-primary" href="https://github.com/afatihyavasi/MacBroom/releases/latest">Download the DMG</a>
         <code>brew install --cask afatihyavasi/tap/macbroom</code>
         <p style="color: var(--muted); font-size: 13.5px;">Requires macOS Ventura (13) or later.</p>
+        <p style="color: var(--muted); font-size: 13.5px;">Releases aren't notarized yet. If macOS calls the downloaded app <em>"damaged"</em>, clear the quarantine flag once:<br>
+        <code style="font-size: 12.5px;">xattr -d com.apple.quarantine /Applications/MacBroom.app</code><br>
+        The Homebrew install does this automatically.</p>
       </div>
     </div>
   </section>

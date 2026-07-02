@@ -4,6 +4,26 @@ This project follows [Semantic Versioning](https://semver.org/) and [Keep a Chan
 
 ## [Unreleased]
 
+### Fixed
+- **"MacBroom is damaged" persisted after 1.0.1 on Apple Silicon.** The 1.0.1
+  ad-hoc seal made the bundle *valid*, but Gatekeeper still reports a
+  *quarantined* ad-hoc-signed app as "damaged" on Apple Silicon, and
+  right-click → Open does not bypass that dialog — only clearing the
+  quarantine flag (or notarization) does. Install paths now handle this:
+  - The Homebrew cask clears the quarantine flag in a `postflight` step, so
+    `brew install --cask afatihyavasi/tap/macbroom` opens with no dialog.
+  - The DMG ships a READ ME with the one-line fix
+    (`xattr -d com.apple.quarantine /Applications/MacBroom.app`), and the
+    release notes / README / website say the same instead of the old,
+    incorrect "right-click → Open" advice.
+- **DMG only ran on Apple Silicon.** CI builds on an arm64 runner produced an
+  arm64-only binary, so Intel Macs got "this application is not supported on
+  this type of Mac". `make-app.sh` now builds a universal (arm64 + x86_64)
+  binary; `MACBROOM_ARCHS=native` keeps fast single-arch local builds.
+- **DMG staging could invalidate the code signature.** `make-dmg.sh` now
+  copies the app with `ditto` (preserves extended attributes and signature
+  metadata) instead of `cp -R`.
+
 ## [1.0.1] - 2026-06-25
 
 ### Fixed

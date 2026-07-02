@@ -97,5 +97,17 @@ jobs:
           body: |
             MacBroom ${{ steps.ver.outputs.version }}
 
-            > Note: if the signing/notarization secrets are not configured, the DMG
-            > is unsigned; you may need to right-click → Open the first time.
+            **Install:** open the DMG and drag MacBroom into **Applications**.
+
+            > **Unsigned build note:** if this release was built without an Apple
+            > Developer ID, macOS reports the downloaded app as **"damaged"**
+            > (Gatekeeper blocks quarantined ad-hoc-signed apps on Apple Silicon,
+            > and right-click → Open does **not** bypass that dialog). Clear the
+            > quarantine flag once after copying the app to Applications:
+            >
+            > ```
+            > xattr -d com.apple.quarantine /Applications/MacBroom.app
+            > ```
+            >
+            > Or install via Homebrew, which handles this automatically:
+            > `brew install --cask afatihyavasi/tap/macbroom`
