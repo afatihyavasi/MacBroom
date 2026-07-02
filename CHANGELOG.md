@@ -4,7 +4,38 @@ This project follows [Semantic Versioning](https://semver.org/) and [Keep a Chan
 
 ## [Unreleased]
 
+### Security / Safety (engine)
+- **Scan really is read-only now.** mole has two deletion channels that bypass
+  the engine's `safe_clean`/`safe_remove` sink, and both could fire during a
+  supposedly read-only scan: `clean_tool_cache` executes purge commands
+  directly (`npm cache clean --force`, `pip3 cache purge`, `pnpm store prune`,
+  …), and `safe_sudo_remove` is a real `sudo rm -rf` used by browser/system
+  cleaners whenever a sudo timestamp is alive. Both channels are now neutered;
+  everything routes through the scan → approve → clean contract.
+- **Unmatched glob targets are no longer word-split.** An unmatched pattern
+  like `…/Google/Chrome/*/Application Cache/*` was split on spaces and each
+  fragment re-globbed **relative to the engine's working directory**, so paths
+  that were never cache files could be surfaced — and via auto-clean deleted.
+  Patterns now expand without word splitting.
+- **Every deletion passes mole's `validate_path_for_deletion`.** The engine's
+  sink now rejects relative paths, `..` traversal, control characters, and
+  critical system paths before any `rm -rf`/Trash move — a corrupt approved-
+  paths file can no longer translate into an unguarded delete.
+
 ### Fixed
+- **"Empty Trash" in Move-to-Trash mode did nothing while reporting freed
+  bytes** (items were renamed in place inside `~/.Trash`); it now really
+  deletes. Trash name collisions within the same second no longer nest one
+  trashed folder inside another (which also corrupted restore paths).
+- **"Logs & .DS_Store" now actually cleans `.DS_Store` files** — the registry
+  pointed at a mole function that was never sourced and, even if it had been,
+  needed arguments; the target silently skipped that half.
+- **App uninstall respects the user's "Protected paths" list** when collecting
+  candidates, and a protected path that still reaches app-clean emits a
+  `skipped` event instead of disappearing silently from the totals.
+- **`analyze` no longer emits truncated paths** for filenames containing a
+  newline (the truncated first line used to pass the guard), and its numeric
+  arguments are regex-validated instead of arithmetic-evaluated.
 - **"MacBroom is damaged" persisted after 1.0.1 on Apple Silicon.** The 1.0.1
   ad-hoc seal made the bundle *valid*, but Gatekeeper still reports a
   *quarantined* ad-hoc-signed app as "damaged" on Apple Silicon, and

@@ -379,6 +379,69 @@ EOS
     [ ! -e "$HOME/.cache/mbperm" ]
 }
 
+# --- scan must be read-only: mole's non-safe_clean deletion channels -------
+
+@test "scan never executes package-manager purge commands (npm cache clean etc.)" {
+    # mole's clean_tool_cache runs its command args directly when DRY_RUN!=true;
+    # the engine must neuter that channel or a "scan" would purge real caches.
+    mkdir -p "$HOME/.npm/_cacache"
+    head -c 4096 /dev/zero > "$HOME/.npm/_cacache/blob"
+    mkdir -p "$HOME/bin"
+    cat > "$HOME/bin/npm" <<'EOS'
+#!/usr/bin/env bash
+# Reads (config get cache) are fine; only a purge may never happen.
+if [[ "${1:-}" == "cache" && "${2:-}" == "clean" ]]; then
+    [[ -n "${NPM_MARKER:-}" ]] && touch "$NPM_MARKER"
+fi
+echo "$HOME/.npm"
+EOS
+    chmod +x "$HOME/bin/npm"
+
+    run env NPM_MARKER="$HOME/npm-invoked" PATH="$HOME/bin:$PATH" \
+        bash "$ENGINE" scan --targets=system:pkg-caches
+    [ "$status" -eq 0 ]
+    [ ! -e "$HOME/npm-invoked" ]              # npm was never executed
+    [ -e "$HOME/.npm/_cacache/blob" ]         # nothing deleted by the scan
+    [[ "$output" == *"_cacache"* ]]           # residual dirs still surfaced
+}
+
+@test "scan does not word-split unmatched glob targets into CWD-relative paths" {
+    # An unmatched pattern like ".../Application Cache/*" must stay ONE glob;
+    # splitting on spaces would evaluate fragments like "Cache/*" against the
+    # engine's working directory.
+    mkdir -p "$HOME/Library/Caches/Google/Chrome"   # system:browser installed
+    mkdir -p "$HOME/cwd/Cache"
+    head -c 2048 /dev/zero > "$HOME/cwd/Cache/victim.bin"
+
+    cd "$HOME/cwd"
+    run bash "$ENGINE" scan --targets=system:browser
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"victim.bin"* ]]          # never surfaced as a candidate
+    [ -e "$HOME/cwd/Cache/victim.bin" ]        # and certainly not deleted
+}
+
+@test "clean refuses relative and traversal paths in the approved file" {
+    mkdir -p "$HOME/victim"
+    head -c 2048 /dev/zero > "$HOME/victim/blob"
+    printf '%s\n' "victim" "../$(basename "$HOME")/victim" > "$HOME/approved.txt"
+
+    cd "$HOME"
+    run bash "$ENGINE" app-clean --paths-file="$HOME/approved.txt"
+    [ "$status" -eq 0 ]
+    [ -e "$HOME/victim/blob" ]   # neither the relative nor the ../ form deleted
+}
+
+@test "trash-mode empty-trash really deletes (no rename-in-place inside .Trash)" {
+    mkdir -p "$HOME/.Trash/old"
+    head -c 8192 /dev/zero > "$HOME/.Trash/old/junk.bin"
+    printf '%s\n' "$HOME/.Trash/old" > "$HOME/approved.txt"
+
+    run env MACBROOM_DELETE_MODE=trash bash "$ENGINE" clean --targets=system:trash --paths-file="$HOME/approved.txt"
+    [ "$status" -eq 0 ]
+    [ ! -e "$HOME/.Trash/old" ]                 # actually gone
+    [ -z "$(ls -A "$HOME/.Trash")" ]            # not just renamed within Trash
+}
+
 # --- analyze: read-only large-file finder ---------------------------------
 
 @test "analyze lists large files over the threshold with size_bytes (read-only)" {
