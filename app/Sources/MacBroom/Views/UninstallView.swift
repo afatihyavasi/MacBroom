@@ -34,7 +34,10 @@ struct UninstallView: View {
                 uninstalledResult(freed: freed, count: count, failed: failed, permissionBlocked: permissionBlocked)
             case let .error(msg):
                 centered { Image(systemName: "exclamationmark.triangle").foregroundStyle(Theme.destructive)
-                    Text(msg).font(.shCaption).foregroundStyle(Theme.destructive) }
+                    Text(msg).font(.shCaption).foregroundStyle(Theme.destructive)
+                    // Without this the tab is stuck on the error for the rest of
+                    // the session (loadApps early-returns once apps is loaded).
+                    Button(loc.t(.backToList)) { state.backToAppList() }.buttonStyle(.shGhost(.sm)) }
             case let .reviewing(app):
                 reviewList(app)
             case .browsing:

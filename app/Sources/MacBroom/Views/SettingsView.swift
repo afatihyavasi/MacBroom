@@ -238,7 +238,12 @@ struct SettingsView: View {
     /// A selectable deletion-mode card (radio behavior).
     private func deletionRow(_ mode: DeleteMode) -> some View {
         let selected = deletionMode == mode.rawValue
-        return Button { deletionMode = mode.rawValue } label: {
+        return Button {
+            deletionMode = mode.rawValue
+            // The delete mode is baked into each launchd plist; re-sync so
+            // scheduled cleans pick up the new policy immediately.
+            state.syncLaunchAgents()
+        } label: {
             HStack(alignment: .top, spacing: Theme.Space.sm) {
                 Image(systemName: selected ? "largecircle.fill.circle" : "circle")
                     .foregroundStyle(selected ? Theme.accent : Theme.mutedForeground)

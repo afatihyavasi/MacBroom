@@ -37,9 +37,13 @@ enum LaunchAgentManager {
         for (id, rule) in enabled {
             let label = LaunchAgent.label(for: id)
             let args = ["/bin/bash", enginePath, "auto-clean", "--targets=\(id)"]
+            // MACBROOM_USER_PROTECTED_FILE binds the user's "Protected paths"
+            // whitelist to launchd runs too — the engine only loads it from this
+            // env var, and it tolerates the file being absent (empty whitelist).
             let env = ["MACBROOM_MOLE_DIR": moleDir,
                        "MACBROOM_DELETE_MODE": deleteMode,
-                       "MACBROOM_RECLAIMED_LEDGER": ledgerURL.path]
+                       "MACBROOM_RECLAIMED_LEDGER": ledgerURL.path,
+                       "MACBROOM_USER_PROTECTED_FILE": EngineBridge.userProtectedFileURL.path]
             guard let data = LaunchAgent.plistData(label: label, programArguments: args,
                                                    environment: env, rule: rule) else { continue }
             let file = dir.appendingPathComponent("\(label).plist")
