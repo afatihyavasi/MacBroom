@@ -275,7 +275,10 @@ struct MenuBarView: View {
                 if showResults {
                     Button(loc.t(.clean)) { Task { await state.clean(category: category) } }
                         .buttonStyle(.shPrimary(.sm))
-                        .disabled(!state.hasSelection(in: category))
+                        // isBusy: a clean/scan may be running on the OTHER tab —
+                        // starting a second one would corrupt the shared phase
+                        // and overwrite its Trash-restore entries.
+                        .disabled(!state.hasSelection(in: category) || state.isBusy)
                 }
                 Button(loc.t(.quit)) { NSApplication.shared.terminate(nil) }
                     .buttonStyle(.shGhost(.sm))

@@ -71,9 +71,8 @@ MacBroom never deletes anything without a preview and confirmation. Every deleti
 brew install --cask afatihyavasi/tap/macbroom
 ```
 
-> Since 1.0.0 is **unsigned**, macOS quarantines it. On first launch,
-> right-click MacBroom → **Open**, or clear the flag once:
-> `xattr -dr com.apple.quarantine /Applications/MacBroom.app`
+> The cask clears the quarantine flag at install time, so the app opens
+> normally even though releases are not notarized yet.
 
 ### Manual (.dmg)
 
@@ -81,11 +80,18 @@ brew install --cask afatihyavasi/tap/macbroom
 2. Open the DMG and **drag MacBroom into Applications**.
 3. Launch it — the 🧹 icon appears in your **menu bar** (top-right). MacBroom has no Dock icon.
 
-> **First launch (unsigned builds):** if macOS says *"MacBroom can't be opened because it is from an unidentified developer,"* **right-click the app → Open**, then click **Open** again. You only need to do this once.
+> **First launch (unsigned builds):** macOS reports the downloaded app as
+> *"MacBroom is damaged and can't be opened"*. This is Gatekeeper blocking a
+> quarantined app that has no Apple Developer ID signature — **right-click →
+> Open does not bypass this dialog** on Apple Silicon. The app is fine; clear
+> the quarantine flag once:
 >
-> Alternatively, run: `xattr -dr com.apple.quarantine /Applications/MacBroom.app`
+> ```bash
+> xattr -d com.apple.quarantine /Applications/MacBroom.app
+> ```
 >
-> Notarized releases (signed with an Apple Developer ID) open with no warning.
+> Then launch normally. Notarized releases (signed with an Apple Developer ID)
+> will open with no warning.
 
 ## Setup (development)
 

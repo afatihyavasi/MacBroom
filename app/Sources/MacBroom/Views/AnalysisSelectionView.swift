@@ -44,7 +44,9 @@ struct AnalysisSelectionView: View {
                         Text(loc.t(.analyzeButton, state.selectedTargetCount(in: category)))
                     }
                     .buttonStyle(.shPrimary(.sm))
-                    .disabled(state.selectedTargetCount(in: category) == 0)
+                    // isBusy: an operation may be in flight on the other tab;
+                    // starting a scan now would stomp its progress phase.
+                    .disabled(state.selectedTargetCount(in: category) == 0 || state.isBusy)
                 }
             }
         }

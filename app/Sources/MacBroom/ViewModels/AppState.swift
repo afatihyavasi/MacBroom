@@ -53,6 +53,16 @@ final class AppState: ObservableObject {
     func toggleExcluded(_ id: String) {
         if excludedTargets.contains(id) { excludedTargets.remove(id) } else { excludedTargets.insert(id) }
         UserDefaults.standard.set(Array(excludedTargets), forKey: excludedKey)
+        // Excluding a scheduled target must also drop its schedule — otherwise
+        // its launchd agent keeps cleaning it (even while the app is quit),
+        // contradicting the "never scanned or auto-cleaned" promise in Settings.
+        if excludedTargets.contains(id), rules[id] != nil {
+            rules[id] = nil
+            lastRun[id] = nil
+            persistRules()
+            persistLastRun()
+            syncLaunchAgents()
+        }
     }
 
     /// User-defined absolute paths the engine must never scan or delete
@@ -304,6 +314,7 @@ final class AppState: ObservableObject {
     /// Scan only the selected targets in ONE category, keeping other categories'
     /// results intact — so AI and System tabs analyze independently.
     func scanSelected(category: CleanCategory) async {
+        guard !isBusy else { return }   // never stomp an in-flight scan/clean on another tab
         let ids = installedTargets(in: category)
             .map(\.id).filter { selectedTargets.contains($0) }
         guard !ids.isEmpty else { return }
@@ -351,6 +362,7 @@ final class AppState: ObservableObject {
     /// Clean ONLY the selected items in `category` — scoped so cleaning the AI
     /// tab never touches System selections (and vice versa).
     func clean(category: CleanCategory) async {
+        guard !isBusy else { return }   // two concurrent cleans would corrupt phase + lastRestorable
         let categoryPaths = Set(candidates(in: category).map(\.path))
         let approvedSet = selected.intersection(categoryPaths)
         guard !approvedSet.isEmpty else { return }
@@ -560,10 +572,12 @@ final class AppState: ObservableObject {
         let total = approved.count
         appFlow = .uninstalling(done: 0, total: total, freedBytes: 0)
         var freed: Int64 = 0, done = 0, removedCount = 0, failed = 0, permissionBlocked = false
+        var restorables: [RestoreEntry] = []
         do {
             for try await event in engine.appClean(approvedPaths: approved, deleteMode: deleteMode) {
                 switch event {
-                case let .progress(_, bytes, _): freed += bytes; done += 1; removedCount += 1
+                case let .progress(path, bytes, trashedTo): freed += bytes; done += 1; removedCount += 1
+                    if let t = trashedTo { restorables.append(RestoreEntry(original: path, trash: t)) }
                     appFlow = .uninstalling(done: done, total: total, freedBytes: freed)
                 case let .skipped(_, reason): failed += 1; done += 1
                     if reason == "permission" { permissionBlocked = true }
@@ -578,6 +592,8 @@ final class AppState: ObservableObject {
             // Drop the uninstalled app from the list (path no longer exists).
             apps.removeAll { !FileManager.default.fileExists(atPath: $0.path) }
             addReclaimed(freed)
+            setRestorable(restorables)   // Trash-mode → restorable; permanent → empty (clears
+                                         // stale entries from an earlier clean, matching the contract)
             recordClean(freed: freed, count: removedCount, kind: "apps")
             appFlow = .uninstalled(freedBytes: freed, count: removedCount, failed: failed, permissionBlocked: permissionBlocked)
             await refreshStatus()   // every delete refreshes the disk/memory panel
@@ -625,8 +641,10 @@ final class AppState: ObservableObject {
 
     /// Install/refresh launchd agents so schedules also fire when the app is quit.
     /// Runs off the main actor — launchctl is a blocking subprocess and there may
-    /// be one call per rule.
-    private func syncLaunchAgents() {
+    /// be one call per rule. Internal (not private): Settings calls it when the
+    /// deletion mode changes, since MACBROOM_DELETE_MODE is baked into each plist
+    /// at sync time and stale agents would keep the old mode until next launch.
+    func syncLaunchAgents() {
         let snapshot = rules
         let enginePath = engine.enginePath, moleDir = engine.moleDir, mode = deleteMode.rawValue
         let labelById = Dictionary(targets.map { ($0.id, $0.label) }, uniquingKeysWith: { a, _ in a })

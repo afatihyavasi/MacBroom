@@ -18,8 +18,34 @@ STAGE="$BUILD/dmg-stage"
 echo "==> staging DMG contents"
 rm -rf "$STAGE" "$DMG"
 mkdir -p "$STAGE"
-cp -R "$APP" "$STAGE/"
+# ditto (not cp -R) preserves extended attributes and the code-signature
+# metadata exactly; a copy that drops them invalidates the bundle seal and
+# macOS then reports the downloaded app as "damaged".
+ditto "$APP" "$STAGE/MacBroom.app"
 ln -s /Applications "$STAGE/Applications"
+
+# First-launch help for unsigned builds: quarantined ad-hoc-signed apps are
+# reported as "damaged" by Gatekeeper on Apple Silicon, and right-click → Open
+# does NOT bypass that dialog. Ship the one-line fix inside the DMG.
+cat > "$STAGE/If macOS says MacBroom is damaged - READ ME.txt" <<'TXT'
+If macOS says: "MacBroom is damaged and can't be opened"
+=========================================================
+
+This build is not notarized with an Apple Developer ID yet, so Gatekeeper
+blocks the downloaded app (right-click -> Open does not help for this dialog).
+The app is fine — you only need to clear the quarantine flag once.
+
+1. Drag MacBroom.app into the Applications folder.
+2. Open Terminal and run:
+
+   xattr -d com.apple.quarantine /Applications/MacBroom.app
+
+3. Launch MacBroom — the broom icon appears in the menu bar (top right).
+
+Alternatively, install via Homebrew, which handles this automatically:
+
+   brew install --cask afatihyavasi/tap/macbroom
+TXT
 
 echo "==> creating $DMG"
 hdiutil create \

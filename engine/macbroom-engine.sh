@@ -121,10 +121,24 @@ _sizes_kb() {
 # Remove a path. In trash mode, echoes the Trash destination on success so the
 # app can offer "restore last cleanup"; permanent mode echoes nothing.
 _mb_remove() {
-    if [[ "${MACBROOM_DELETE_MODE:-permanent}" == "trash" ]]; then
-        _mb_trash "$1"
+    # Last-line validation before anything is removed: absolute path, no `..`
+    # component, no control chars/newlines, not a critical system path, symlink
+    # target checked. Uses mole's audited validate_path_for_deletion when loaded;
+    # the inline fallback keeps the absolute/no-traversal/no-newline core even on
+    # submodule drift. Guards against a corrupt approved-paths file or any
+    # upstream bug handing us a relative path (rm -rf would hit the CWD).
+    local target="$1"
+    if declare -F validate_path_for_deletion >/dev/null 2>&1; then
+        validate_path_for_deletion "$target" >/dev/null 2>&1 || return 1
     else
-        rm -rf -- "$1" 2>/dev/null
+        [[ "$target" == /* ]] || return 1
+        [[ "$target" =~ (^|/)\.\.(/|$) ]] && return 1
+        [[ "$target" == *$'\n'* ]] && return 1
+    fi
+    if [[ "${MACBROOM_DELETE_MODE:-permanent}" == "trash" ]]; then
+        _mb_trash "$target"
+    else
+        rm -rf -- "$target" 2>/dev/null
     fi
 }
 
@@ -133,13 +147,26 @@ _mb_remove() {
 _mb_trash() {
     local src="$1"
     local trash="$HOME/.Trash"
+    # An item already in the Trash can't be "moved to Trash" — renaming it in
+    # place would report freed bytes while freeing nothing (the Empty-Trash
+    # target hits this). Fall through to a real delete; echo nothing so the app
+    # doesn't offer a bogus restore.
+    if [[ "$src" == "$trash" || "$src" == "$trash"/* ]]; then
+        rm -rf -- "$src" 2>/dev/null
+        return $?
+    fi
     [[ -d "$trash" ]] || mkdir -p "$trash" 2>/dev/null || return 1
-    local base dest
+    local base dest n=1
     base="$(basename "$src")"
     dest="$trash/$base"
-    if [[ -e "$dest" ]]; then
-        dest="$trash/${base} $(date +%Y%m%d-%H%M%S)-$$"
-    fi
+    # Loop until a fresh name: a single timestamp suffix collides when many
+    # same-basename dirs (GPUCache, Code Cache, ...) are trashed in one second —
+    # mv would then nest item N *inside* the previous one and the reported
+    # trashed_to path (used for restore) would be wrong.
+    while [[ -e "$dest" || -L "$dest" ]]; do
+        dest="$trash/${base} $(date +%Y%m%d-%H%M%S)-$$-$n"
+        n=$((n + 1))
+    done
     if mv -f -- "$src" "$dest" 2>/dev/null; then
         printf '%s' "$dest"
         return 0
@@ -168,10 +195,18 @@ safe_clean() {
     for target in "${targets[@]}"; do
         local -a expanded=()
         if [[ "$target" == *"*"* ]]; then
+            # Glob-expand WITHOUT word splitting (IFS=''): mole passes unmatched
+            # glob strings through as single literals (e.g. ".../Google/Chrome/*/
+            # Application Cache/*" when Chrome has no such dir). Splitting that
+            # on spaces would glob fragments like "Cache/*" RELATIVE TO THE CWD
+            # and surface — then delete — paths that were never cache files.
+            local _mb_old_ifs="$IFS"
+            IFS=''
             shopt -s nullglob
-            # shellcheck disable=SC2206  # intentional glob expansion
+            # shellcheck disable=SC2206  # intentional glob expansion (no split)
             expanded=( $target )
             shopt -u nullglob
+            IFS="$_mb_old_ifs"
         else
             expanded=("$target")
         fi
@@ -237,6 +272,16 @@ _mb_clean_xcode_device_support() {
     clean_xcode_device_support ~/Library/Developer/Xcode/iOS\ DeviceSupport "iOS DeviceSupport"
     clean_xcode_device_support ~/Library/Developer/Xcode/watchOS\ DeviceSupport "watchOS DeviceSupport"
     clean_xcode_device_support ~/Library/Developer/Xcode/tvOS\ DeviceSupport "tvOS DeviceSupport"
+}
+
+# .DS_Store half of the system:maintenance target. mole's clean_ds_store_tree
+# is ARG-based (target dir + label) and lives in lib/clean/apps.sh — listing it
+# bare in the registry made it a silent no-op (never sourced; no args). Its
+# deletes go through safe_remove, i.e. our sink: scan lists, clean removes only
+# approved paths.
+_mb_clean_ds_store() {
+    declare -F clean_ds_store_tree >/dev/null 2>&1 || return 0
+    clean_ds_store_tree "$HOME" ".DS_Store"
 }
 
 # Membership test for the approved-path allowlist (bash 3.2 friendly).
@@ -331,7 +376,7 @@ load_mole() {
     source "$MOLE_DIR/lib/core/common.sh" || die "failed to source mole common.sh" 3
 
     local m
-    for m in dev caches user system app_caches; do
+    for m in dev caches user system app_caches apps; do
         # shellcheck disable=SC1090
         source "$MOLE_DIR/lib/clean/$m.sh" 2>/dev/null || true
     done
@@ -361,6 +406,22 @@ load_mole() {
     # (e.g. clean_xcode_derived_data) route through the engine sink. safe_clean
     # needs no such treatment — mole never defines it.
     _mb_install_safe_remove_override
+
+    # mole has two more deletion channels that DON'T go through safe_clean/
+    # safe_remove, so overriding those two is not enough:
+    #   - clean_tool_cache executes its command args directly (`npm cache clean
+    #     --force`, `pip3 cache purge`, `pnpm store prune`, ...) whenever
+    #     DRY_RUN != "true" — i.e. even during our scan, which must be read-only;
+    #   - safe_sudo_remove is a real `sudo rm -rf`, used by browser/system
+    #     cleaners whenever a sudo timestamp happens to be alive
+    #     (has_sudo_session), bypassing our sink entirely.
+    # Neither channel can honor the scan → approve → clean contract, the
+    # Trash/permanent policy, or the user's protected list, so both are
+    # neutered. With has_sudo_session forced false, mole's callers take their
+    # non-sudo branch, which routes through our overridden safe_remove.
+    clean_tool_cache() { return 0; }
+    safe_sudo_remove() { return 1; }
+    has_sudo_session() { return 1; }
 }
 
 # --------------------------------------------------------------------------
@@ -392,7 +453,7 @@ system:pkg-caches|Package manager caches|system|~/.npm:~/.yarn/cache:~/Library/C
 system:lang-caches|Language toolchain caches|system|~/.cargo:~/.rustup:~/.gem:~/.rbenv:~/.bundle|clean_dev_rust clean_dev_ruby
 system:docker|Docker BuildX cache|system|~/.docker/buildx|clean_dev_docker
 system:browser|Browser caches|system|~/Library/Caches/com.apple.Safari:~/Library/Caches/Google/Chrome:~/Library/Caches/com.microsoft.edgemac:~/Library/Caches/Chromium|clean_browsers clean_chromium_default_caches
-system:maintenance|Logs & .DS_Store|system|*|clean_application_support_logs clean_ds_store_tree
+system:maintenance|Logs & .DS_Store|system|*|clean_application_support_logs _mb_clean_ds_store
 system:trash|Trash (empty)|system|~/.Trash|clean_trash
 EOF
 }
@@ -648,6 +709,10 @@ cmd_app_scan() {
     while IFS= read -r p; do
         [[ -n "$p" && ( -e "$p" || -L "$p" ) ]] || continue
         if _protected "$p"; then continue; fi
+        # User whitelist: same "never listed" guarantee as _mb_handle gives the
+        # cache scan — app-scan collects candidates in its own loop, so the
+        # guard must be repeated here.
+        if _mb_user_protected "$p"; then continue; fi
         paths+=("$p"); labels+=("$(basename "$p")")
     done < <(find_app_files "$bundle" "$name" 2>/dev/null || true)
 
@@ -690,10 +755,16 @@ cmd_app_clean() {
     local p size reason
     while IFS= read -r p || [[ -n "$p" ]]; do
         [[ -n "$p" && ( -e "$p" || -L "$p" ) ]] || continue
-        if _protected "$p"; then continue; fi
-        # User whitelist: app-clean deletes in its own loop (not via _mb_handle),
-        # so the guard must be repeated here.
-        if _mb_user_protected "$p"; then continue; fi
+        # User whitelist + mole protection: app-clean deletes in its own loop
+        # (not via _mb_handle), so the guards must be repeated here. Emit a
+        # `skipped` event instead of dropping the path silently — the app counts
+        # one event per approved path, and a silent skip would leave its totals
+        # (and the user's mental model of what was removed) out of sync.
+        if _protected "$p" || _mb_user_protected "$p"; then
+            MB_FAILED=$((${MB_FAILED:-0} + 1))
+            emit "{\"event\":\"skipped\",\"path\":$(json_string "$p"),\"reason\":\"protected\"}"
+            continue
+        fi
         size="$(path_size_bytes "$p")"
         local dest rc
         dest="$(_mb_remove "$p")"; rc=$?
@@ -773,8 +844,11 @@ cmd_analyze() {
         esac
     done
     [[ -d "$root" ]] || die "analyze: not a directory: $root" 4
-    [[ "$limit" -gt 0 ]] 2>/dev/null || limit=50
-    [[ "$min_mb" -gt 0 ]] 2>/dev/null || min_mb=100
+    # Regex-validate (not arithmetic-test) the numeric args: bash arithmetic on
+    # an arbitrary string evaluates it, so a crafted --limit could execute code
+    # via an array-subscript expression before the fallback kicked in.
+    [[ "$limit" =~ ^[0-9]+$ && "$limit" -gt 0 ]] || limit=50
+    [[ "$min_mb" =~ ^[0-9]+$ && "$min_mb" -gt 0 ]] || min_mb=100
 
     # Collect "size<TAB>mtime<TAB>path" rows, biggest first, capped to limit.
     # stat -f %z (size bytes) %m (mtime epoch). All stderr suppressed: scanning
@@ -791,10 +865,13 @@ cmd_analyze() {
     local out="" first=1 size mtime path count=0
     while IFS=$'\t' read -r size mtime path; do
         [[ -n "$path" ]] || continue
-        # Guard against a path containing a newline (its trailing part lands on a
-        # new line with a non-numeric "size") — skip such rows rather than emit
-        # garbage into a list that feeds a delete UI.
+        # Guard against a path containing a newline: its trailing part lands on
+        # a new line with a non-numeric "size" (caught by the regex below), but
+        # the FIRST line still carries a valid size and a TRUNCATED path — so
+        # also require the path to be an existing regular file before emitting
+        # anything into a list that feeds a delete UI.
         [[ "$size" =~ ^[0-9]+$ && "$mtime" =~ ^[0-9]+$ ]] || continue
+        [[ -f "$path" ]] || continue
         [[ $first -eq 1 ]] || out+=","
         first=0
         out+="{\"path\":$(json_string "$path"),\"size_bytes\":${size:-0},\"mtime\":${mtime:-0}}"

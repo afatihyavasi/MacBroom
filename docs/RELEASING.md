@@ -27,8 +27,11 @@ This triggers the `.github/workflows/release.yml` workflow. The workflow:
 5. Uploads the DMG to GitHub Releases.
 
 > **Graceful fallback:** If the signing/notarization secrets are NOT present, the workflow still
-> runs and produces an **unsigned** DMG; CI does not fail. When opening an unsigned DMG,
-> users have to "right-click → Open".
+> runs and produces an **unsigned** (ad-hoc-signed) DMG; CI does not fail. Gatekeeper reports
+> quarantined ad-hoc-signed apps as **"damaged"** on Apple Silicon and right-click → Open does
+> NOT bypass that dialog — users must clear the quarantine flag once:
+> `xattr -d com.apple.quarantine /Applications/MacBroom.app`
+> (the DMG ships a READ ME with this command, and the Homebrew cask strips the flag automatically).
 
 ---
 
@@ -143,13 +146,18 @@ brew install --cask afatihyavasi/tap/macbroom
 ```
 
 **On each release**, bump `version` + `sha256` in `homebrew-tap/Casks/macbroom.rb`
-and push. For **unsigned** builds there is no way to bypass Gatekeeper at install
-time (both the `no_quarantine` cask stanza and the `--no-quarantine` install flag
-were removed from Homebrew). Homebrew installs the app quarantined; on first
-launch users right-click → Open, or clear it once:
+and push — and keep the rest of the cask in sync with `Casks/macbroom.rb` in this
+repo (it is the source of truth; copy the whole file, don't just edit two fields).
+
+For **unsigned** builds there is no install-time bypass in Homebrew itself (both
+the `no_quarantine` cask stanza and the `--no-quarantine` install flag were
+removed), and right-click → Open does not help either: Gatekeeper reports
+quarantined ad-hoc-signed apps as **"damaged"** on Apple Silicon. The cask
+therefore ships a `postflight` block that clears the quarantine flag after
+install (allowed in personal taps). Manual `.dmg` users clear it themselves:
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/MacBroom.app
+xattr -d com.apple.quarantine /Applications/MacBroom.app
 ```
 
-This goes away once releases are notarized.
+Both workarounds (and the postflight block) go away once releases are notarized.
