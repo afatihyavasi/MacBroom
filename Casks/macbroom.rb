@@ -1,6 +1,6 @@
 cask "macbroom" do
-  version "1.0.1"
-  sha256 "e9e5c616b82b01700b6a151ae0642c58ccbba708effebab327890653b6372355"
+  version "1.0.2"
+  sha256 "7d9ad7ba40712b85cb8fcf9a3da1af5447d5398ee82a554985beb4b641c306fc"
 
   url "https://github.com/afatihyavasi/MacBroom/releases/download/v#{version}/MacBroom-#{version}.dmg"
   name "MacBroom"
