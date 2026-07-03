@@ -4,6 +4,8 @@ This project follows [Semantic Versioning](https://semver.org/) and [Keep a Chan
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-07-03
+
 ### Security / Safety (engine)
 - **Scan really is read-only now.** mole has two deletion channels that bypass
   the engine's `safe_clean`/`safe_remove` sink, and both could fire during a
