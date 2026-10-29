@@ -176,6 +176,9 @@ final class AppState: ObservableObject {
         else { return }
         addReclaimed(bytes)
         try? "0".write(to: url, atomically: true, encoding: .utf8)
+        // launchd runs can't post a proper banner themselves (no app bundle),
+        // so the app announces what they freed when it folds the ledger.
+        Notifier.autoCleaned(freed: bytes, targetLabel: nil)
     }
 
     /// User-chosen deletion policy (mirrors @AppStorage("deletionMode")).
@@ -700,12 +703,17 @@ final class AppState: ObservableObject {
         Task { [weak self] in
             // Refresh launchd agents to the current rules + engine path (the app
             // may have moved since last launch), then run the in-app catch-up.
+            Notifier.setUp()
             self?.syncLaunchAgents()
             await self?.runDueSchedules()
+            var tick = 0
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 300 * 1_000_000_000)   // 5 min
+                try? await Task.sleep(nanoseconds: 60 * 1_000_000_000)    // 1 min
                 guard let self else { break }
-                await self.runDueSchedules()
+                tick += 1
+                // Fold launchd results every minute so their banner shows up
+                // promptly; due-schedule checks stay on the 5-minute cadence.
+                if tick % 5 == 0 { await self.runDueSchedules() } else { self.foldReclaimedLedger() }
             }
         }
     }
@@ -733,10 +741,8 @@ final class AppState: ObservableObject {
         if let result = try? await engine.autoClean(targetId: targetId, deleteMode: deleteMode) {
             addReclaimed(result.freed)
             recordClean(freed: result.freed, count: result.count, kind: "auto")
-            // The result is shown in the app (reclaimed total + history). No
-            // banner on the app path: the engine's osascript one is suppressed
-            // (it reads as "Script Editor"), and UNUserNotificationCenter crashes
-            // an unsigned/ad-hoc app, so we keep it silent here.
+            let label = targets.first { $0.id == targetId }?.displayLabel(LocalizationManager())
+            Notifier.autoCleaned(freed: result.freed, targetLabel: label)
         }
     }
 }

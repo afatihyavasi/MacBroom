@@ -36,7 +36,13 @@ enum LaunchAgentManager {
         var failed: [String] = []
         for (id, rule) in enabled {
             let label = LaunchAgent.label(for: id)
-            let args = ["/bin/bash", enginePath, "auto-clean", "--targets=\(id)"]
+            // Always sandboxed: a launchd-run bash does not inherit MacBroom's
+            // Full Disk Access, so touching a protected folder would raise a
+            // permission dialog for "bash" in the middle of the user's work.
+            let wrapped = PrivacySandbox.wrap(executable: "/bin/bash",
+                                              arguments: [enginePath, "auto-clean", "--targets=\(id)"],
+                                              readable: [(enginePath as NSString).deletingLastPathComponent, moleDir])
+            let args = [wrapped.executable] + wrapped.arguments
             // MACBROOM_USER_PROTECTED_FILE binds the user's "Protected paths"
             // whitelist to launchd runs too — the engine only loads it from this
             // env var, and it tolerates the file being absent (empty whitelist).

@@ -54,6 +54,7 @@ public enum L10n: String, CaseIterable {
     case tabAI, tabSystem, tabDeveloper, tabApps, tabAutomation
     case refreshHelp, settingsHelp, open, quit, clean, loading, back, backToList
     case fdaTitle, fdaBannerDesc, fdaSettingsDesc, openFDA, openInSettings, fdaGranted
+    case fdaGateTitle, fdaGateBody, fdaGateWaiting, fdaGateLimited
     case searchingTargets, scanningTargets, cleaningProgress, freed, backTargets, selectedSuffix
     case cleaningProgressBytes, removingProgressBytes
     case removingProgress, removedFreed, removedPartial, someProtected, itemsInUse
@@ -72,6 +73,8 @@ public enum L10n: String, CaseIterable {
     case targetAppCaches, targetEditors, targetGuiApps, targetDevMisc
     case targetXcode, targetPkgCaches, targetBrowser, targetMaintenance, targetTrash
     case targetXcodeDeviceSupport, targetLangCaches, targetDocker
+    case targetFrontend, targetMobileDev, targetJvm, targetCloudCli, targetUpdaters, targetMailDownloads
+    case notifyAutoCleanTitle, notifyFreedFromTarget, notifyFreedInBackground
     case autoCleanTitle, autoCleanDesc, autoCleanNoTools, autoCleanLast
     case freqOff, freqHourly, freqDaily, freqWeekly, freqMonthly
     case appearance, appearanceSystem, appearanceLight, appearanceDark
@@ -117,6 +120,10 @@ public enum Localization {
         .fdaBannerDesc: "Grant access to clean all caches.",
         .fdaSettingsDesc: "MacBroom needs Full Disk Access to clean some system caches.",
         .openFDA: "Open Full Disk Access", .openInSettings: "Open in System Settings", .fdaGranted: "Full Disk Access granted",
+        .fdaGateTitle: "One permission is enough",
+        .fdaGateBody: "With Full Disk Access, macOS stops asking folder by folder and every cache can be scanned. Without it, protected folders (Documents, Downloads, other apps’ data…) are skipped and no permission dialogs appear.",
+        .fdaGateWaiting: "Waiting for access… turn MacBroom on in the list.",
+        .fdaGateLimited: "Continue without access (limited scan)",
         .searchingTargets: "Searching targets…", .scanningTargets: "Scanning selected targets…",
         .cleaningProgress: "Cleaning… %d/%d", .freed: "%@ freed",
         .cleaningProgressBytes: "Cleaning… %d/%d · %@ freed",
@@ -163,6 +170,9 @@ public enum Localization {
         .targetGuiApps: "GUI app caches", .targetDevMisc: "Developer leftovers",
         .targetXcode: "Xcode DerivedData", .targetPkgCaches: "Package manager caches", .targetBrowser: "Browser caches", .targetMaintenance: "Logs & .DS_Store", .targetTrash: "Trash (empty)",
         .targetXcodeDeviceSupport: "Xcode device support", .targetLangCaches: "Language toolchain caches", .targetDocker: "Docker BuildX cache",
+        .targetFrontend: "Frontend build caches", .targetMobileDev: "Mobile development caches", .targetJvm: "JVM caches (Gradle, SBT)",
+        .targetCloudCli: "Cloud & CI tool caches", .targetUpdaters: "Updater leftovers & firmware", .targetMailDownloads: "Old Mail attachments",
+        .notifyAutoCleanTitle: "Auto-clean finished", .notifyFreedFromTarget: "%@ freed · %@", .notifyFreedInBackground: "%@ freed in the background",
         .autoCleanTitle: "Automatic AI cleaning",
         .autoCleanDesc: "Clean a tool's caches automatically on a schedule.",
         .autoCleanNoTools: "No AI tools detected yet.", .autoCleanLast: "Last cleaned: %@",
@@ -200,6 +210,10 @@ public enum Localization {
         .fdaBannerDesc: "Tüm önbellekleri temizlemek için izin verin.",
         .fdaSettingsDesc: "Bazı sistem önbelleklerini temizlemek için MacBroom’a Tam Disk Erişimi vermeniz gerekir.",
         .openFDA: "Tam Disk Erişimi’ni Aç", .openInSettings: "Sistem Ayarları’nda Aç", .fdaGranted: "Tam Disk Erişimi verildi",
+        .fdaGateTitle: "Tek bir izin yeterli",
+        .fdaGateBody: "Tam Disk Erişimi verirsen macOS klasör klasör izin sormayı bırakır ve tüm önbellekler taranır. Vermezsen korumalı klasörler (Belgeler, İndirilenler, diğer uygulamaların verileri…) atlanır ve hiç izin penceresi çıkmaz.",
+        .fdaGateWaiting: "İzin bekleniyor… listede MacBroom’u açman yeterli.",
+        .fdaGateLimited: "İzinsiz devam et (sınırlı tarama)",
         .searchingTargets: "Hedefler aranıyor…", .scanningTargets: "Seçili hedefler taranıyor…",
         .cleaningProgress: "Temizleniyor… %d/%d", .freed: "%@ boşaltıldı",
         .cleaningProgressBytes: "Temizleniyor… %d/%d · %@ boşaltıldı",
@@ -246,6 +260,9 @@ public enum Localization {
         .targetGuiApps: "GUI uygulama önbellekleri", .targetDevMisc: "Geliştirici artıkları",
         .targetXcode: "Xcode DerivedData", .targetPkgCaches: "Paket yöneticisi önbellekleri", .targetBrowser: "Tarayıcı önbellekleri", .targetMaintenance: "Loglar ve .DS_Store", .targetTrash: "Çöp Kutusu (boşalt)",
         .targetXcodeDeviceSupport: "Xcode aygıt desteği", .targetLangCaches: "Dil araç zinciri önbellekleri", .targetDocker: "Docker BuildX önbelleği",
+        .targetFrontend: "Frontend derleme önbellekleri", .targetMobileDev: "Mobil geliştirme önbellekleri", .targetJvm: "JVM önbellekleri (Gradle, SBT)",
+        .targetCloudCli: "Bulut ve CI aracı önbellekleri", .targetUpdaters: "Güncelleyici artıkları ve firmware", .targetMailDownloads: "Eski Mail ekleri",
+        .notifyAutoCleanTitle: "Otomatik temizlik tamamlandı", .notifyFreedFromTarget: "%@ boşaltıldı · %@", .notifyFreedInBackground: "Arka planda %@ boşaltıldı",
         .autoCleanTitle: "Otomatik AI temizliği",
         .autoCleanDesc: "Bir aracın önbelleklerini belirlenen sıklıkta otomatik temizler.",
         .autoCleanNoTools: "Henüz AI aracı bulunamadı.", .autoCleanLast: "Son temizlik: %@",
@@ -283,6 +300,10 @@ public enum Localization {
         .fdaBannerDesc: "Concede acceso para limpiar todas las cachés.",
         .fdaSettingsDesc: "MacBroom necesita Acceso a Todo el Disco para limpiar algunas cachés del sistema.",
         .openFDA: "Abrir Acceso a Todo el Disco", .openInSettings: "Abrir en Ajustes del Sistema", .fdaGranted: "Acceso a Todo el Disco concedido",
+        .fdaGateTitle: "Basta con un permiso",
+        .fdaGateBody: "Con Acceso a Todo el Disco, macOS deja de preguntar carpeta por carpeta y se pueden analizar todas las cachés. Sin él, las carpetas protegidas (Documentos, Descargas, datos de otras apps…) se omiten y no aparece ningún diálogo de permisos.",
+        .fdaGateWaiting: "Esperando el acceso… activa MacBroom en la lista.",
+        .fdaGateLimited: "Continuar sin acceso (análisis limitado)",
         .searchingTargets: "Buscando objetivos…", .scanningTargets: "Analizando los objetivos seleccionados…",
         .cleaningProgress: "Limpiando… %d/%d", .freed: "%@ liberados",
         .cleaningProgressBytes: "Limpiando… %d/%d · %@ liberados",
@@ -329,6 +350,9 @@ public enum Localization {
         .targetGuiApps: "Cachés de apps con interfaz", .targetDevMisc: "Restos de desarrollo",
         .targetXcode: "Xcode DerivedData", .targetPkgCaches: "Cachés de gestores de paquetes", .targetBrowser: "Cachés del navegador", .targetMaintenance: "Registros y .DS_Store", .targetTrash: "Papelera (vaciar)",
         .targetXcodeDeviceSupport: "Soporte de dispositivos de Xcode", .targetLangCaches: "Cachés de toolchains de lenguajes", .targetDocker: "Caché de Docker BuildX",
+        .targetFrontend: "Cachés de compilación frontend", .targetMobileDev: "Cachés de desarrollo móvil", .targetJvm: "Cachés de JVM (Gradle, SBT)",
+        .targetCloudCli: "Cachés de herramientas cloud y CI", .targetUpdaters: "Restos de actualizadores y firmware", .targetMailDownloads: "Adjuntos antiguos de Mail",
+        .notifyAutoCleanTitle: "Limpieza automática completada", .notifyFreedFromTarget: "%@ liberados · %@", .notifyFreedInBackground: "%@ liberados en segundo plano",
         .autoCleanTitle: "Limpieza automática de IA",
         .autoCleanDesc: "Limpia las cachés de una herramienta según una frecuencia.",
         .autoCleanNoTools: "Aún no se detectan herramientas de IA.", .autoCleanLast: "Última limpieza: %@",
@@ -366,6 +390,10 @@ public enum Localization {
         .fdaBannerDesc: "Autorisez l’accès pour nettoyer tous les caches.",
         .fdaSettingsDesc: "MacBroom a besoin de l’Accès complet au disque pour nettoyer certains caches système.",
         .openFDA: "Ouvrir l’Accès complet au disque", .openInSettings: "Ouvrir dans Réglages Système", .fdaGranted: "Accès complet au disque accordé",
+        .fdaGateTitle: "Une seule autorisation suffit",
+        .fdaGateBody: "Avec l’Accès complet au disque, macOS cesse de demander dossier par dossier et tous les caches peuvent être analysés. Sans lui, les dossiers protégés (Documents, Téléchargements, données des autres apps…) sont ignorés et aucune demande d’autorisation n’apparaît.",
+        .fdaGateWaiting: "En attente de l’accès… activez MacBroom dans la liste.",
+        .fdaGateLimited: "Continuer sans accès (analyse limitée)",
         .searchingTargets: "Recherche des cibles…", .scanningTargets: "Analyse des cibles sélectionnées…",
         .cleaningProgress: "Nettoyage… %d/%d", .freed: "%@ libérés",
         .cleaningProgressBytes: "Nettoyage… %d/%d · %@ libérés",
@@ -412,6 +440,9 @@ public enum Localization {
         .targetGuiApps: "Caches d’apps graphiques", .targetDevMisc: "Restes de développement",
         .targetXcode: "Xcode DerivedData", .targetPkgCaches: "Caches des gestionnaires de paquets", .targetBrowser: "Caches du navigateur", .targetMaintenance: "Journaux et .DS_Store", .targetTrash: "Corbeille (vider)",
         .targetXcodeDeviceSupport: "Support d’appareils Xcode", .targetLangCaches: "Caches des chaînes d’outils de langages", .targetDocker: "Cache Docker BuildX",
+        .targetFrontend: "Caches de build frontend", .targetMobileDev: "Caches de développement mobile", .targetJvm: "Caches JVM (Gradle, SBT)",
+        .targetCloudCli: "Caches des outils cloud et CI", .targetUpdaters: "Restes de mises à jour et firmware", .targetMailDownloads: "Anciennes pièces jointes Mail",
+        .notifyAutoCleanTitle: "Nettoyage automatique terminé", .notifyFreedFromTarget: "%@ libérés · %@", .notifyFreedInBackground: "%@ libérés en arrière-plan",
         .autoCleanTitle: "Nettoyage IA automatique",
         .autoCleanDesc: "Nettoie les caches d’un outil selon une fréquence définie.",
         .autoCleanNoTools: "Aucun outil d’IA détecté pour l’instant.", .autoCleanLast: "Dernier nettoyage : %@",

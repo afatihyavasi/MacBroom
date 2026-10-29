@@ -23,7 +23,10 @@ if [[ "${MACBROOM_ARCHS:-universal}" == "native" ]]; then
   BIN="$ROOT/app/.build/release/MacBroom"
 else
   ( cd "$ROOT/app" && swift build -c release --arch arm64 --arch x86_64 --product MacBroom )
+  # Older SwiftPM writes universal products under .build/apple, newer under
+  # .build/out — accept either so local and CI toolchains both package.
   BIN="$ROOT/app/.build/apple/Products/Release/MacBroom"
+  [[ -x "$BIN" ]] || BIN="$ROOT/app/.build/out/Products/Release/MacBroom"
 fi
 [[ -x "$BIN" ]] || { echo "build failed: $BIN missing"; exit 1; }
 
