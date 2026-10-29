@@ -2,270 +2,425 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MacBroom — Safe, open-source AI &amp; system cache cleaner for the macOS menu bar</title>
-  <meta name="description" content="MacBroom is a safe, open-source AI and system cache cleaner that lives in your macOS menu bar. Preview and confirm before anything is deleted." />
-  <style>
-    :root {
-      --bg: #09090B;
-      --bg-elev: #0E0E11;
-      --text: #FAFAFA;
-      --muted: #A1A1AA;
-      --border: #27272A;
-      --accent: #6366F1;
-      --accent-light: #818CF8;
-      --radius: 14px;
-      --max: 1080px;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-    }
-    a { color: var(--accent-light); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MacBroom: clear AI and developer caches from your Mac menu bar</title>
+  <meta name="description" content="MacBroom is a free, open source Mac menu bar app that clears Codex, Claude, Gemini and Cursor caches plus system and developer caches. Every file is previewed first, and sessions are never touched." />
+  <link rel="canonical" href="https://afatihyavasi.github.io/MacBroom/" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="color-scheme" content="dark" />
 
-    /* Header */
-    header {
-      position: sticky; top: 0; z-index: 10;
-      backdrop-filter: blur(10px);
-      background: rgba(9, 9, 11, 0.72);
-      border-bottom: 1px solid var(--border);
-    }
-    header .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
-    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
-    .brand .logo { font-size: 22px; }
-    nav a { color: var(--muted); margin-left: 22px; font-size: 14px; }
-    nav a:hover { color: var(--text); text-decoration: none; }
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="MacBroom" />
+  <meta property="og:title" content="MacBroom: clear AI and developer caches, keep every session" />
+  <meta property="og:description" content="A free, open source cleaner in your Mac menu bar. Preview every file, confirm, then clean. Your AI tool sessions and memory stay untouched." />
+  <meta property="og:url" content="https://afatihyavasi.github.io/MacBroom/" />
+  <meta property="og:image" content="https://afatihyavasi.github.io/MacBroom/img/icon-512.png" />
+  <meta property="og:image:alt" content="MacBroom app icon" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="MacBroom: clear AI and developer caches, keep every session" />
+  <meta name="twitter:description" content="A free, open source cleaner in your Mac menu bar. Preview every file, confirm, then clean." />
+  <meta name="twitter:image" content="https://afatihyavasi.github.io/MacBroom/img/icon-512.png" />
 
-    /* Hero */
-    .hero { text-align: center; padding: 110px 0 80px; position: relative; }
-    .hero::before {
-      content: ""; position: absolute; inset: 0;
-      background: radial-gradient(600px 300px at 50% 0%, rgba(99, 102, 241, 0.18), transparent 70%);
-      pointer-events: none;
-    }
-    .badge {
-      display: inline-block; font-size: 13px; color: var(--accent-light);
-      border: 1px solid var(--border); border-radius: 999px;
-      padding: 5px 14px; margin-bottom: 26px; background: var(--bg-elev);
-    }
-    .hero h1 { font-size: clamp(38px, 6vw, 64px); line-height: 1.08; letter-spacing: -0.02em; font-weight: 800; }
-    .hero h1 .accent { color: var(--accent-light); }
-    .hero p.lead { font-size: clamp(17px, 2.4vw, 21px); color: var(--muted); max-width: 640px; margin: 22px auto 36px; }
-    .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-    .btn {
-      display: inline-block; font-weight: 600; font-size: 15px;
-      padding: 13px 26px; border-radius: 10px; border: 1px solid transparent;
-      transition: transform .12s ease, background .12s ease;
-    }
-    .btn:hover { text-decoration: none; transform: translateY(-1px); }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:hover { background: var(--accent-light); }
-    .btn-ghost { background: var(--bg-elev); color: var(--text); border-color: var(--border); }
-    .btn-ghost:hover { border-color: var(--accent); }
+  <link rel="icon" type="image/png" sizes="64x64" href="img/favicon-64.png" />
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
 
-    /* Screenshot placeholder */
-    .hero-shot {
-      display: block; margin: 56px auto 0;
-      width: 300px; max-width: 78vw; height: auto;
-      filter: drop-shadow(0 24px 60px rgba(0, 0, 0, 0.55));
-    }
-    /* Screenshot gallery */
-    .shots { display: flex; flex-wrap: wrap; justify-content: center; gap: 40px 28px; }
-    .shots figure { margin: 0; width: 240px; max-width: 70vw; }
-    .shots img {
-      width: 100%; height: auto; display: block;
-      filter: drop-shadow(0 16px 40px rgba(0, 0, 0, 0.5));
-    }
-    .shots figcaption { color: var(--muted); font-size: 14px; text-align: center; margin-top: 18px; }
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="styles.css" />
 
-    /* Sections */
-    section { padding: 80px 0; }
-    .section-title { text-align: center; font-size: clamp(28px, 4vw, 40px); font-weight: 800; letter-spacing: -0.02em; }
-    .section-sub { text-align: center; color: var(--muted); margin: 14px auto 50px; max-width: 560px; }
-
-    /* Features grid */
-    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
-    .card {
-      border: 1px solid var(--border); border-radius: var(--radius);
-      background: var(--bg-elev); padding: 26px;
-      transition: border-color .15s ease, transform .15s ease;
-    }
-    .card:hover { border-color: var(--accent); transform: translateY(-2px); }
-    .card .icon { font-size: 26px; margin-bottom: 14px; }
-    .card h3 { font-size: 17px; margin-bottom: 8px; }
-    .card p { color: var(--muted); font-size: 14.5px; }
-
-    /* Safety */
-    .safety {
-      border: 1px solid var(--border); border-radius: var(--radius);
-      background: var(--bg-elev); padding: 40px;
-    }
-    .safety ul { list-style: none; margin-top: 18px; display: grid; gap: 12px; }
-    .safety li { color: var(--muted); padding-left: 28px; position: relative; }
-    .safety li::before { content: "✓"; position: absolute; left: 0; color: var(--accent-light); font-weight: 700; }
-
-    /* Download */
-    .download { text-align: center; }
-    .download .card { max-width: 560px; margin: 0 auto; padding: 44px; }
-    .download code {
-      display: block; background: var(--bg); border: 1px solid var(--border);
-      border-radius: 8px; padding: 14px; margin: 22px 0; font-size: 14px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent-light);
-    }
-
-    /* Footer */
-    footer { border-top: 1px solid var(--border); padding: 40px 0; color: var(--muted); font-size: 14px; }
-    footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
-  </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "MacBroom",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "macOS 13 or later",
+        "description": "A free, open source Mac menu bar app that clears AI tool caches and system caches after a preview and confirmation.",
+        "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+        "url": "https://afatihyavasi.github.io/MacBroom/",
+        "downloadUrl": "https://github.com/afatihyavasi/MacBroom/releases/latest",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Will MacBroom delete my Codex or Claude sessions?", "acceptedAnswer": { "@type": "Answer", "text": "No. Auth, sessions, memory and history of AI tools are protected by default. Only regenerable caches are listed for cleanup." } },
+          { "@type": "Question", "name": "Does MacBroom delete anything without asking?", "acceptedAnswer": { "@type": "Answer", "text": "No. Every cleanup starts as a read only scan that lists each file with its path, size and reason. Files are removed only after you confirm." } },
+          { "@type": "Question", "name": "Why does macOS say MacBroom is damaged?", "acceptedAnswer": { "@type": "Answer", "text": "Releases are not notarized yet, so Gatekeeper flags the downloaded DMG. Install with Homebrew, or clear the quarantine flag once with xattr -d com.apple.quarantine /Applications/MacBroom.app." } },
+          { "@type": "Question", "name": "Does MacBroom need Full Disk Access?", "acceptedAnswer": { "@type": "Answer", "text": "It asks once, the first time you analyze. Grant access for a complete scan, or continue with a limited scan that skips protected folders." } },
+          { "@type": "Question", "name": "Does MacBroom send my data anywhere?", "acceptedAnswer": { "@type": "Answer", "text": "No. It runs entirely on your Mac with no network connection and no telemetry." } },
+          { "@type": "Question", "name": "Which Macs does MacBroom support?", "acceptedAnswer": { "@type": "Answer", "text": "macOS 13 Ventura or later, on Apple Silicon and Intel." } },
+          { "@type": "Question", "name": "Where is the MacBroom window?", "acceptedAnswer": { "@type": "Answer", "text": "MacBroom lives in the menu bar at the top right of your screen and has no Dock icon. Click its icon to open the panel." } },
+          { "@type": "Question", "name": "Is MacBroom free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. It is open source under GPL 3.0 or later, and its cleaning engine is tw93/mole." } },
+          { "@type": "Question", "name": "How is MacBroom different from running mole in Terminal?", "acceptedAnswer": { "@type": "Answer", "text": "MacBroom uses the same protected delete path as mole and adds a preview screen, per category selection, scheduled cleaning and notifications, with no terminal needed." } }
+        ]
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
-  <header>
-    <div class="wrap">
-      <div class="brand"><span class="logo">🧹</span> MacBroom</div>
-      <nav>
-        <a href="#features">Features</a>
-        <a href="#screenshots">Screenshots</a>
-        <a href="#safety">Safety</a>
-        <a href="#download">Download</a>
-        <!-- Set OWNER below -->
-        <a href="https://github.com/afatihyavasi/MacBroom">GitHub</a>
-      </nav>
-    </div>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <!-- ===================== NAVIGATION ===================== -->
+  <header class="nav" role="banner">
+    <a class="brand" href="#top" aria-label="MacBroom home">
+      <img src="img/favicon-64.png" width="32" height="32" alt="" />
+      MacBroom
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#benefits">Benefits</a>
+      <a href="#how">How it works</a>
+      <a href="#safety">Safety</a>
+      <a href="#faq">FAQ</a>
+      <a href="https://github.com/afatihyavasi/MacBroom" rel="noopener"><i class="ph ph-github-logo" aria-hidden="true"></i>GitHub</a>
+    </nav>
+    <a class="btn btn-sm nav-cta" href="https://github.com/afatihyavasi/MacBroom/releases/latest" rel="noopener">Download</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="menu" aria-label="Open menu">
+      <span></span><span></span>
+    </button>
   </header>
 
-  <!-- ===================== HERO ===================== -->
-  <section class="hero">
-    <div class="wrap">
-      <span class="badge">Open-source · GPL-3.0 · macOS menu bar</span>
-      <h1>Clean caches.<br /><span class="accent">Keep your data.</span></h1>
-      <p class="lead">Safe, open-source AI &amp; system cache cleaner for the macOS menu bar.</p>
-      <div class="cta-row">
-        <!-- Set OWNER: links to the GitHub Releases page -->
-        <a class="btn btn-primary" href="https://github.com/afatihyavasi/MacBroom/releases/latest">Download for macOS</a>
-        <a class="btn btn-ghost" href="#features">See features</a>
-      </div>
-      <img class="hero-shot" src="img/ai-cleanup.png" width="300"
-           alt="MacBroom menu-bar panel showing AI cache cleanup" />
-    </div>
-  </section>
+  <div class="menu" id="menu">
+    <a href="#benefits" style="--i:0">Benefits <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+    <a href="#how" style="--i:1">How it works <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+    <a href="#safety" style="--i:2">Safety <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+    <a href="#faq" style="--i:3">FAQ <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+    <a href="https://github.com/afatihyavasi/MacBroom" rel="noopener" style="--i:4">GitHub <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+  </div>
 
-  <!-- ===================== FEATURES ===================== -->
-  <section id="features">
-    <div class="wrap">
-      <h2 class="section-title">Everything in your menu bar</h2>
-      <p class="section-sub">No terminal required. Preview, confirm, done.</p>
-      <div class="grid">
-        <div class="card">
-          <div class="icon">🤖</div>
-          <h3>AI cache cleanup</h3>
-          <p>Reclaim space from Codex, Claude, Gemini &amp; Cursor — without touching auth, sessions, or memory.</p>
+  <main id="main">
+    <!-- ===================== HERO ===================== -->
+    <section class="hero" id="top">
+      <div class="container">
+        <h1 class="h-hero"><span>Clear the cache.</span><span>Keep every session.</span></h1>
+        <p class="lead">MacBroom is a free, open source cleaner for your Mac menu bar. It finds the cache that Codex, Claude, Gemini and Cursor leave behind, shows you every file, and deletes only what you confirm.</p>
+        <div class="cta">
+          <a class="btn" href="https://github.com/afatihyavasi/MacBroom/releases/latest" rel="noopener"><i class="ph ph-download-simple" aria-hidden="true"></i>Download for macOS</a>
+          <p class="cta-note">Free. macOS 13 or later. Apple Silicon and Intel.</p>
         </div>
-        <div class="card">
-          <div class="icon">🧽</div>
-          <h3>System &amp; Developer caches</h3>
-          <p>Clear regenerable system and developer caches with a dry-run preview first.</p>
-        </div>
-        <div class="card">
-          <div class="icon">🗑️</div>
-          <h3>App uninstaller</h3>
-          <p>Remove apps along with the leftovers they scatter across your Library.</p>
-        </div>
-        <div class="card">
-          <div class="icon">📊</div>
-          <h3>Disk analysis</h3>
-          <p>See what is using your disk and where your space actually went.</p>
-        </div>
-        <div class="card">
-          <div class="icon">⏱️</div>
-          <h3>Scheduled automation</h3>
-          <p>Set it and forget it — automatic, safe clean-ups on your schedule.</p>
-        </div>
-        <div class="card">
-          <div class="icon">🌍</div>
-          <h3>4 languages</h3>
-          <p>Fully localized so it feels native wherever you are.</p>
+        <ul class="proof" aria-label="Why you can trust it">
+          <li><i class="ph ph-seal-check" aria-hidden="true"></i>Built on the safety layer of tw93/mole</li>
+          <li><i class="ph ph-wifi-slash" aria-hidden="true"></i>Runs offline, no telemetry</li>
+          <li><i class="ph ph-code" aria-hidden="true"></i>Open source, GPL 3.0</li>
+        </ul>
+        <div class="hero-shots" data-reveal>
+          <img src="img/ai-cleanup.png" width="852" height="1212" alt="MacBroom panel listing Gemini, Codex, Claude, Cursor, GitHub Copilot and Chrome DevTools MCP, ready to analyze" />
+          <img src="img/system-cleanup.png" width="852" height="1212" alt="MacBroom panel listing system and developer caches such as Xcode DerivedData and package manager caches" />
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ===================== SCREENSHOTS ===================== -->
-  <section id="screenshots">
-    <div class="wrap">
-      <h2 class="section-title">See it in action</h2>
-      <p class="section-sub">Native menu-bar UI, light or dark, in four languages.</p>
-      <div class="shots">
-        <figure>
-          <img src="img/ai-cleanup.png" alt="AI cache cleanup tab" />
-          <figcaption>AI cache cleanup — state preserved</figcaption>
-        </figure>
-        <figure>
-          <img src="img/system-cleanup.png" alt="System and developer caches tab" />
-          <figcaption>System &amp; developer caches</figcaption>
-        </figure>
-        <figure>
-          <img src="img/automation.png" alt="Scheduled automation tab" />
-          <figcaption>Scheduled automation, per tool</figcaption>
-        </figure>
-        <figure>
-          <img src="img/settings.png" alt="Settings window" />
-          <figcaption>Settings — appearance, language, protected paths</figcaption>
-        </figure>
+    <!-- ===================== TAGLINE REVEAL ===================== -->
+    <section class="tagline" aria-label="What MacBroom does">
+      <div class="container">
+        <p data-tagline>Your AI tools leave a trail of cache behind them. MacBroom sweeps up the cache and leaves your sessions, memory and logins exactly where they were.</p>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ===================== SAFETY ===================== -->
-  <section id="safety">
-    <div class="wrap">
-      <h2 class="section-title">Safe by default</h2>
-      <p class="section-sub">Destructive actions are gated behind preview and explicit confirmation.</p>
-      <div class="safety">
-        <ul>
-          <li>Never touches auth tokens, sessions, or memory data.</li>
-          <li>Every clean-up is previewed first — nothing is deleted before you confirm.</li>
-          <li>System-critical and expensive-to-rebuild paths are protected and whitelisted.</li>
-          <li>Powered by <a href="https://github.com/tw93/mole">tw93/mole</a>'s safety-first cleaning engine.</li>
+    <!-- ===================== PROBLEM TO SOLUTION ===================== -->
+    <section id="why">
+      <div class="container">
+        <div class="section-head" data-reveal>
+          <h2 class="h2">Cleaning your dev folders by hand is a gamble</h2>
+          <p>Hidden folders like <span class="mono">~/.codex</span> and <span class="mono">~/.claude</span> hold cache and your history side by side. One wrong delete costs you more than the space you got back.</p>
+        </div>
+        <div class="compare">
+          <div class="card bad" data-reveal>
+            <h3><i class="ph ph-x" aria-hidden="true"></i>By hand</h3>
+            <ul>
+              <li><i class="ph ph-x" aria-hidden="true"></i>Guess which folders are safe to delete.</li>
+              <li><i class="ph ph-x" aria-hidden="true"></i>Paste an <span class="mono">rm</span> command you cannot undo.</li>
+              <li><i class="ph ph-x" aria-hidden="true"></i>Find out later that a session or memory folder went with it.</li>
+            </ul>
+          </div>
+          <div class="card good" data-reveal>
+            <h3><i class="ph ph-check" aria-hidden="true"></i>With MacBroom</h3>
+            <ul>
+              <li><i class="ph ph-check" aria-hidden="true"></i>Every file shows its path, size and the reason it is listed.</li>
+              <li><i class="ph ph-check" aria-hidden="true"></i>You review the list first. Nothing runs before you confirm.</li>
+              <li><i class="ph ph-check" aria-hidden="true"></i>Auth, sessions, memory and history are protected by default.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== BENEFITS ===================== -->
+    <section id="benefits">
+      <div class="container">
+        <div class="section-head" data-reveal>
+          <h2 class="h2">Get the space back without the second guessing</h2>
+          <p>Six AI tools, a long list of developer caches, and a schedule you can set once.</p>
+        </div>
+        <div class="bento">
+          <article class="card span-3" data-reveal>
+            <div class="icon-chip"><i class="ph ph-robot" aria-hidden="true"></i></div>
+            <h3>Shrink AI tool caches, keep your work</h3>
+            <p>Clear regenerable cache from the tools you use every day. Their auth, sessions, memory and history are left alone.</p>
+            <ul class="chips" aria-label="Supported AI tools">
+              <li class="chip">Codex</li><li class="chip">Claude</li><li class="chip">Gemini</li><li class="chip">Cursor</li><li class="chip">GitHub Copilot</li><li class="chip">Chrome DevTools MCP</li>
+            </ul>
+          </article>
+          <article class="card span-3" data-reveal>
+            <div class="icon-chip"><i class="ph ph-hard-drives" aria-hidden="true"></i></div>
+            <h3>Find the developer caches you forgot</h3>
+            <p>Build output and downloads pile up quietly. MacBroom scans for them by category so you pick only what you want.</p>
+            <ul class="chips" aria-label="Scan targets">
+              <li class="chip">Xcode DerivedData</li><li class="chip">SwiftPM</li><li class="chip">Homebrew downloads</li><li class="chip">Gradle</li><li class="chip">Go build</li><li class="chip">Vite and Turbo</li><li class="chip">Android</li><li class="chip">Old Mail attachments</li>
+            </ul>
+          </article>
+          <article class="card span-2" data-reveal>
+            <div class="icon-chip"><i class="ph ph-eye" aria-hidden="true"></i></div>
+            <h3>See every file before it goes</h3>
+            <p>Path, size, reason and category for each candidate. You approve the list, not a guess.</p>
+          </article>
+          <article class="card span-2" data-reveal>
+            <div class="icon-chip"><i class="ph ph-clock-countdown" aria-hidden="true"></i></div>
+            <h3>Clean on a schedule</h3>
+            <p>Hourly, daily, weekly or monthly, per tool. A banner appears when a run frees at least 100 MB.</p>
+          </article>
+          <article class="card span-2" data-reveal>
+            <div class="icon-chip"><i class="ph ph-trash" aria-hidden="true"></i></div>
+            <h3>Remove apps with their leftovers</h3>
+            <p>Uninstall an app together with the files it scattered across your Library.</p>
+          </article>
+        </div>
+        <ul class="also" data-reveal aria-label="Also included">
+          <li><i class="ph ph-gauge" aria-hidden="true"></i>Live disk and memory status</li>
+          <li><i class="ph ph-globe" aria-hidden="true"></i>English, Türkçe, Español and Français</li>
+          <li><i class="ph ph-moon" aria-hidden="true"></i>Follows light and dark appearance</li>
         </ul>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ===================== DOWNLOAD ===================== -->
-  <section id="download" class="download">
-    <div class="wrap">
-      <h2 class="section-title">Get MacBroom</h2>
-      <p class="section-sub">DMG download or one-line Homebrew install (recommended).</p>
-      <div class="card">
-        <!-- Set OWNER on both the button and the brew command -->
-        <a class="btn btn-primary" href="https://github.com/afatihyavasi/MacBroom/releases/latest">Download the DMG</a>
-        <code>brew install --cask afatihyavasi/tap/macbroom</code>
-        <p style="color: var(--muted); font-size: 13.5px;">Requires macOS Ventura (13) or later.</p>
-        <p style="color: var(--muted); font-size: 13.5px;">Releases aren't notarized yet. If macOS calls the downloaded app <em>"damaged"</em>, clear the quarantine flag once:<br>
-        <code style="font-size: 12.5px;">xattr -d com.apple.quarantine /Applications/MacBroom.app</code><br>
-        The Homebrew install does this automatically.</p>
+    <!-- ===================== HOW IT WORKS ===================== -->
+    <section id="how">
+      <div class="container">
+        <div class="section-head" data-reveal>
+          <h2 class="h2">From cluttered to clean in three steps</h2>
+          <p>Click the broom in your menu bar. There is no window to hunt for and no terminal to open.</p>
+        </div>
+        <ol class="steps">
+          <li class="card step" data-reveal>
+            <p class="num">01</p>
+            <h3>Pick what to analyze</h3>
+            <p>Tick the AI tools or system caches you care about. Only your selection is scanned, which keeps it quick.</p>
+          </li>
+          <li class="card step" data-reveal>
+            <p class="num">02</p>
+            <h3>Review the preview</h3>
+            <p>Each file lists its path, size and the reason it is there. Nothing has been deleted at this point.</p>
+          </li>
+          <li class="card step" data-reveal>
+            <p class="num">03</p>
+            <h3>Confirm and clean</h3>
+            <p>Approve the list and MacBroom removes exactly that, through the same protected delete path mole uses.</p>
+          </li>
+        </ol>
+        <div class="note" data-reveal>
+          <i class="ph ph-info" aria-hidden="true"></i>
+          <p>The first time you analyze, MacBroom asks once for Full Disk Access instead of raising a dialog per folder. Grant it for a complete scan, or continue with a limited scan that skips protected folders.</p>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
+
+    <!-- ===================== SCREENS ===================== -->
+    <section id="screens">
+      <div class="container">
+        <div class="section-head" data-reveal>
+          <h2 class="h2">A native panel, not a web view in disguise</h2>
+          <p>Built in SwiftUI for the menu bar, with the same materials and symbols as the rest of macOS.</p>
+        </div>
+        <div class="screens">
+          <figure data-reveal>
+            <img src="img/ai-cleanup.png" width="852" height="1212" loading="lazy" alt="AI tab with six tools selected for analysis" />
+            <figcaption><strong>AI caches</strong>State is preserved</figcaption>
+          </figure>
+          <figure data-reveal>
+            <img src="img/system-cleanup.png" width="852" height="1212" loading="lazy" alt="System tab with Xcode DerivedData and developer leftovers selected" />
+            <figcaption><strong>System and developer</strong>Pick by category</figcaption>
+          </figure>
+          <figure data-reveal>
+            <img src="img/automation.png" width="852" height="1212" loading="lazy" alt="Automation tab with per tool cleaning schedules" />
+            <figcaption><strong>Automation</strong>Schedule per tool</figcaption>
+          </figure>
+          <figure data-reveal>
+            <img src="img/settings.png" width="1024" height="1408" loading="lazy" alt="Settings window with appearance, language, deletion policy and protected paths" />
+            <figcaption><strong>Settings</strong>Language, policy, protected paths</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== SAFETY ===================== -->
+    <section id="safety">
+      <div class="container">
+        <div class="section-head" data-reveal>
+          <h2 class="h2">Exactly what is protected, tool by tool</h2>
+          <p>This is the default behavior, straight from the <a href="https://github.com/afatihyavasi/MacBroom/blob/main/docs/SAFETY.md" rel="noopener" style="text-decoration: underline; text-underline-offset: 4px;">safety model</a>. Options that touch state are off until you turn them on and confirm separately.</p>
+        </div>
+        <div class="tools">
+          <article class="card" data-reveal>
+            <h3>Codex</h3>
+            <p class="path">~/.codex</p>
+            <dl>
+              <div><dt><i class="ph ph-lock-key" aria-hidden="true"></i>Untouched</dt><dd><ul class="chips"><li class="chip">auth.json</li><li class="chip">sessions/</li><li class="chip">history.jsonl</li><li class="chip">*.sqlite</li></ul></dd></div>
+              <div><dt><i class="ph ph-broom" aria-hidden="true"></i>Cleanable</dt><dd><ul class="chips"><li class="chip">runtime and temporary files</li></ul></dd></div>
+            </dl>
+          </article>
+          <article class="card" data-reveal>
+            <h3>Claude</h3>
+            <p class="path">~/.claude and Application Support/Claude</p>
+            <dl>
+              <div><dt><i class="ph ph-lock-key" aria-hidden="true"></i>Untouched</dt><dd><ul class="chips"><li class="chip">memory/</li><li class="chip">projects</li><li class="chip">worktrees</li><li class="chip">auth</li></ul></dd></div>
+              <div><dt><i class="ph ph-broom" aria-hidden="true"></i>Cleanable</dt><dd><ul class="chips"><li class="chip">old bundled Desktop versions</li><li class="chip">regenerable cache</li></ul></dd></div>
+            </dl>
+          </article>
+          <article class="card" data-reveal>
+            <h3>Gemini</h3>
+            <p class="path">~/.gemini</p>
+            <dl>
+              <div><dt><i class="ph ph-lock-key" aria-hidden="true"></i>Untouched</dt><dd><ul class="chips"><li class="chip">identity</li><li class="chip">state</li></ul></dd></div>
+              <div><dt><i class="ph ph-broom" aria-hidden="true"></i>Cleanable</dt><dd><ul class="chips"><li class="chip">tmp/</li><li class="chip">antigravity-browser-profile/</li></ul></dd></div>
+            </dl>
+          </article>
+          <article class="card" data-reveal>
+            <h3>Cursor</h3>
+            <p class="path">Application Support/Cursor</p>
+            <dl>
+              <div><dt><i class="ph ph-lock-key" aria-hidden="true"></i>Untouched</dt><dd><ul class="chips"><li class="chip">project data</li><li class="chip">auth</li></ul></dd></div>
+              <div><dt><i class="ph ph-broom" aria-hidden="true"></i>Cleanable</dt><dd><ul class="chips"><li class="chip">agent session logs</li></ul></dd></div>
+            </dl>
+          </article>
+        </div>
+        <div class="guards">
+          <div class="card" data-reveal>
+            <div class="icon-chip"><i class="ph ph-list-magnifying-glass" aria-hidden="true"></i></div>
+            <h3>Preview is mandatory</h3>
+            <p>Every scan is read only. Deletion needs its own confirmation step.</p>
+          </div>
+          <div class="card" data-reveal>
+            <div class="icon-chip"><i class="ph ph-shield-check" aria-hidden="true"></i></div>
+            <h3>Protected paths</h3>
+            <p>System folders and costly to rebuild data are rejected, and paths with <span class="mono">..</span> never pass.</p>
+          </div>
+          <div class="card" data-reveal>
+            <div class="icon-chip"><i class="ph ph-prohibit" aria-hidden="true"></i></div>
+            <h3>Running tools are skipped</h3>
+            <p>If an AI tool is open, MacBroom leaves it alone and tells you.</p>
+          </div>
+          <div class="card" data-reveal>
+            <div class="icon-chip"><i class="ph ph-wifi-slash" aria-hidden="true"></i></div>
+            <h3>Local only</h3>
+            <p>No network connection and no telemetry. Deletion history stays on your Mac.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== FAQ ===================== -->
+    <section id="faq">
+      <div class="container">
+        <div class="section-head" data-reveal>
+          <h2 class="h2">Questions people ask before installing</h2>
+        </div>
+        <div class="faq" data-reveal>
+          <details>
+            <summary>Will MacBroom delete my Codex or Claude sessions?<i class="ph ph-plus" aria-hidden="true"></i></summary>
+            <div class="answer"><p>No. Auth, sessions, memory and history are protected by default, and only regenerable cache is listed. Advanced options that include state are switched off, need a separate confirmation, and state the risk plainly.</p></div>
+          </details>
+          <details>
+            <summary>Does it delete anything without asking?<i class="ph ph-plus" aria-hidden="true"></i></summary>
+            <div class="answer"><p>No. Every cleanup begins as a read only scan that lists each file with its path, size and reason. Files go only after you confirm. The one exception is scheduled automation, which you turn on yourself for each tool and which follows the same protected path rules.</p></div>
+          </details>
+          <details>
+            <summary>Why does macOS say the app is damaged?<i class="ph ph-plus" aria-hidden="true"></i></summary>
+            <div class="answer"><p>Releases are not notarized yet, so Gatekeeper blocks the downloaded DMG even though the app is fine. Install with Homebrew, which clears the flag for you, or run this once: <code>xattr -d com.apple.quarantine /Applications/MacBroom.app</code></p></div>
+          </details>
+          <details>
+            <summary>Does it need Full Disk Access?<i class="ph ph-plus" aria-hidden="true"></i></summary>
+            <div class="answer"><p>It asks once, the first time you analyze. Grant it for a complete scan and MacBroom picks it up without a relaunch. Or continue with a limited scan that skips protected folders, so no further dialogs appear.</p></div>
+          </details>
+          <details>
+            <summary>Does it send my data anywhere?<i class="ph ph-plus" aria-hidden="true"></i></summary>
+            <div class="answer"><p>No. The app runs entirely on your Mac with no network connection and no telemetry. Read the <a href="privacy.html">privacy notice</a> for the details, including what this website loads.</p></div>
+          </details>
+          <details>
+            <summary>Which Macs are supported?<i class="ph ph-plus" aria-hidden="true"></i></summary>
+            <div class="answer"><p>macOS 13 Ventura or later, on both Apple Silicon and Intel.</p></div>
+          </details>
+          <details>
+            <summary>Where is the MacBroom window?<i class="ph ph-plus" aria-hidden="true"></i></summary>
+            <div class="answer"><p>In the menu bar at the top right of your screen. MacBroom has no Dock icon, so click its icon there to open the panel.</p></div>
+          </details>
+          <details>
+            <summary>Is it really free?<i class="ph ph-plus" aria-hidden="true"></i></summary>
+            <div class="answer"><p>Yes. MacBroom is open source under GPL 3.0 or later because it builds on mole's GPL licensed modules. You can read, build and change the code on GitHub.</p></div>
+          </details>
+          <details>
+            <summary>How is it different from running mole in Terminal?<i class="ph ph-plus" aria-hidden="true"></i></summary>
+            <div class="answer"><p>It is the same engine and the same protected delete path. MacBroom adds a preview screen, selection by category, scheduled cleaning, notifications and an app uninstaller, so you never need the command line.</p></div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== FINAL CTA ===================== -->
+    <section class="final" id="download">
+      <div class="container">
+        <div class="card" data-reveal>
+          <h2 class="h2">Get your space back. Keep your sessions.</h2>
+          <div class="cta">
+            <a class="btn" href="https://github.com/afatihyavasi/MacBroom/releases/latest" rel="noopener"><i class="ph ph-download-simple" aria-hidden="true"></i>Download for macOS</a>
+            <p class="cta-note">Free. macOS 13 or later. Apple Silicon and Intel.</p>
+          </div>
+          <ul class="risk">
+            <li><i class="ph ph-check" aria-hidden="true"></i>Nothing is deleted until you confirm</li>
+            <li><i class="ph ph-check" aria-hidden="true"></i>Free and open source</li>
+            <li><i class="ph ph-check" aria-hidden="true"></i>Remove it any time by dragging it to the Trash</li>
+          </ul>
+          <div class="brew">
+            <p class="brew-label" id="brew-label">Prefer Homebrew? This also clears the quarantine flag.</p>
+            <div class="cmd">
+              <code aria-labelledby="brew-label">brew install --cask afatihyavasi/tap/macbroom</code>
+              <button class="copy" type="button" data-copy="brew install --cask afatihyavasi/tap/macbroom" data-status="copy-status">
+                <i class="ph ph-copy" aria-hidden="true"></i><span data-copy-label>Copy</span>
+              </button>
+            </div>
+            <p class="copy-status" id="copy-status" role="status" aria-live="polite"></p>
+          </div>
+          <div class="fine">
+            <p>Downloaded the DMG and macOS says it is "damaged"? Releases are not notarized yet. Clear the quarantine flag once:</p>
+            <code>xattr -d com.apple.quarantine /Applications/MacBroom.app</code>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 
   <!-- ===================== FOOTER ===================== -->
   <footer>
-    <div class="wrap">
-      <div>MacBroom — distributed under <strong>GPL-3.0-or-later</strong>.</div>
+    <div class="container foot">
       <div>
-        <!-- Set OWNER -->
-        <a href="https://github.com/afatihyavasi/MacBroom">Repository</a> ·
-        Cleaning engine: <a href="https://github.com/tw93/mole">tw93/mole</a>
+        <a class="brand" href="#top" style="padding-inline: 0;"><img src="img/favicon-64.png" width="32" height="32" alt="" />MacBroom</a>
+        <p>A safe, open source system and AI cache cleaner for the macOS menu bar. Powered by <a href="https://github.com/tw93/mole" rel="noopener" style="text-decoration: underline; text-underline-offset: 4px;">tw93/mole</a>.</p>
       </div>
+      <nav aria-label="Footer">
+        <a href="https://github.com/afatihyavasi/MacBroom" rel="noopener"><i class="ph ph-github-logo" aria-hidden="true"></i>GitHub</a>
+        <a href="https://github.com/afatihyavasi/MacBroom/releases" rel="noopener">Releases</a>
+        <a href="https://github.com/afatihyavasi/MacBroom/blob/main/CHANGELOG.md" rel="noopener">Changelog</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="https://github.com/afatihyavasi/MacBroom/blob/main/LICENSE" rel="noopener">Terms (GPL 3.0)</a>
+      </nav>
     </div>
   </footer>
+
+  <script src="site.js" defer></script>
 </body>
 </html>
