@@ -168,6 +168,53 @@ if let data = LaunchAgent.plistData(
 check("plist nil for disabled rule",
       LaunchAgent.plistData(label: "x", programArguments: [], environment: [:], rule: .off) == nil)
 
+// --- PrivacySandbox: no-FDA runs never reach TCC-protected folders ----------
+do {
+    let p = PrivacySandbox.profile(home: "/Users/a\"b")
+    check("sandbox profile denies Documents", p.contains(#"(subpath "/Users/a\"b/Documents")"#))
+    check("sandbox profile denies other apps' containers", p.contains(#"/Library/Containers")"#))
+    check("sandbox profile allows by default", p.hasPrefix("(version 1)(allow default)(deny file-read* file-write* "))
+    check("sandbox profile re-allows the engine dir after the deny",
+          PrivacySandbox.profile(home: "/Users/z", readable: ["/Users/z/Documents/mb/engine"])
+            .hasSuffix(#"(allow file-read* (subpath "/Users/z/Documents/mb/engine"))"#))
+    let w = PrivacySandbox.wrap(executable: "/bin/bash", arguments: ["/x/engine.sh", "scan"], home: "/Users/z")
+    check("wrap runs the command under sandbox-exec",
+          w.executable == PrivacySandbox.executable && w.arguments.suffix(3) == ["/bin/bash", "/x/engine.sh", "scan"])
+
+    // Live: under the profile a protected dir is refused while others stay readable.
+    let home = FileManager.default.temporaryDirectory.appendingPathComponent("mb-sbx-\(getpid())").path
+    try? FileManager.default.createDirectory(atPath: home + "/Documents", withIntermediateDirectories: true)
+    try? FileManager.default.createDirectory(atPath: home + "/Library/Caches", withIntermediateDirectories: true)
+    func sandboxedLs(_ dir: String) -> Int32 {
+        let cmd = PrivacySandbox.wrap(executable: "/bin/ls", arguments: [dir], home: home)
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: cmd.executable)
+        proc.arguments = cmd.arguments
+        proc.standardOutput = FileHandle.nullDevice
+        proc.standardError = FileHandle.nullDevice
+        guard (try? proc.run()) != nil else { return -1 }
+        proc.waitUntilExit()
+        return proc.terminationStatus
+    }
+    check("sandboxed run is refused a protected folder", sandboxedLs(home + "/Documents") != 0)
+    check("sandboxed run still reads caches", sandboxedLs(home + "/Library/Caches") == 0)
+    try? FileManager.default.createDirectory(atPath: home + "/Documents/engine", withIntermediateDirectories: true)
+    func sandboxedLsAllowing(_ dir: String) -> Int32 {
+        let cmd = PrivacySandbox.wrap(executable: "/bin/ls", arguments: [dir], home: home, readable: [dir])
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: cmd.executable)
+        proc.arguments = cmd.arguments
+        proc.standardOutput = FileHandle.nullDevice
+        proc.standardError = FileHandle.nullDevice
+        guard (try? proc.run()) != nil else { return -1 }
+        proc.waitUntilExit()
+        return proc.terminationStatus
+    }
+    check("an explicitly readable dir under a protected root stays readable",
+          sandboxedLsAllowing(home + "/Documents/engine") == 0)
+    try? FileManager.default.removeItem(atPath: home)
+}
+
 // Localization: every key must be translated in all 4 languages (no fallback
 // gaps), and format placeholders must match across languages.
 for lang in [AppLanguage.en, .tr, .es, .fr] {

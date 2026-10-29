@@ -299,26 +299,18 @@ EOS
     chmod +x "$HOME/bin/osascript"
 }
 
-@test "auto-clean skips the osascript banner when MACBROOM_SUPPRESS_NOTIFY is set" {
+@test "auto-clean never posts an osascript banner (the app owns notifications)" {
     mkdir -p "$HOME/.gemini/tmp"
     head -c 50000 /dev/zero > "$HOME/.gemini/tmp/cache.bin"
     _mock_osascript
 
+    # launchd path (no app env): an osascript banner would show as Script
+    # Editor, so the engine only writes the ledger and the app announces it.
     run env OSA_MARKER="$HOME/osa-called" PATH="$HOME/bin:$PATH" \
-        MACBROOM_SUPPRESS_NOTIFY=1 bash "$ENGINE" auto-clean --targets=ai:gemini
+        MACBROOM_RECLAIMED_LEDGER="$HOME/ledger" bash "$ENGINE" auto-clean --targets=ai:gemini
     [ "$status" -eq 0 ]
-    [ ! -e "$HOME/osa-called" ]   # native-notify path: osascript NOT invoked
-}
-
-@test "auto-clean uses the osascript banner when MACBROOM_SUPPRESS_NOTIFY is unset (launchd path)" {
-    mkdir -p "$HOME/.gemini/tmp"
-    head -c 50000 /dev/zero > "$HOME/.gemini/tmp/cache.bin"
-    _mock_osascript
-
-    run env OSA_MARKER="$HOME/osa-called" PATH="$HOME/bin:$PATH" \
-        bash "$ENGINE" auto-clean --targets=ai:gemini
-    [ "$status" -eq 0 ]
-    [ -e "$HOME/osa-called" ]      # launchd path: osascript invoked
+    [ ! -e "$HOME/osa-called" ] || return 1
+    [ -s "$HOME/ledger" ] || return 1
 }
 
 # --- new dev targets (lang caches / docker / xcode device support) ---------
@@ -443,6 +435,99 @@ EOS
 }
 
 # --- analyze: read-only large-file finder ---------------------------------
+
+# --- extended targets (frontend / mobile / jvm / updaters / toolchains) -------
+
+# PATH stub for pgrep: answers `pgrep -x ShipIt` with $1 (0 = running, 1 = not)
+# and passes every other query to the real pgrep. Needed both ways — a real
+# ShipIt may be running on the dev machine mid-update.
+_stub_shipit() {
+    mkdir -p "$HOME/bin"
+    cat > "$HOME/bin/pgrep" <<EOF
+#!/bin/bash
+[[ "\$*" == "-x ShipIt" ]] && exit $1
+exec /usr/bin/pgrep "\$@"
+EOF
+    chmod +x "$HOME/bin/pgrep"
+    export PATH="$HOME/bin:$PATH"
+}
+
+@test "discover registers the extended targets (incl. glob detect for *.ShipIt)" {
+    mkdir -p "$HOME/.cache/node-gyp" "$HOME/Library/Developer/XCTestDevices" \
+             "$HOME/.gradle" "$HOME/.kube" "$HOME/Library/Caches/com.example.App.ShipIt"
+
+    run bash "$ENGINE" discover
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"id":"system:frontend","label":"Frontend build caches","category":"system","installed":true'* ]] || return 1
+    [[ "$output" == *'"id":"system:mobile-dev"'*'"installed":true'* ]] || return 1
+    [[ "$output" == *'"id":"system:updaters","label":"Updater leftovers & firmware","category":"system","installed":true'* ]] || return 1
+    [[ "$output" == *'"id":"system:mail-downloads","label":"Old Mail attachments","category":"system","installed":false'* ]] || return 1
+}
+
+@test "scanning the extended targets lists regenerable caches, read-only" {
+    local -a dirs=(
+        "$HOME/.cache/node-gyp/22.0.0"
+        "$HOME/Library/Caches/org.swift.swiftpm/repositories"
+        "$HOME/.gradle/caches/build-cache-1/entry"
+        "$HOME/Library/Caches/go-build/ab"
+        "$HOME/Library/Caches/dotslash/cd"
+        "$HOME/Library/Caches/Homebrew/downloads/x--bottle.tar.gz"
+    )
+    local d
+    for d in "${dirs[@]}"; do mkdir -p "$d"; head -c 4096 /dev/zero > "$d/blob"; done
+
+    run bash "$ENGINE" scan --targets=system:frontend,system:mobile-dev,system:jvm,system:lang-caches,system:pkg-caches
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"candidates"'* ]] || return 1
+    for d in "${dirs[@]}"; do
+        [[ "$output" == *"\"path\":\"$d\""* ]] || { echo "missing: $d"; return 1; }
+        [ -e "$d/blob" ] || return 1   # scan never deletes
+    done
+}
+
+@test "jvm target does not abort the scan (maven.sh's set -e must not leak)" {
+    mkdir -p "$HOME/.gradle/notifications" "$HOME/.cargo/registry/cache/repo"
+    head -c 4096 /dev/zero > "$HOME/.cargo/registry/cache/repo/blob"
+
+    run bash "$ENGINE" scan --targets=system:jvm,system:lang-caches
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"$HOME/.cargo/registry/cache/repo"* ]] || return 1
+}
+
+@test "updater payloads are listed when ShipIt is idle, skipped while it runs" {
+    local payload="$HOME/Library/Caches/com.example.App.ShipIt/update.AbC123"
+    mkdir -p "$payload/Example.app"
+    head -c 4096 /dev/zero > "$payload/Example.app/blob"
+    head -c 10 /dev/zero > "$HOME/Library/Caches/com.example.App.ShipIt/ShipItState.plist"
+
+    _stub_shipit 1
+    run bash "$ENGINE" scan --targets=system:updaters
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"\"path\":\"$payload\""* ]] || return 1
+    [[ "$output" != *"ShipItState.plist"* ]] || return 1   # only the staged bundle, not ShipIt's own state
+
+    _stub_shipit 0
+    run bash "$ENGINE" scan --targets=system:updaters
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"$payload"* ]] || return 1
+    [ -e "$payload/Example.app/blob" ] || return 1
+}
+
+@test "a path reached by two cleaners is listed once (no double-counted size)" {
+    # Slack's Cache_Data is hit by clean_communication_apps ("Slack cache") AND,
+    # once the dir carries Electron cache markers, by the Application Support
+    # sweep ("Cache_Data"). Without dedupe it was listed twice.
+    local app="$HOME/Library/Application Support/Slack"
+    local cache="$app/Cache/Cache_Data"
+    mkdir -p "$cache" "$app/GPUCache" "$app/Code Cache"
+    head -c 4096 /dev/zero > "$cache/f_000001"
+
+    run bash "$ENGINE" scan --targets=system:gui-apps,system:maintenance
+    [ "$status" -eq 0 ]
+    local n
+    n="$(printf '%s' "$output" | grep -o "\"path\":\"$cache\"" | wc -l | tr -d ' ')"
+    [ "$n" -eq 1 ] || { echo "listed $n times"; return 1; }
+}
 
 @test "analyze lists large files over the threshold with size_bytes (read-only)" {
     mkdir -p "$HOME/big"

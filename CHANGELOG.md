@@ -4,6 +4,41 @@ This project follows [Semantic Versioning](https://semver.org/) and [Keep a Chan
 
 ## [Unreleased]
 
+### Added
+- **Six new scan targets**, all wired to mole's protection-gated sink: frontend
+  build caches (node-gyp, Turbo, Vite, …), mobile development caches (XCTest
+  devices, simulator runtime/dyld caches, SwiftPM, Android, Expo), JVM caches
+  (Gradle, SBT, Ivy), cloud & CI tool caches, updater leftovers (ShipIt staged
+  update bundles, skipped while ShipIt runs; old iOS firmware) and old Mail
+  attachments. Package caches now also cover Homebrew downloads; toolchain
+  caches cover Go build, DotSlash, Composer, NuGet, Deno and Bazel.
+- New app icon.
+
+### Changed
+- **One permission ask instead of a stream of dialogs.** Analyzing without
+  Full Disk Access used to raise a separate macOS prompt for Desktop,
+  Documents, Downloads, other apps' data, Calendars, Contacts, … The first
+  Analyze now asks once: grant Full Disk Access (picked up automatically, no
+  relaunch) or continue with a limited scan. Without access the engine runs
+  under a `sandbox-exec` profile that denies protected folders up front, so no
+  dialog can appear; launchd auto-cleans are always sandboxed this way.
+- **Auto-clean banners come from the app.** The engine no longer posts an
+  `osascript` notification (shown as Script Editor, English-only, even for a
+  few KB). MacBroom posts a localized banner itself, only when at least 100 MB
+  was freed; launchd runs are announced when the app folds the reclaimed
+  ledger (checked every minute). Developer ID builds use
+  `UNUserNotificationCenter`; ad-hoc builds, which macOS denies notification
+  authorization, fall back to in-process AppleScript.
+
+### Fixed
+- A path reached by two cleaners (e.g. Slack's `Cache_Data`) was listed twice,
+  double-counting its size in the scan total.
+- Selecting a target whose mole function sources a module with `set -e`
+  (`clean_dev_jvm` → `maven.sh`) could abort the engine and return an empty
+  result for **every** selected target.
+- `make app` failed to find the universal binary on newer SwiftPM
+  (`.build/out` instead of `.build/apple`).
+
 ## [1.0.2] - 2026-07-03
 
 ### Security / Safety (engine)

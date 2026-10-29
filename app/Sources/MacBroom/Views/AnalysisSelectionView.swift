@@ -10,7 +10,36 @@ struct AnalysisSelectionView: View {
 
     private var items: [AnalysisTarget] { state.installedTargets(in: category) }
 
+    /// Set once the user has answered the Full Disk Access ask (either way), so
+    /// it is shown a single time instead of on every Analyze.
+    @AppStorage("fdaGateAnswered") private var fdaGateAnswered = false
+    @State private var showFDAGate = false
+
     var body: some View {
+        if showFDAGate {
+            FullDiskAccessGateView { _ in
+                fdaGateAnswered = true
+                showFDAGate = false
+                startScan()
+            }
+        } else {
+            selection
+        }
+    }
+
+    private func analyze() {
+        if !fdaGateAnswered && !FullDiskAccess.isGranted {
+            showFDAGate = true
+        } else {
+            startScan()
+        }
+    }
+
+    private func startScan() {
+        Task { await state.scanSelected(category: category) }
+    }
+
+    private var selection: some View {
         VStack(alignment: .leading, spacing: Theme.Space.md) {
             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                 Text(loc.t(.analyzeQuestion)).font(.shHeadline)
@@ -39,7 +68,7 @@ struct AnalysisSelectionView: View {
                     }
                     Spacer()
                     Button {
-                        Task { await state.scanSelected(category: category) }
+                        analyze()
                     } label: {
                         Text(loc.t(.analyzeButton, state.selectedTargetCount(in: category)))
                     }
@@ -102,6 +131,12 @@ extension AnalysisTarget {
         case "system:pkg-caches":  return loc.t(.targetPkgCaches)
         case "system:lang-caches": return loc.t(.targetLangCaches)
         case "system:docker":      return loc.t(.targetDocker)
+        case "system:frontend":    return loc.t(.targetFrontend)
+        case "system:mobile-dev":  return loc.t(.targetMobileDev)
+        case "system:jvm":         return loc.t(.targetJvm)
+        case "system:cloud-cli":   return loc.t(.targetCloudCli)
+        case "system:updaters":    return loc.t(.targetUpdaters)
+        case "system:mail-downloads": return loc.t(.targetMailDownloads)
         case "system:browser":     return loc.t(.targetBrowser)
         case "system:maintenance": return loc.t(.targetMaintenance)
         case "system:trash":       return loc.t(.targetTrash)

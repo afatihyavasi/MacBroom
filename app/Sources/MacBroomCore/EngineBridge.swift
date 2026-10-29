@@ -91,13 +91,12 @@ public struct EngineBridge {
     }
 
     /// Scheduled automation: scan a target and clean everything it surfaces in
-    /// one shot. Returns the final freed/failed totals. MACBROOM_SUPPRESS_NOTIFY
-    /// tells the engine to skip its osascript ("Script Editor") banner — the app
-    /// surfaces the result itself (reclaimed total + history).
+    /// one shot. Returns the final freed/failed totals; the app surfaces the
+    /// result itself (reclaimed total, history and a native banner).
     public func autoClean(targetId: String, deleteMode: DeleteMode = .permanent) async throws -> (freed: Int64, count: Int, failed: Int) {
         let (data, _) = try await runCollecting(
             ["auto-clean", "--targets=\(targetId)"],
-            extraEnv: ["MACBROOM_DELETE_MODE": deleteMode.rawValue, "MACBROOM_SUPPRESS_NOTIFY": "1"]
+            extraEnv: ["MACBROOM_DELETE_MODE": deleteMode.rawValue]
         )
         let text = String(data: data, encoding: .utf8) ?? ""
         for line in text.split(separator: "\n").reversed() {
@@ -208,8 +207,14 @@ public struct EngineBridge {
                                      args: [String], extraEnv: [String: String]) throws -> Process {
         guard FileManager.default.fileExists(atPath: enginePath) else { throw EngineError.engineNotFound }
         let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: "/bin/bash")
-        proc.arguments = [enginePath] + args
+        // No Full Disk Access → fence the run off from privacy-protected folders
+        // so macOS never raises a per-folder permission dialog mid-scan.
+        let command = FullDiskAccess.isGranted
+            ? (executable: "/bin/bash", arguments: [enginePath] + args)
+            : PrivacySandbox.wrap(executable: "/bin/bash", arguments: [enginePath] + args,
+                                  readable: [(enginePath as NSString).deletingLastPathComponent, moleDir])
+        proc.executableURL = URL(fileURLWithPath: command.executable)
+        proc.arguments = command.arguments
         var env = ProcessInfo.processInfo.environment
         env["MACBROOM_MOLE_DIR"] = moleDir
         // The user's whitelist (rules set in Settings). Point the engine at the

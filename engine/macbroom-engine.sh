@@ -87,6 +87,7 @@ MB_PATHS_FILE=""          # clean mode: file of approved absolute paths (one per
 declare -a MB_CANDIDATES=()   # JSON object strings (scan mode)
 declare -a MB_SCAN_PATHS=()   # raw candidate paths (scan mode; used by auto-clean)
 declare -a MB_USER_PROTECTED=()   # user-defined absolute paths never listed or deleted
+MB_SEEN=$'\n'             # scan mode: newline-delimited paths already listed (dedupe)
 # NOTE: macOS ships bash 3.2 (no associative arrays), so the approved-path set
 # is kept as a file and membership is tested with a fixed-string grep.
 
@@ -284,6 +285,72 @@ _mb_clean_ds_store() {
     clean_ds_store_tree "$HOME" ".DS_Store"
 }
 
+# Mobile-dev caches that mole's clean_dev_mobile would cover — called directly
+# because clean_dev_mobile also runs simctl deletes and the sudo-only
+# documentation/runtime cleaners. Every line here is a plain safe_clean, so it
+# goes through our protection-gated sink like any other target.
+_mb_clean_mobile_caches() {
+    safe_clean ~/Library/Developer/CoreSimulator/Profiles/Runtimes/*/Contents/Resources/RuntimeRoot/System/Library/Caches/* "Simulator runtime cache"
+    safe_clean ~/Library/Developer/CoreSimulator/Caches/* "Simulator dyld cache"
+    safe_clean ~/Library/Developer/Xcode/UserData/IB\ Support/* "Xcode Interface Builder cache"
+    safe_clean ~/Library/Developer/Xcode/UserData/Previews/* "SwiftUI Previews data"
+    safe_clean ~/.cache/swift-package-manager/* "Swift package manager cache"
+    safe_clean ~/Library/Caches/org.swift.swiftpm/* "Swift package manager library cache"
+    safe_clean ~/Library/Caches/Google/AndroidStudio*/* "Android Studio cache"
+    safe_clean ~/.android/build-cache/* "Android build cache"
+    safe_clean ~/.android/cache/* "Android SDK cache"
+    safe_clean ~/.expo/expo-go/* "Expo Go cache"
+    safe_clean ~/.expo/android-apk-cache/* "Expo Android APK cache"
+    safe_clean ~/.expo/ios-simulator-app-cache/* "Expo iOS simulator app cache"
+    safe_clean ~/.expo/native-modules-cache/* "Expo native modules cache"
+    safe_clean ~/.expo/versions-cache/* "Expo versions cache"
+}
+
+# JVM build caches — the safe_clean body of mole's clean_dev_jvm. Not called
+# directly: it sources lib/clean/maven.sh, whose top-level `set -euo pipefail`
+# re-arms errexit in our shell and kills the whole scan on the next non-zero
+# status (an empty result for EVERY selected target). The Maven repo it would
+# add is on mole's default whitelist anyway.
+_mb_clean_jvm() {
+    safe_clean ~/.sbt/boot/* "SBT boot cache"
+    safe_clean ~/.sbt/launchers/* "SBT launcher cache"
+    safe_clean ~/.ivy2/cache/* "Ivy cache"
+    safe_clean ~/.gradle/caches/build-cache-*/* "Gradle build cache"
+    safe_clean ~/.gradle/notifications/* "Gradle notifications cache"
+    if ! declare -F gradle_daemon_running >/dev/null 2>&1 || gradle_daemon_running; then
+        return 0
+    fi
+    safe_clean ~/.gradle/daemon/* "Gradle daemon"
+    safe_clean ~/.gradle/workers/* "Gradle workers"
+}
+
+# Toolchain download caches mole has no cleaner for (or only reaches through
+# the neutered clean_tool_cache, e.g. `go clean -cache`). All re-fetched on
+# demand. The Go *module* cache is deliberately left out: it is written
+# read-only, so a plain delete half-fails and leaves a broken tree.
+_mb_clean_toolchain_caches() {
+    safe_clean ~/Library/Caches/go-build/* "Go build cache"
+    safe_clean ~/Library/Caches/dotslash/* "DotSlash download cache"
+}
+
+# Homebrew's downloaded bottles/casks (what `brew cleanup` prunes). The `api`
+# metadata dir is left alone — brew re-fetches it but every brew command would
+# pay for that.
+_mb_clean_homebrew_downloads() {
+    safe_clean ~/Library/Caches/Homebrew/downloads/* "Homebrew downloads"
+    safe_clean ~/Library/Caches/Homebrew/Cask/* "Homebrew cask downloads"
+}
+
+# Squirrel/ShipIt updater payloads (Electron apps: Cursor, Claude, Figma, ...).
+# Each `update.*` dir is a fully downloaded app bundle staged for install; once
+# the update has been applied it is dead weight, and if it hasn't the app just
+# downloads it again. Skipped entirely while ShipIt is running — that is the
+# window in which it is swapping the staged bundle into place.
+_mb_clean_updater_payloads() {
+    pgrep -x ShipIt >/dev/null 2>&1 && return 0
+    safe_clean ~/Library/Caches/*.ShipIt/update.* "App updater payload"
+}
+
 # Membership test for the approved-path allowlist (bash 3.2 friendly).
 _mb_is_approved() {
     [[ -n "$MB_PATHS_FILE" ]] || return 1
@@ -335,6 +402,11 @@ _mb_handle() {
     _mb_user_protected "$path" && return 0
 
     if [[ "$MB_MODE" == "scan" ]]; then
+        # Several mole cleaners reach the same dir (e.g. Slack's Cache_Data via
+        # both the communication-app and Application Support sweeps). List it
+        # once — a duplicate double-counts its size in the scan total.
+        case "$MB_SEEN" in *$'\n'"$path"$'\n'*) return 0 ;; esac
+        MB_SEEN+="$path"$'\n'
         local size; size="$(path_size_bytes "$path")"
         MB_CANDIDATES+=("{\"category\":$(json_string "$MB_CATEGORY"),\"label\":$(json_string "$label"),\"path\":$(json_string "$path"),\"size_bytes\":$size}")
         MB_SCAN_PATHS+=("$path")   # raw paths, for auto-clean's scan→clean
@@ -449,8 +521,14 @@ system:gui-apps|GUI app caches|system|*|clean_user_gui_applications
 system:dev-misc|Developer leftovers|system|*|clean_dev_misc
 system:xcode|Xcode DerivedData|system|~/Library/Developer/Xcode/DerivedData|clean_xcode_derived_data
 system:xcode-device-support|Xcode device support|system|~/Library/Developer/Xcode/iOS DeviceSupport:~/Library/Developer/Xcode/watchOS DeviceSupport:~/Library/Developer/Xcode/tvOS DeviceSupport|_mb_clean_xcode_device_support
-system:pkg-caches|Package manager caches|system|~/.npm:~/.yarn/cache:~/Library/Caches/pip:~/.cache/poetry|clean_dev_npm clean_dev_python
-system:lang-caches|Language toolchain caches|system|~/.cargo:~/.rustup:~/.gem:~/.rbenv:~/.bundle|clean_dev_rust clean_dev_ruby
+system:pkg-caches|Package manager caches|system|~/.npm:~/.yarn/cache:~/Library/Caches/Yarn:~/Library/Caches/pip:~/.cache/poetry:~/Library/Caches/Homebrew|clean_dev_npm clean_dev_python _mb_clean_homebrew_downloads
+system:lang-caches|Language toolchain caches|system|~/.cargo:~/.rustup:~/.gem:~/.rbenv:~/.bundle:~/Library/Caches/go-build:~/Library/Caches/dotslash:~/Library/Caches/composer:~/.nuget:~/Library/Caches/deno:~/.cache/bazel|clean_dev_rust clean_dev_ruby clean_dev_other_langs _mb_clean_toolchain_caches
+system:frontend|Frontend build caches|system|~/.cache/node-gyp:~/.node-gyp:~/.cache/typescript:~/.cache/electron:~/.turbo:~/.vite:~/.cache/vite:~/.cache/webpack:~/.parcel-cache|clean_dev_frontend
+system:mobile-dev|Mobile development caches|system|~/Library/Developer/XCTestDevices:~/Library/Developer/CoreSimulator:~/Library/Developer/Xcode/UserData:~/Library/Caches/org.swift.swiftpm:~/.android:~/.expo|clean_xcode_xctest_devices _mb_clean_mobile_caches
+system:jvm|JVM caches (Gradle, SBT)|system|~/.gradle:~/.sbt:~/.ivy2|_mb_clean_jvm
+system:cloud-cli|Cloud & CI tool caches|system|~/.kube:~/.aws:~/.config/gcloud:~/.azure:~/.cache/terraform:~/.sonar|clean_dev_cloud clean_dev_cicd
+system:updaters|Updater leftovers & firmware|system|~/Library/Caches/*.ShipIt:~/Library/iTunes|_mb_clean_updater_payloads clean_cached_device_firmware
+system:mail-downloads|Old Mail attachments|system|~/Library/Containers/com.apple.mail/Data/Library/Mail Downloads:~/Library/Mail Downloads|_clean_mail_downloads
 system:docker|Docker BuildX cache|system|~/.docker/buildx|clean_dev_docker
 system:browser|Browser caches|system|~/Library/Caches/com.apple.Safari:~/Library/Caches/Google/Chrome:~/Library/Caches/com.microsoft.edgemac:~/Library/Caches/Chromium|clean_browsers clean_chromium_default_caches
 system:maintenance|Logs & .DS_Store|system|*|clean_application_support_logs _mb_clean_ds_store
@@ -466,7 +544,13 @@ _target_installed() {
     [[ "$detect" == "*" ]] && return 0
     local IFS=:
     for path in $detect; do
-        [[ -e "$(_expand_home "$path")" ]] && return 0
+        path="$(_expand_home "$path")"
+        if [[ "$path" == *"*"* ]]; then
+            # Glob detect (e.g. ~/Library/Caches/*.ShipIt): any match counts.
+            compgen -G "$path" >/dev/null 2>&1 && return 0
+        else
+            [[ -e "$path" ]] && return 0
+        fi
     done
     return 1
 }
@@ -578,26 +662,6 @@ cmd_clean() {
     emit "{\"event\":\"done\",\"freed_bytes\":$MB_FREED_BYTES,\"count\":$MB_COUNT,\"failed\":${MB_FAILED:-0}}"
 }
 
-# Human-readable byte count for notifications (e.g. "1.2 GB").
-_human_bytes() {
-    awk -v b="$1" 'BEGIN {
-        split("B KB MB GB TB", u); i = 1
-        while (b >= 1024 && i < 5) { b /= 1024; i++ }
-        printf (i == 1 ? "%d %s" : "%.1f %s"), b, u[i]
-    }'
-}
-
-# Best-effort banner. When the app drives the clean it sets
-# MACBROOM_SUPPRESS_NOTIFY so we skip the osascript banner — otherwise it'd be
-# attributed to "Script Editor" (and the app already surfaces the result). The
-# launchd path (no app running) still uses osascript.
-_mb_notify() {
-    [[ -n "${MACBROOM_SUPPRESS_NOTIFY:-}" ]] && return 0
-    command -v osascript >/dev/null 2>&1 || return 0
-    local msg="$1"
-    osascript -e "display notification \"$msg\" with title \"MacBroom\"" >/dev/null 2>&1 || true
-}
-
 # When invoked by a launchd agent (no running app), accumulate freed bytes into
 # a ledger file so the app can fold them into its all-time "reclaimed" stat on
 # next launch. Only active when MACBROOM_RECLAIMED_LEDGER is set (the app's
@@ -614,8 +678,8 @@ _mb_record_reclaimed() {
 
 # Scheduled automation: scan the target(s) and clean everything they surface,
 # in one shot. Same safety contract as a manual clean (mole-protection-filtered
-# candidates only); honors MACBROOM_DELETE_MODE. Posts a notification on success
-# so the user knows a background clean happened. Used by the launchd agent.
+# candidates only); honors MACBROOM_DELETE_MODE. Freed bytes go to the ledger
+# (when MACBROOM_RECLAIMED_LEDGER is set) for the app to announce. Used by the launchd agent.
 cmd_auto_clean() {
     local targets="" arg
     for arg in "$@"; do case "$arg" in --targets=*) targets="${arg#*=}" ;; esac; done
@@ -639,8 +703,10 @@ cmd_auto_clean() {
     { _run_targets "$targets"; } >/dev/null 2>&1
     rm -f "$tmp"
 
+    # No banner from here: osascript notifications are attributed to Script
+    # Editor (wrong icon, English-only). The app folds the ledger and posts a
+    # native, localized one instead.
     if [[ "${MB_FREED_BYTES:-0}" -gt 0 ]]; then
-        _mb_notify "$(_human_bytes "$MB_FREED_BYTES") freed"
         _mb_record_reclaimed "$MB_FREED_BYTES"
     fi
     emit "{\"event\":\"done\",\"freed_bytes\":$MB_FREED_BYTES,\"count\":$MB_COUNT,\"failed\":${MB_FAILED:-0}}"
